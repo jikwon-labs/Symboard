@@ -18,6 +18,7 @@ final class AppModel: ObservableObject {
     lazy var loops = LoopRunner(model: self)
     lazy var handoff = HandoffCoordinator(model: self)
     lazy var usage = UsageStore(model: self)
+    lazy var profiles = ProfilesModel(model: self)
     private var saveWork: DispatchWorkItem?
 
     init(store: StateStore) {
@@ -78,6 +79,11 @@ final class AppModel: ObservableObject {
         if state.selectedWorkspaceID == id { state.selectedWorkspaceID = state.workspaces.first?.id }
         scheduleSave()
         NotificationCenter.default.post(name: .workspacesChanged, object: nil)
+    }
+
+    func mutateState(_ body: (inout AppState) -> Void) {
+        body(&state)
+        scheduleSave()
     }
 
     func mutateWorkspace(_ id: UUID, _ body: (inout Workspace) -> Void) {

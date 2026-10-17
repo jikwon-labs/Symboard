@@ -51,8 +51,11 @@ final class DebugBridge {
             log.append(snapshot(to: path) ? "snapshot \(path)" : "snapshot failed")
         case "newTerminal":
             let agent = AgentKind(rawValue: cmd["agent"] as? String ?? "shell") ?? .shell
+            var profileID: UUID?
+            if let pi = cmd["profile"] as? Int, pi < model.state.profiles.count { profileID = model.state.profiles[pi].id }
             let spec = TerminalSpec(agent: agent, executable: cmd["executable"] as? String,
-                                    extraArgs: cmd["args"] as? [String] ?? [], cwd: cmd["cwd"] as? String ?? NSHomeDirectory())
+                                    extraArgs: cmd["args"] as? [String] ?? [], cwd: cmd["cwd"] as? String ?? NSHomeDirectory(),
+                                    profileID: profileID)
             var point: Point?
             if let x = cmd["x"] as? Double, let y = cmd["y"] as? Double { point = Point(x: x, y: y) }
             let n = controller.addTerminal(spec: spec, at: point)
@@ -188,6 +191,10 @@ final class DebugBridge {
             if let st = controller.studio?.studio, let out = cmd["out"] as? String {
                 log.append("png \(st.exportPNG(to: URL(fileURLWithPath: out)))")
             }
+        case "addProfile":
+            model.profiles.add(name: cmd["name"] as? String ?? "P", agent: AgentKind(rawValue: cmd["agent"] as? String ?? "claude") ?? .claude,
+                               folder: cmd["folder"] as? String ?? "/tmp/symprofile")
+            log.append("profile added")
         case "nodeMenu":
             // 노드 본문 메뉴 항목을 제목으로 실행한다.
             if let n = node(cmd), let nv = controller.currentCanvas?.nodeViews[n.id],
