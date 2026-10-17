@@ -84,6 +84,29 @@ final class DebugBridge {
             for (i, n) in nodes.enumerated() {
                 log.append("\(i) \(n.kind.rawValue) \(n.title) frame=\(Int(n.frame.x)),\(Int(n.frame.y)),\(Int(n.frame.w)),\(Int(n.frame.h)) status=\(model.sessions.status(of: n.id)?.rawValue ?? "-") session=\(n.terminal?.sessionID ?? "-")")
             }
+        case "drag":
+            // 진짜 마우스 이벤트를 창에 넣어 노드 헤더(이동)나 손잡이(크기 조절)를 끈다. dx·dy 는 캔버스 단위.
+            if let n = node(cmd), let canvas = controller.currentCanvas, let nv = canvas.nodeViews[n.id] {
+                let part = cmd["part"] as? String ?? "header"
+                let local = part == "resize" ? NSPoint(x: nv.frame.maxX - 6, y: nv.frame.maxY - 6)
+                                             : NSPoint(x: nv.frame.minX + 60, y: nv.frame.minY + 10)
+                let dx = cmd["dx"] as? Double ?? 0, dy = cmd["dy"] as? Double ?? 0
+                let steps = 5
+                for i in 0...(steps + 1) {
+                    let t = Double(min(i, steps)) / Double(steps)
+                    let p = canvas.convert(NSPoint(x: local.x + dx * t, y: local.y + dy * t), to: nil)
+                    let type: NSEvent.EventType = i == 0 ? .leftMouseDown : (i == steps + 1 ? .leftMouseUp : .leftMouseDragged)
+                    if let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: controller.window?.windowNumber ?? 0, context: nil,
+                                                  eventNumber: 0, clickCount: 1, pressure: 1) {
+                        controller.window?.sendEvent(e)
+                    }
+                }
+                log.append("drag \(part)")
+            } else { log.append("drag: no node") }
+        case "windowID":
+            // screencapture -l 로 이 창만 찍을 때 쓴다.
+            log.append("windowID \(controller.window?.windowNumber ?? 0)")
         case "wait":
             delay = cmd["seconds"] as? Double ?? 1
         case "zoom":

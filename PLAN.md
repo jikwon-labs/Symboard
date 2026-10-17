@@ -7,12 +7,12 @@ STATUS: IN_PROGRESS
 ## 체크리스트
 
 - [x] 0. 뼈대: SwiftPM 패키지(SymboardCore 라이브러리 + Symboard 실행 타깃 + 테스트), SwiftTerm 의존성, `scripts/bundle.sh` 로 `build/Symboard.app` 생성
-- [ ] 1a. 보드: 무한 캔버스(이동·확대/축소)
-- [ ] 1b. 보드: 노드 끌어서 이동·크기 조절
-- [ ] 1c. 보드: 작업공간 여러 개를 탭처럼 전환
-- [ ] 2a. 터미널 노드: SwiftTerm + forkpty 로 셸 실행(Ctrl-C·vim·htop)
+- [x] 1a. 보드: 무한 캔버스(이동·확대/축소)
+- [x] 1b. 보드: 노드 끌어서 이동·크기 조절
+- [x] 1c. 보드: 작업공간 여러 개를 탭처럼 전환
+- [x] 2a. 터미널 노드: SwiftTerm + forkpty 로 셸 실행(Ctrl-C·vim·htop)
 - [ ] 2b. 터미널 노드: 새 노드 생성 시 CLI 선택(claude, codex, 임의 실행 파일)
-- [ ] 4a. 이어하기: 작업공간 자동 저장(버전 붙은 JSON, ~/Library/Application Support/Symboard/)
+- [x] 4a. 이어하기: 작업공간 자동 저장(버전 붙은 JSON, ~/Library/Application Support/Symboard/)
 - [ ] 4b. 이어하기: 재실행 시 노드 위치·크기·CLI 복원, claude `--session-id`/`--resume`, codex `resume --last`
 - [ ] 3a. 상태: Claude Code 훅(`--settings` 로 주입) → 앱에 신호
 - [ ] 3b. 상태: 훅 없는 CLI 는 출력 멈춘 시간으로 추정
@@ -35,6 +35,12 @@ STATUS: IN_PROGRESS
 ## 메모
 
 - 0: `swift build`, `swift test`(15개 통과), `scripts/bundle.sh` → `build/Symboard.app` 생성 확인. 이전 회차가 남긴 미커밋 코드(보드·터미널·저장·상태 일부 포함)를 이 커밋에 함께 올렸다. 해당 항목은 각각 실행 확인 후 따로 체크한다.
+- 1a: 디버그 통로 `zoom`(0.5)·`fit` 후 창 캡처로 축소된 보드 확인(`docs/screens/03-zoomed-out.png`). Cmd+스크롤 확대/축소, 빈 곳 끌어 이동은 BoardScrollView/CanvasView 코드.
+- 1b: 디버그 `drag` 명령(창에 NSEvent 마우스 이벤트를 직접 넣음)으로 헤더 끌기 +100,+40 → frame -250,90 / 손잡이 끌기 -120,-80 → 520x320, state.json 에도 반영 확인.
+- 1c: `addWorkspace`·`selectWorkspace` 로 탭 2개 전환, 각 작업공간 노드·배율 유지 확인(`docs/screens/02-second-workspace.png`, `03-zoomed-out.png`).
+- 2a: SwiftTerm LocalProcessTerminalView(forkpty). 노드에서 `vim` 열기→Esc `:q!` 로 닫힘, `sleep 100` 에 Ctrl-C(0x03) → 프롬프트 복귀 확인(디버그 `screen` 출력, `docs/screens/01-three-terminals-restored.png`). htop 은 이 맥에 없어 top 으로 대신 봤다.
+- 4a: 바뀔 때 0.4초 모아 `state.json`(version 1) 저장. SYMBOARD_HOME=/tmp/symtest 로 띄워 노드 3개 만든 뒤 종료→재실행, 같은 frame 으로 복원 확인. 기본 경로는 ~/Library/Application Support/Symboard/.
+- 주의: 창이 가려지면 App Nap 으로 타이머가 멈춰 디버그 통로가 응답하지 않았다 → AppDelegate 에서 beginActivity 로 끔.
 
 ## 막힌 것
 
