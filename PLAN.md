@@ -6,7 +6,7 @@ STATUS: IN_PROGRESS
 
 ## 체크리스트
 
-- [ ] 0. 뼈대: SwiftPM 패키지(SymboardCore 라이브러리 + Symboard 실행 타깃 + 테스트), SwiftTerm 의존성, `scripts/bundle.sh` 로 `build/Symboard.app` 생성
+- [x] 0. 뼈대: SwiftPM 패키지(SymboardCore 라이브러리 + Symboard 실행 타깃 + 테스트), SwiftTerm 의존성, `scripts/bundle.sh` 로 `build/Symboard.app` 생성
 - [ ] 1a. 보드: 무한 캔버스(이동·확대/축소)
 - [ ] 1b. 보드: 노드 끌어서 이동·크기 조절
 - [ ] 1c. 보드: 작업공간 여러 개를 탭처럼 전환
@@ -33,6 +33,8 @@ STATUS: IN_PROGRESS
 - [ ] 15. 완료 기준 확인(스크린샷 docs/screens/, README.md, REPORT.md)
 
 ## 메모
+
+- 0: `swift build`, `swift test`(15개 통과), `scripts/bundle.sh` → `build/Symboard.app` 생성 확인. 이전 회차가 남긴 미커밋 코드(보드·터미널·저장·상태 일부 포함)를 이 커밋에 함께 올렸다. 해당 항목은 각각 실행 확인 후 따로 체크한다.
 
 ## 막힌 것
 

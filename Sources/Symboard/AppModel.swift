@@ -1,0 +1,134 @@
+import AppKit
+import Combine
+import SymboardCore
+
+extension Notification.Name {
+    /// 작업공간 목록·선택이 바뀌었을 때(노드 단위 변경은 제외).
+    static let workspacesChanged = Notification.Name("symboard.workspacesChanged")
+    /// 노드가 추가·삭제됐을 때. object 는 작업공간 id.
+    static let nodesChanged = Notification.Name("symboard.nodesChanged")
+}
+
+/// 앱 상태의 단일 원본. 바뀔 때마다 잠깐 모았다가 디스크에 저장한다.
+@MainActor
+final class AppModel: ObservableObject {
+    @Published private(set) var state: AppState
+    let store: StateStore
+    lazy var sessions = SessionManager(model: self)
+    private var saveWork: DispatchWorkItem?
+
+    init(store: StateStore) {
+        self.store = store
+        self.state = store.load()
+        if state.selectedIndex == nil { state = .initial() }
+    }
+
+    var statusDirectory: URL { store.directory.appendingPathComponent("status", isDirectory: true) }
+
+    // MARK: 저장
+
+    func scheduleSave() {
+        saveWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.saveNow() }
+        saveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
+    }
+
+    func saveNow() {
+        saveWork?.cancel()
+        saveWork = nil
+        do { try store.save(state) } catch { NSLog("Symboard: save failed: \(error)") }
+    }
+
+    // MARK: 작업공간
+
+    var selectedWorkspace: Workspace { state.workspaces[state.selectedIndex ?? 0] }
+
+    func workspace(_ id: UUID) -> Workspace? { state.workspaces.first { $0.id == id } }
+
+    func selectWorkspace(_ id: UUID) {
+        guard state.selectedWorkspaceID != id else { return }
+        state.selectedWorkspaceID = id
+        scheduleSave()
+        NotificationCenter.default.post(name: .workspacesChanged, object: nil)
+    }
+
+    @discardableResult
+    func addWorkspace(name: String) -> Workspace {
+        let ws = Workspace(name: name)
+        state.workspaces.append(ws)
+        state.selectedWorkspaceID = ws.id
+        scheduleSave()
+        NotificationCenter.default.post(name: .workspacesChanged, object: nil)
+        return ws
+    }
+
+    func renameWorkspace(_ id: UUID, to name: String) {
+        mutateWorkspace(id) { $0.name = name }
+        NotificationCenter.default.post(name: .workspacesChanged, object: nil)
+    }
+
+    func removeWorkspace(_ id: UUID) {
+        guard state.workspaces.count > 1, let ws = workspace(id) else { return }
+        for node in ws.nodes { sessions.terminate(node.id) }
+        state.workspaces.removeAll { $0.id == id }
+        if state.selectedWorkspaceID == id { state.selectedWorkspaceID = state.workspaces.first?.id }
+        scheduleSave()
+        NotificationCenter.default.post(name: .workspacesChanged, object: nil)
+    }
+
+    func mutateWorkspace(_ id: UUID, _ body: (inout Workspace) -> Void) {
+        guard let i = state.workspaces.firstIndex(where: { $0.id == id }) else { return }
+        body(&state.workspaces[i])
+        scheduleSave()
+    }
+
+    // MARK: 노드
+
+    func node(_ id: UUID) -> BoardNode? {
+        for ws in state.workspaces { if let n = ws.nodes.first(where: { $0.id == id }) { return n } }
+        return nil
+    }
+
+    func workspaceID(containing nodeID: UUID) -> UUID? {
+        state.workspaces.first { ws in ws.nodes.contains { $0.id == nodeID } }?.id
+    }
+
+    func addNode(_ node: BoardNode, to wsID: UUID? = nil) {
+        let target = wsID ?? selectedWorkspace.id
+        mutateWorkspace(target) { $0.nodes.append(node) }
+        NotificationCenter.default.post(name: .nodesChanged, object: target)
+    }
+
+    func removeNode(_ id: UUID) {
+        guard let wsID = workspaceID(containing: id) else { return }
+        sessions.terminate(id)
+        mutateWorkspace(wsID) { ws in
+            ws.nodes.removeAll { $0.id == id }
+            ws.loops.removeAll { $0.nodeID == id }
+        }
+        NotificationCenter.default.post(name: .nodesChanged, object: wsID)
+    }
+
+    func mutateNode(_ id: UUID, _ body: (inout BoardNode) -> Void) {
+        for i in state.workspaces.indices {
+            if let j = state.workspaces[i].nodes.firstIndex(where: { $0.id == id }) {
+                body(&state.workspaces[i].nodes[j])
+                scheduleSave()
+                return
+            }
+        }
+    }
+
+    /// 새 노드를 놓을 자리: 현재 화면 중앙 근처에서 기존 노드와 덜 겹치게 조금씩 비켜 놓는다.
+    func suggestedFrame(size: CGSize, near center: Point) -> Rect {
+        let existing = selectedWorkspace.nodes.map(\.frame)
+        var x = center.x - size.width / 2
+        var y = center.y - size.height / 2
+        var tries = 0
+        while tries < 30, existing.contains(where: { abs($0.x - x) < 24 && abs($0.y - y) < 24 }) {
+            x += 32; y += 32; tries += 1
+        }
+        return Rect(x: x, y: y, w: size.width, h: size.height)
+    }
+}
