@@ -15,6 +15,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var state: AppState
     let store: StateStore
     lazy var sessions = SessionManager(model: self)
+    lazy var loops = LoopRunner(model: self)
     private var saveWork: DispatchWorkItem?
 
     init(store: StateStore) {

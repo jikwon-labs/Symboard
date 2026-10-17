@@ -123,6 +123,20 @@ final class DebugBridge {
             let t = controller.launchTeam(spec: spec, count: count, teamName: cmd["name"] as? String ?? "Team",
                                           roles: Composer.roles(from: cmd["roles"] as? String ?? "", count: count))
             log.append("team \(t.name)")
+        case "loop":
+            if let n = node(cmd) {
+                let trigger: LoopTrigger
+                switch cmd["trigger"] as? String ?? "interval" {
+                case "idle": trigger = .idle(seconds: cmd["value"] as? Double ?? 5)
+                case "output": trigger = .output(pattern: cmd["pattern"] as? String ?? "")
+                default: trigger = .interval(seconds: cmd["value"] as? Double ?? 5)
+                }
+                model.loops.add(LoopRule(nodeID: n.id, message: cmd["message"] as? String ?? "", trigger: trigger,
+                                         goal: cmd["goal"] as? String ?? "", maxRuns: cmd["maxRuns"] as? Int ?? 20))
+                log.append("loop added")
+            }
+        case "loops":
+            for r in model.loops.rows { log.append("loop \(r.nodeTitle) \(r.trigger) enabled=\(r.enabled) runs=\(r.runs) \(r.note)") }
         case "pen":
             controller.setPen(cmd["on"] as? Bool ?? true)
             log.append("pen")

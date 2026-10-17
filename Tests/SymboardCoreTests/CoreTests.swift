@@ -160,3 +160,51 @@ import Testing
         #expect(Composer.roles(from: "Lead, Coder,, ", count: 3) == ["Lead", "Coder", nil])
     }
 }
+
+@Suite struct LoopEngineTests {
+    let t0 = Date(timeIntervalSince1970: 10_000)
+
+    @Test func intervalFiresEveryPeriod() {
+        let rule = LoopRule(nodeID: UUID(), message: "go", trigger: .interval(seconds: 10))
+        var rt = LoopRuntime(startedAt: t0)
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(5), idleSeconds: 0, lastOutputAt: nil) == .none)
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(10), idleSeconds: 0, lastOutputAt: nil) == .fire)
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(15), idleSeconds: 0, lastOutputAt: nil) == .none)
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(20), idleSeconds: 0, lastOutputAt: nil) == .fire)
+    }
+
+    @Test func idleWaitsForNewActivity() {
+        let rule = LoopRule(nodeID: UUID(), message: "continue", trigger: .idle(seconds: 5))
+        var rt = LoopRuntime(startedAt: t0)
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(6), idleSeconds: 6, lastOutputAt: t0) == .fire)
+        // 아무 출력이 없었으면 다시 보내지 않는다.
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(20), idleSeconds: 20, lastOutputAt: t0) == .none)
+        // 출력이 있고 다시 유휴가 되면 보낸다.
+        let out = t0.addingTimeInterval(22)
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(28), idleSeconds: 6, lastOutputAt: out) == .fire)
+    }
+
+    @Test func outputPatternAndGoalStop() {
+        let rule = LoopRule(nodeID: UUID(), message: "next please", trigger: .output(pattern: "READY"), goal: "ALL DONE")
+        var rt = LoopRuntime(startedAt: t0)
+        rt.pending = "...REA"
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0, idleSeconds: 0, lastOutputAt: t0) == .none)
+        rt.pending += "DY>"
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(1), idleSeconds: 0, lastOutputAt: t0) == .fire)
+        rt.pending += "working... all done"
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(9), idleSeconds: 0, lastOutputAt: t0) == .stop(reason: "goal"))
+    }
+
+    @Test func echoedMessageDoesNotTriggerGoal() {
+        let rule = LoopRule(nodeID: UUID(), message: "say ALL DONE when finished", trigger: .interval(seconds: 100), goal: "ALL DONE")
+        var rt = LoopRuntime(startedAt: t0)
+        rt.pending = "> say ALL DONE when finished\n"
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(1), idleSeconds: 0, lastOutputAt: t0) == .none)
+    }
+
+    @Test func maxRunsStops() {
+        let rule = LoopRule(nodeID: UUID(), message: "x", trigger: .interval(seconds: 1), maxRuns: 2, runCount: 2)
+        var rt = LoopRuntime(startedAt: t0)
+        #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(5), idleSeconds: 0, lastOutputAt: nil) == .stop(reason: "max runs"))
+    }
+}

@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import SymboardCore
 
 /// 메인 창: 위쪽 작업공간 탭과 도구 막대, 가운데 보드, 오른쪽 패널.
@@ -29,6 +30,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         if !window.setFrameUsingName("SymboardMain") { window.center() }
         buildUI()
         observe()
+        sidePanel.addTab("Loops", view: AnyView(LoopPanelView(runner: model.loops) { [weak self] in self?.newLoop(for: nil) }))
         showWorkspace(model.selectedWorkspace.id)
     }
 
@@ -252,6 +254,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         configure(&node)
         model.addNode(node)
         currentCanvas?.select(node.id)
+    }
+
+    func newLoop(for nodeID: UUID?) {
+        guard let rule = LoopDialog.run(nodes: model.selectedWorkspace.nodes, preselect: nodeID ?? currentCanvas?.selectedNodeID) else { return }
+        model.loops.add(rule)
+        showPanel(tab: "Loops")
     }
 
     @objc func openComposer(_ sender: Any?) {

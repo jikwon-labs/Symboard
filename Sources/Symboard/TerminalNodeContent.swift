@@ -29,7 +29,13 @@ final class TerminalNodeContent: NSObject, NodeContent {
     func sync(node: BoardNode) {}
 
     func menuItems() -> [NSMenuItem] {
-        [ClosureMenuItem(title: "Restart Process") { [weak self] in self?.restart() }]
+        [ClosureMenuItem(title: "Restart Process") { [weak self] in self?.restart() },
+         ClosureMenuItem(title: "Add Loop...") { [weak self] in
+             guard let self, let wsID = self.model.workspaceID(containing: self.nodeID),
+                   let ws = self.model.workspace(wsID),
+                   let rule = LoopDialog.run(nodes: ws.nodes, preselect: self.nodeID) else { return }
+             self.model.loops.add(rule)
+         }]
     }
 
     func teardown() {}

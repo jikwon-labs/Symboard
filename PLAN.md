@@ -18,7 +18,7 @@ STATUS: IN_PROGRESS
 - [x] 3b. 상태: 훅 없는 CLI 는 출력 멈춘 시간으로 추정
 - [x] 3c. 상태: 전체 노드 목록 패널(미션 맵)
 - [x] 5. 컴포저(최대 12개 한 번에)와 팀(묶기·역할 이름)
-- [ ] 6. 루프(시간 간격/유휴/특정 출력 시작, 목표 문구로 자동 종료)
+- [x] 6. 루프(시간 간격/유휴/특정 출력 시작, 목표 문구로 자동 종료)
 - [ ] 7. 넘겨주기(보내는 노드 CLI 에 요약 요청 → 다른 노드에 입력)
 - [x] 8a. 메모 도구: 스티키·텍스트·체크리스트·칸반 노드
 - [x] 8b. 메모 도구: 펜 그리기, 이미지 드롭 후 표시
@@ -50,6 +50,7 @@ STATUS: IN_PROGRESS
 - 8a: 도구 막대 Add 메뉴로 스티키(색 바꾸기)·텍스트·체크리스트(진행 막대)·칸반(카드 좌우 이동) 노드. SwiftUI 본문을 NSHostingView 로 붙이고 편집 즉시 모델에 저장. 디버그 `addNode` 로 만들고 화면 확인(`docs/screens/07-notes.png`), 재실행 후 내용 유지 확인. 키보드로 직접 타이핑하는 경로는 자동 확인하지 않았다.
 - 8b: 펜 버튼을 켜고 보드 위를 끌면 획 저장(디버그 `stroke` 로 실제 마우스 이벤트, state.json strokes 1). 이미지는 끌어다 놓기 또는 Add > Image... 로 추가하고, 펜이 켜진 채 이미지 위를 끌면 이미지 기준 0~1 좌표로 표시 저장(스크린샷 07 의 빨간 선). Add > Clear Pen Drawings, 노드 메뉴 Clear Markup.
 - 5: 도구 막대 Composer(프로그램·개수 1~12·폴더·팀 이름·역할 쉼표 목록) → 격자로 띄우고 새 팀으로 묶음. 노드 메뉴 Team > New Team.../기존 팀 지정, Set Role.... 디버그 `team` 으로 12개 띄워 격자·역할·팀 배지·Mission 패널 확인(`docs/screens/08-composer-team.png`, `09-composer-dialog.png`). 격자 배치·역할 펴기는 단위 테스트(ComposerTests).
+- 6: 판정은 SymboardCore LoopEngine(단위 테스트 5개), 실행은 LoopRunner(1초 틱 + 노드 출력 구독). 패널 Loops 탭(켜기/끄기·삭제·New Loop), 터미널 노드 메뉴 Add Loop.... 셸 노드 3개로 확인: 5초 간격 2회 전송 → `echo GOALHIT` 출력에 스스로 꺼짐, 출력에 PING 이 나오자 1회 전송, 유휴 4초 조건 2회 후 최대 횟수로 정지(디버그 `loops`, `docs/screens/10-loops.png`).
 
 ## 막힌 것
 
