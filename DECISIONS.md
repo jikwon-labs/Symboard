@@ -6,3 +6,4 @@
 - 웹 인스펙터는 공개 API 가 없어 WKWebView 의 내부 _inspector 를 있을 때만 쓰고, 없으면 오른쪽 클릭 Inspect Element 로 안내한다.
 - git 카드 Commit 은 add -A 후 커밋(원본처럼 한 번에). pull 은 --ff-only 로 병합 커밋을 만들지 않는다.
 - 스튜디오 PDF 는 printOperation 대신 createPDF 결과를 직접 쪽으로 자른다(화면 밖 웹뷰 인쇄가 끝나지 않는 문제를 겪음). 다이어그램은 Mermaid 대신 'A -> B: 라벨' 한 줄 형식으로 단순하게 했다.
+- 메모리 보내기는 기본으로 Enter 를 누르지 않는다(붙여넣기만). 사용자가 확인한 뒤 보내게 하려는 것이고, 패널의 토글로 바꿀 수 있다.

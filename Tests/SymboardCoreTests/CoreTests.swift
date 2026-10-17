@@ -331,3 +331,16 @@ import Testing
         #expect(UsageParser.field(t, "\"timestamp\":\"") == "2026-10-17T20:27:40.918Z")
     }
 }
+
+@Suite struct MemoryScopeTests {
+    @Test func findsNearestGitRoot() {
+        let existing: Set<String> = ["/a/repo/.git"]
+        #expect(MemoryScope.repoRoot(for: "/a/repo/src/x", fileExists: { existing.contains($0) }) == "/a/repo")
+        #expect(MemoryScope.repoRoot(for: "/b/c", fileExists: { existing.contains($0) }) == nil)
+    }
+
+    @Test func textJoinsTitleAndBody() {
+        #expect(MemoryScope.text(for: MemoryNote(title: "Rules", body: " use pnpm \n")) == "Rules\nuse pnpm")
+        #expect(MemoryScope.text(for: MemoryNote(title: "", body: "x")) == "x")
+    }
+}

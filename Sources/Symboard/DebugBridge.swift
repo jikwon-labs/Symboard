@@ -195,6 +195,20 @@ final class DebugBridge {
             model.profiles.add(name: cmd["name"] as? String ?? "P", agent: AgentKind(rawValue: cmd["agent"] as? String ?? "claude") ?? .claude,
                                folder: cmd["folder"] as? String ?? "/tmp/symprofile")
             log.append("profile added")
+        case "memory":
+            // 메모를 만들고(선택) 지정 노드를 고른 뒤 Send 버튼과 같은 경로로 보낸다.
+            let mem = model.memory
+            mem.scope = cmd["repo"] as? String
+            if let title = cmd["title"] as? String {
+                mem.add()
+                if let id = mem.editingID { mem.update(id, title: title, body: cmd["body"] as? String ?? "") }
+                mem.editingID = nil
+            }
+            if let n = node(cmd) {
+                controller.currentCanvas?.select(n.id)
+                if cmd["send"] as? Bool == true, let first = mem.notes.last { mem.send(first, to: n.id) }
+            }
+            log.append("memory \(mem.note)")
         case "nodeMenu":
             // 노드 본문 메뉴 항목을 제목으로 실행한다.
             if let n = node(cmd), let nv = controller.currentCanvas?.nodeViews[n.id],

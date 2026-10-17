@@ -30,6 +30,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         if !window.setFrameUsingName("SymboardMain") { window.center() }
         buildUI()
         observe()
+        sidePanel.addTab("Memory", view: AnyView(MemoryPanelView(memory: model.memory, panel: sidePanel.state)))
         sidePanel.addTab("Profiles", view: AnyView(ProfilesPanelView(profiles: model.profiles) { [weak self] p in
             self?.addTerminal(spec: TerminalSpec(agent: p.agent, cwd: NewTerminalDialog.lastCwd, profileID: p.id), at: nil,
                               title: "\(p.agent.displayName) (\(p.name))")

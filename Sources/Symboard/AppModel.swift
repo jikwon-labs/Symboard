@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
     lazy var handoff = HandoffCoordinator(model: self)
     lazy var usage = UsageStore(model: self)
     lazy var profiles = ProfilesModel(model: self)
+    lazy var memory = MemoryModel(model: self)
     private var saveWork: DispatchWorkItem?
 
     init(store: StateStore) {
