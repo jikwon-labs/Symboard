@@ -49,6 +49,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         toolbarStack.addArrangedSubview(toolButton("New Terminal", symbol: "terminal", action: #selector(newTerminalMenu(_:))))
         toolbarStack.addArrangedSubview(toolButton("Composer", symbol: "square.grid.3x3", action: #selector(openComposer(_:))))
         toolbarStack.addArrangedSubview(toolButton("Add", symbol: "plus.square.on.square", action: #selector(addMenu(_:))))
+        toolbarStack.addArrangedSubview(toolButton("Studio", symbol: "doc.richtext", action: #selector(openStudio(_:))))
         penButton = toolButton("Pen", symbol: "pencil.tip", action: #selector(togglePen))
         penButton.setButtonType(.pushOnPushOff)
         toolbarStack.addArrangedSubview(penButton)
@@ -260,6 +261,27 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         guard let rule = LoopDialog.run(nodes: model.selectedWorkspace.nodes, preselect: nodeID ?? currentCanvas?.selectedNodeID) else { return }
         model.loops.add(rule)
         showPanel(tab: "Loops")
+    }
+
+    var studio: StudioWindowController?
+
+    @objc func openStudio(_ sender: Any?) {
+        showStudio(root: nil)
+    }
+
+    func showStudio(root: URL?) {
+        if studio == nil {
+            studio = StudioWindowController(root: root ?? URL(fileURLWithPath: NewTerminalDialog.lastCwd)) { [weak self] url in
+                self?.pinFile(url)
+            }
+        } else if let root { studio?.studio.root = root }
+        studio?.showWindow(nil)
+    }
+
+    /// 스튜디오에서 고른 파일을 보드에 노드로 고정한다.
+    func pinFile(_ url: URL) {
+        addNode(kind: .file, size: CGSize(width: 560, height: 420), title: url.lastPathComponent) { $0.text = url.path }
+        window?.makeKeyAndOrderFront(nil)
     }
 
     @objc func openComposer(_ sender: Any?) {

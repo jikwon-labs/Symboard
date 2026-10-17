@@ -257,3 +257,46 @@ import Testing
         #expect(s.changes == [.init(code: ".M", path: "Sources/a b.swift"), .init(code: "R.", path: "new.txt"), .init(code: "??", path: "notes.md")])
     }
 }
+
+@Suite struct StudioTests {
+    @Test func highlightsSwift() {
+        let src = "let url = \"http://x\" // note\nreturn 42"
+        let t = SyntaxHighlighter.tokens(src, language: "swift")
+        let ns = src as NSString
+        let pairs = t.map { (ns.substring(with: $0.range), $0.kind) }
+        #expect(pairs.contains { $0.0 == "let" && $0.1 == .keyword })
+        #expect(pairs.contains { $0.0 == "\"http://x\"" && $0.1 == .string })
+        #expect(pairs.contains { $0.0 == "// note" && $0.1 == .comment })
+        #expect(pairs.contains { $0.0 == "42" && $0.1 == .number })
+        // 문자열 안의 // 는 주석이 아니다.
+        #expect(!pairs.contains { $0.1 == .comment && $0.0.hasPrefix("//x") })
+    }
+
+    @Test func markdownLinksAndGraph() {
+        #expect(Markdown.links(in: "See [[Plan]] and [notes](sub/Notes.md#top) and [web](https://a.md)") == ["Plan", "Notes"])
+        let edges = Markdown.graph(["README": "[[plan]] [[missing]]", "plan": "back to [r](README.md)"])
+        #expect(edges.map { "\($0.from)>\($0.to)" } == ["README>plan", "plan>README"])
+    }
+
+    @Test func markdownHTML() {
+        let h = Markdown.html("# Title\n\nSome **bold** and `code`.\n\n- a\n- b\n\n```\nx < y\n```")
+        #expect(h.contains("<h1>Title</h1>"))
+        #expect(h.contains("<strong>bold</strong>"))
+        #expect(h.contains("<code>code</code>"))
+        #expect(h.contains("<ul><li>a</li><li>b</li></ul>"))
+        #expect(h.contains("<pre><code>x &lt; y</code></pre>"))
+    }
+
+    @Test func diagramParseAndLayers() {
+        let d = Diagram.parse("# flow\nUser -> App: open\nApp -> Agent -> Disk\nAgent -> App\nLonely")
+        #expect(d.nodes == ["User", "App", "Agent", "Disk", "Lonely"])
+        #expect(d.edges.count == 4)
+        #expect(d.edges[0].label == "open")
+        let layers = d.layers()
+        #expect(layers.first?.contains("User") == true)
+        #expect(layers.flatMap { $0 }.count == 5)
+        // 순환(App -> Agent -> App)이 있어도 앞에서 뒤로 층이 놓인다.
+        #expect(layers.firstIndex { $0.contains("App") }! < layers.firstIndex { $0.contains("Agent") }!)
+        #expect(layers.firstIndex { $0.contains("Agent") }! < layers.firstIndex { $0.contains("Disk") }!)
+    }
+}

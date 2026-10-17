@@ -165,6 +165,29 @@ final class DebugBridge {
                 let s = g.card.status
                 log.append("git branch=\(s?.branch ?? "-") ahead=\(s?.ahead ?? 0) changes=\(s?.changes.count ?? -1)\n\(g.card.log)")
             }
+        case "studio":
+            controller.showStudio(root: (cmd["root"] as? String).map { URL(fileURLWithPath: $0) })
+            if let st = controller.studio?.studio {
+                if let t = cmd["tab"] as? String { st.tab = t }
+                if let f = cmd["code"] as? String { st.codeSelection = URL(fileURLWithPath: f) }
+                if let f = cmd["md"] as? String { st.mdSelection = URL(fileURLWithPath: f) }
+                if let g = cmd["graph"] as? Bool { st.showGraph = g }
+                if let t = cmd["mdText"] as? String { st.mdText = t }
+            }
+            log.append("studio window \(controller.studio?.window?.windowNumber ?? 0)")
+        case "studioPin":
+            if let f = cmd["path"] as? String { controller.pinFile(URL(fileURLWithPath: f)); log.append("pinned") }
+        case "studioPDF":
+            if let st = controller.studio?.studio, let md = cmd["md"] as? String, let out = cmd["out"] as? String {
+                st.exportPDF(from: URL(fileURLWithPath: md), to: URL(fileURLWithPath: out)) { [weak self] ok in
+                    try? "pdf \(ok)".write(to: self!.dir.appendingPathComponent("pdf.txt"), atomically: true, encoding: .utf8)
+                }
+                log.append("pdf started")
+            }
+        case "studioPNG":
+            if let st = controller.studio?.studio, let out = cmd["out"] as? String {
+                log.append("png \(st.exportPNG(to: URL(fileURLWithPath: out)))")
+            }
         case "nodeMenu":
             // 노드 본문 메뉴 항목을 제목으로 실행한다.
             if let n = node(cmd), let nv = controller.currentCanvas?.nodeViews[n.id],

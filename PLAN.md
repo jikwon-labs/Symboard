@@ -24,9 +24,9 @@ STATUS: IN_PROGRESS
 - [x] 8b. 메모 도구: 펜 그리기, 이미지 드롭 후 표시
 - [x] 9. 웹 타일(WKWebView, 웹 인스펙터)
 - [x] 10. git 카드(브랜치·상태, commit·push·pull)
-- [ ] 11a. 스튜디오: 코드(파일 트리·하이라이트·노드로 고정)
-- [ ] 11b. 스튜디오: 마크다운(파일 트리·자동 저장 편집기·링크 그래프)
-- [ ] 11c. 스튜디오: 문서(마크다운 → PDF), 다이어그램(PNG 내보내기)
+- [x] 11a. 스튜디오: 코드(파일 트리·하이라이트·노드로 고정)
+- [x] 11b. 스튜디오: 마크다운(파일 트리·자동 저장 편집기·링크 그래프)
+- [x] 11c. 스튜디오: 문서(마크다운 → PDF), 다이어그램(PNG 내보내기)
 - [ ] 12. 사용량(로컬 세션 로그에서 날짜별·에이전트별 토큰)
 - [ ] 13. 계정 프로필(CLI 별 설정 폴더 환경 변수)
 - [ ] 14. 메모리(레포별·전역 메모, 버튼으로 노드에 보내기)
@@ -55,6 +55,11 @@ STATUS: IN_PROGRESS
   - 고친 것: bracketed paste 를 프로그램이 그 모드를 켰을 때만 쓰게 했다(안 켠 프로그램에 ^[[200~ 가 그대로 찍혔다).
 - 9: Add > Web Tile... 로 주소 입력. WKWebView + 주소 칸, Info.plist 에 NSAllowsLocalNetworking. 노드 메뉴 Open Web Inspector(WKWebView 내부 _inspector 객체가 있으면 show, 없으면 오른쪽 클릭 Inspect Element 안내; developerExtrasEnabled·isInspectable 켬). /tmp/symweb 를 python http.server 8765 로 띄워 페이지 표시와 인스펙터 열림 확인(`docs/screens/12-web-git.png`, `13-web-inspector.png`).
 - 10: Add > Git Card... 로 레포 선택. `git status --porcelain=v2 --branch` 파싱(단위 테스트 GitStatusTests)으로 브랜치·추적·앞뒤 개수·변경 파일, Commit All(add -A + commit)·Pull(--ff-only)·Push 버튼, 결과 로그 표시. GIT_TERMINAL_PROMPT=0 으로 비밀번호 대기 방지. /tmp/symgit(+ /tmp 로컬 bare 레포를 origin 으로) 에서 커밋 → 푸시 → 다른 클론에서 푸시한 것 풀까지 확인(디버그 `git`/`gitState`).
+- 11: 도구 막대 Studio 로 별도 창. 탭 4개. 확인 폴더 /tmp/symstudio(마크다운 4개 + swift 파일).
+  - 11a Code: 파일 트리(.git·.build·node_modules 등 제외), 정규식 기반 하이라이트(키워드·문자열·주석·숫자, 단위 테스트), Pin to Board → file 노드(`docs/screens/14-studio-code.png`, `21-pinned-file.png`).
+  - 11b Markdown: .md 트리, 편집기 0.6초 뒤 자동 저장(디버그로 내용 바꾼 뒤 파일 내용과 "Saved" 표시 확인), [[링크]]·[글](x.md) 링크 그래프(`15`, `16-studio-link-graph.png`).
+  - 11c Docs: 마크다운 → HTML 미리보기 → Export PDF(WKWebView createPDF 로 긴 한 장을 받아 Letter 쪽으로 자름). README 1쪽, 150문단 문서 8쪽 확인(`17-studio-docs.png`, `19-docs-export-page1.png`). Diagram: `A -> B: 라벨` 줄 형식, 순환 간선은 깊이 우선 탐색으로 빼고 층 배치, 되돌아가는 간선은 아래로 점선, Export PNG(ImageRenderer) 확인(`18`, `20-diagram-export.png`).
+  - 사고와 수정: 처음엔 화면 밖 WKWebView 의 printOperation 으로 PDF 를 만들었는데 쪽 나누기가 끝나지 않아 파일이 1.4GB 까지 커졌다. 즉시 앱을 죽이고 파일을 지운 뒤 createPDF + 직접 쪽 자르기(최대 300쪽)로 바꿨고, 다시 시험할 때는 20MB 감시 스크립트를 함께 돌렸다.
 
 ## 막힌 것
 
