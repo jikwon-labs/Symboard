@@ -208,3 +208,33 @@ import Testing
         #expect(LoopEngine.evaluate(rule: rule, runtime: &rt, now: t0.addingTimeInterval(5), idleSeconds: 0, lastOutputAt: nil) == .stop(reason: "max runs"))
     }
 }
+
+@Suite struct HandoffTests {
+    @Test func extractSkipsEchoedRequest() {
+        let text = "> " + Handoff.request(note: "") + "\nthinking...\nHANDOFF-BEGIN\nGoal: x\nLeft: y\nHANDOFF-END\n> "
+        #expect(Handoff.extractMarked(text) == "Goal: x\nLeft: y")
+        #expect(Handoff.extractMarked("no markers") == nil)
+    }
+
+    @Test func claudeReplyFromTranscript() {
+        let lines = [
+            #"{"type":"user","message":{"role":"user","content":"hello"}}"#,
+            #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"old"}]}}"#,
+            #"{"type":"user","message":{"role":"user","content":[{"type":"text","text":"summarize"}]}}"#,
+            #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":""}]}}"#,
+            #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Read"}]}}"#,
+            #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"..."}]}}"#,
+            #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"HANDOFF-BEGIN\nsum\nHANDOFF-END"}]}}"#,
+        ].joined(separator: "\n")
+        #expect(Handoff.claudeLastReply(jsonl: lines) == "HANDOFF-BEGIN\nsum\nHANDOFF-END")
+    }
+
+    @Test func codexReplyFromRollout() {
+        let lines = [
+            #"{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"hi"}]}}"#,
+            #"{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"first"}]}}"#,
+            #"{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"second"}]}}"#,
+        ].joined(separator: "\n")
+        #expect(Handoff.codexLastReply(jsonl: lines) == "second")
+    }
+}

@@ -137,6 +137,14 @@ final class DebugBridge {
             }
         case "loops":
             for r in model.loops.rows { log.append("loop \(r.nodeTitle) \(r.trigger) enabled=\(r.enabled) runs=\(r.runs) \(r.note)") }
+        case "handoff":
+            if let i = cmd["from"] as? Int, let j = cmd["to"] as? Int, i < nodes.count, j < nodes.count {
+                _ = model.handoff
+                model.handoff.start(source: nodes[i].id, target: nodes[j].id, note: "", autoSend: true)
+                log.append("handoff started")
+            }
+        case "handoffResult":
+            log.append("handoff \(model.handoff.lastResult)")
         case "pen":
             controller.setPen(cmd["on"] as? Bool ?? true)
             log.append("pen")

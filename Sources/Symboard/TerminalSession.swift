@@ -80,8 +80,8 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
     /// 사용자가 친 것처럼 문자열을 보낸다. submit 이면 Enter 까지 보낸다.
     func sendText(_ text: String, submit: Bool) {
         guard running else { return }
-        // 여러 줄은 bracketed paste 로 감싸서 CLI 가 한 번에 받게 한다.
-        if text.contains("\n") {
+        // 여러 줄은 bracketed paste 로 감싸서 CLI 가 한 번에 받게 한다. 프로그램이 그 모드를 켰을 때만.
+        if text.contains("\n") && view.getTerminal().bracketedPasteMode {
             view.send(txt: "\u{1b}[200~" + text + "\u{1b}[201~")
         } else {
             view.send(txt: text)

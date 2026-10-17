@@ -19,7 +19,7 @@ STATUS: IN_PROGRESS
 - [x] 3c. 상태: 전체 노드 목록 패널(미션 맵)
 - [x] 5. 컴포저(최대 12개 한 번에)와 팀(묶기·역할 이름)
 - [x] 6. 루프(시간 간격/유휴/특정 출력 시작, 목표 문구로 자동 종료)
-- [ ] 7. 넘겨주기(보내는 노드 CLI 에 요약 요청 → 다른 노드에 입력)
+- [x] 7. 넘겨주기(보내는 노드 CLI 에 요약 요청 → 다른 노드에 입력)
 - [x] 8a. 메모 도구: 스티키·텍스트·체크리스트·칸반 노드
 - [x] 8b. 메모 도구: 펜 그리기, 이미지 드롭 후 표시
 - [ ] 9. 웹 타일(WKWebView, 웹 인스펙터)
@@ -51,6 +51,8 @@ STATUS: IN_PROGRESS
 - 8b: 펜 버튼을 켜고 보드 위를 끌면 획 저장(디버그 `stroke` 로 실제 마우스 이벤트, state.json strokes 1). 이미지는 끌어다 놓기 또는 Add > Image... 로 추가하고, 펜이 켜진 채 이미지 위를 끌면 이미지 기준 0~1 좌표로 표시 저장(스크린샷 07 의 빨간 선). Add > Clear Pen Drawings, 노드 메뉴 Clear Markup.
 - 5: 도구 막대 Composer(프로그램·개수 1~12·폴더·팀 이름·역할 쉼표 목록) → 격자로 띄우고 새 팀으로 묶음. 노드 메뉴 Team > New Team.../기존 팀 지정, Set Role.... 디버그 `team` 으로 12개 띄워 격자·역할·팀 배지·Mission 패널 확인(`docs/screens/08-composer-team.png`, `09-composer-dialog.png`). 격자 배치·역할 펴기는 단위 테스트(ComposerTests).
 - 6: 판정은 SymboardCore LoopEngine(단위 테스트 5개), 실행은 LoopRunner(1초 틱 + 노드 출력 구독). 패널 Loops 탭(켜기/끄기·삭제·New Loop), 터미널 노드 메뉴 Add Loop.... 셸 노드 3개로 확인: 5초 간격 2회 전송 → `echo GOALHIT` 출력에 스스로 꺼짐, 출력에 PING 이 나오자 1회 전송, 유휴 4초 조건 2회 후 최대 횟수로 정지(디버그 `loops`, `docs/screens/10-loops.png`).
+- 7: 터미널 노드 메뉴 Hand Off To... → 받을 노드 선택 → 보내는 노드에 요약 요청(HANDOFF-BEGIN/END 표시 사이에 쓰라고) → 일했다가 다시 쉬면 답을 읽어 확인 창(편집 가능) 뒤 받는 노드에 입력. 답은 claude 는 대화 기록 jsonl, codex 는 세션 jsonl 의 마지막 assistant 글(형식은 디스크에서 확인, 단위 테스트 HandoffTests), 그 밖은 화면 출력에서 표시 사이를 찾는다. 실제 에이전트에 일을 시키지 않으려고 가짜 에이전트 스크립트 두 개로 확인(디버그 `handoff` 자동 전송, `docs/screens/11-handoff.png`). claude·codex 로 실제 요약을 받는 것은 실행 확인하지 않았다.
+  - 고친 것: bracketed paste 를 프로그램이 그 모드를 켰을 때만 쓰게 했다(안 켠 프로그램에 ^[[200~ 가 그대로 찍혔다).
 
 ## 막힌 것
 

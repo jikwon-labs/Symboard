@@ -59,4 +59,15 @@ public enum CodexSessions {
         }
         return found.min { $0.0 < $1.0 }?.1
     }
+
+    /// 세션 id 가 파일 이름에 들어 있는 기록 파일. 최근 날짜 폴더부터 찾는다.
+    public static func file(root: String, id: String) -> String? {
+        let fm = FileManager.default
+        guard let e = fm.enumerator(atPath: root) else { return nil }
+        var hits: [String] = []
+        while let rel = e.nextObject() as? String {
+            if rel.hasSuffix(".jsonl") && rel.contains(id) { hits.append(root + "/" + rel) }
+        }
+        return hits.sorted().last
+    }
 }
