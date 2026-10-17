@@ -30,6 +30,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         if !window.setFrameUsingName("SymboardMain") { window.center() }
         buildUI()
         observe()
+        sidePanel.addTab("Usage", view: AnyView(UsagePanelView(store: model.usage)))
         sidePanel.addTab("Loops", view: AnyView(LoopPanelView(runner: model.loops) { [weak self] in self?.newLoop(for: nil) }))
         showWorkspace(model.selectedWorkspace.id)
     }

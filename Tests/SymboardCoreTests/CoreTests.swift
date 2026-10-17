@@ -300,3 +300,34 @@ import Testing
         #expect(layers.firstIndex { $0.contains("Agent") }! < layers.firstIndex { $0.contains("Disk") }!)
     }
 }
+
+@Suite struct UsageTests {
+    @Test func claudeDedupesRepeatedMessage() {
+        let line = #"{"type":"assistant","timestamp":"2026-10-17T20:27:40.918Z","requestId":"r1","message":{"id":"m1","usage":{"input_tokens":2,"output_tokens":120,"cache_read_input_tokens":100,"cache_creation_input_tokens":50}}}"#
+        let other = #"{"type":"assistant","timestamp":"2026-10-17T20:28:00.000Z","requestId":"r2","message":{"id":"m2","usage":{"input_tokens":3,"output_tokens":5}}}"#
+        var seen = Set<String>()
+        let recs = UsageParser.claude(jsonl: [line, line, other].joined(separator: "\n"), fallbackDay: "x", seen: &seen)
+        #expect(recs.count == 2)
+        let agg = UsageParser.aggregate(recs)
+        let total = agg.values.flatMap(\.values).reduce(TokenCounts(), +)
+        #expect(total == TokenCounts(input: 5, output: 125, cacheRead: 100, cacheWrite: 50))
+    }
+
+    @Test func codexUsesCumulativeDeltas() {
+        func ev(_ input: Int, _ cached: Int, _ out: Int) -> String {
+            #"{"timestamp":"2026-10-17T20:29:36.309Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":\#(input),"cached_input_tokens":\#(cached),"output_tokens":\#(out)}}}}"#
+        }
+        let recs = UsageParser.codex(jsonl: [ev(100, 40, 10), ev(100, 40, 10), ev(250, 90, 30)].joined(separator: "\n"), fallbackDay: "x")
+        let total = recs.map(\.counts).reduce(TokenCounts(), +)
+        #expect(total == TokenCounts(input: 160, output: 30, cacheRead: 90, cacheWrite: 0))
+    }
+}
+
+@Suite struct UsageFieldTests {
+    @Test func fieldExtraction() {
+        let t = #"{"requestId":"req_1","message":{"id":"msg_abc","usage":{}},"timestamp":"2026-10-17T20:27:40.918Z"}"#
+        #expect(UsageParser.messageID(t) == "msg_abc")
+        #expect(UsageParser.field(t, "\"requestId\":\"") == "req_1")
+        #expect(UsageParser.field(t, "\"timestamp\":\"") == "2026-10-17T20:27:40.918Z")
+    }
+}

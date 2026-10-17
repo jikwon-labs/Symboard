@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
     lazy var sessions = SessionManager(model: self)
     lazy var loops = LoopRunner(model: self)
     lazy var handoff = HandoffCoordinator(model: self)
+    lazy var usage = UsageStore(model: self)
     private var saveWork: DispatchWorkItem?
 
     init(store: StateStore) {

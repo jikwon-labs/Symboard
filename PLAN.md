@@ -27,7 +27,7 @@ STATUS: IN_PROGRESS
 - [x] 11a. 스튜디오: 코드(파일 트리·하이라이트·노드로 고정)
 - [x] 11b. 스튜디오: 마크다운(파일 트리·자동 저장 편집기·링크 그래프)
 - [x] 11c. 스튜디오: 문서(마크다운 → PDF), 다이어그램(PNG 내보내기)
-- [ ] 12. 사용량(로컬 세션 로그에서 날짜별·에이전트별 토큰)
+- [x] 12. 사용량(로컬 세션 로그에서 날짜별·에이전트별 토큰)
 - [ ] 13. 계정 프로필(CLI 별 설정 폴더 환경 변수)
 - [ ] 14. 메모리(레포별·전역 메모, 버튼으로 노드에 보내기)
 - [ ] 15. 완료 기준 확인(스크린샷 docs/screens/, README.md, REPORT.md)
@@ -60,6 +60,7 @@ STATUS: IN_PROGRESS
   - 11b Markdown: .md 트리, 편집기 0.6초 뒤 자동 저장(디버그로 내용 바꾼 뒤 파일 내용과 "Saved" 표시 확인), [[링크]]·[글](x.md) 링크 그래프(`15`, `16-studio-link-graph.png`).
   - 11c Docs: 마크다운 → HTML 미리보기 → Export PDF(WKWebView createPDF 로 긴 한 장을 받아 Letter 쪽으로 자름). README 1쪽, 150문단 문서 8쪽 확인(`17-studio-docs.png`, `19-docs-export-page1.png`). Diagram: `A -> B: 라벨` 줄 형식, 순환 간선은 깊이 우선 탐색으로 빼고 층 배치, 되돌아가는 간선은 아래로 점선, Export PNG(ImageRenderer) 확인(`18`, `20-diagram-export.png`).
   - 사고와 수정: 처음엔 화면 밖 WKWebView 의 printOperation 으로 PDF 를 만들었는데 쪽 나누기가 끝나지 않아 파일이 1.4GB 까지 커졌다. 즉시 앱을 죽이고 파일을 지운 뒤 createPDF + 직접 쪽 자르기(최대 300쪽)로 바꿨고, 다시 시험할 때는 20MB 감시 스크립트를 함께 돌렸다.
+- 12: 패널 Usage 탭. claude 는 ~/.claude/projects/*/*.jsonl 의 assistant 줄 message.usage(같은 응답이 여러 줄이라 message.id+requestId 로 한 번만), codex 는 ~/.codex/sessions 의 token_count 누적값 증가분(형식은 디스크에서 확인, 단위 테스트 UsageTests). 계정 프로필 폴더도 함께 본다. 7/14/30일, 날짜별 쌓은 막대(Swift Charts)와 날짜별 줄. 이 맥 로그 549개 30.9초 → 바이트로 거르고 usage 객체만 푸는 방식으로 6.7초, 날짜별 합계는 두 방식이 같았다(`docs/screens/22-usage.png`).
 
 ## 막힌 것
 
