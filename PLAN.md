@@ -11,12 +11,12 @@ STATUS: IN_PROGRESS
 - [x] 1b. 보드: 노드 끌어서 이동·크기 조절
 - [x] 1c. 보드: 작업공간 여러 개를 탭처럼 전환
 - [x] 2a. 터미널 노드: SwiftTerm + forkpty 로 셸 실행(Ctrl-C·vim·htop)
-- [ ] 2b. 터미널 노드: 새 노드 생성 시 CLI 선택(claude, codex, 임의 실행 파일)
+- [x] 2b. 터미널 노드: 새 노드 생성 시 CLI 선택(claude, codex, 임의 실행 파일)
 - [x] 4a. 이어하기: 작업공간 자동 저장(버전 붙은 JSON, ~/Library/Application Support/Symboard/)
-- [ ] 4b. 이어하기: 재실행 시 노드 위치·크기·CLI 복원, claude `--session-id`/`--resume`, codex `resume --last`
-- [ ] 3a. 상태: Claude Code 훅(`--settings` 로 주입) → 앱에 신호
-- [ ] 3b. 상태: 훅 없는 CLI 는 출력 멈춘 시간으로 추정
-- [ ] 3c. 상태: 전체 노드 목록 패널(미션 맵)
+- [x] 4b. 이어하기: 재실행 시 노드 위치·크기·CLI 복원, claude `--session-id`/`--resume`, codex `resume --last`
+- [x] 3a. 상태: Claude Code 훅(`--settings` 로 주입) → 앱에 신호
+- [x] 3b. 상태: 훅 없는 CLI 는 출력 멈춘 시간으로 추정
+- [x] 3c. 상태: 전체 노드 목록 패널(미션 맵)
 - [ ] 5. 컴포저(최대 12개 한 번에)와 팀(묶기·역할 이름)
 - [ ] 6. 루프(시간 간격/유휴/특정 출력 시작, 목표 문구로 자동 종료)
 - [ ] 7. 넘겨주기(보내는 노드 CLI 에 요약 요청 → 다른 노드에 입력)
@@ -41,6 +41,12 @@ STATUS: IN_PROGRESS
 - 2a: SwiftTerm LocalProcessTerminalView(forkpty). 노드에서 `vim` 열기→Esc `:q!` 로 닫힘, `sleep 100` 에 Ctrl-C(0x03) → 프롬프트 복귀 확인(디버그 `screen` 출력, `docs/screens/01-three-terminals-restored.png`). htop 은 이 맥에 없어 top 으로 대신 봤다.
 - 4a: 바뀔 때 0.4초 모아 `state.json`(version 1) 저장. SYMBOARD_HOME=/tmp/symtest 로 띄워 노드 3개 만든 뒤 종료→재실행, 같은 frame 으로 복원 확인. 기본 경로는 ~/Library/Application Support/Symboard/.
 - 주의: 창이 가려지면 App Nap 으로 타이머가 멈춰 디버그 통로가 응답하지 않았다 → AppDelegate 에서 beginActivity 로 끔.
+- 2b: 도구 막대 New Terminal 대화상자에서 Claude Code·Codex·Shell·Custom(실행 파일 경로)·인자·폴더·프로필 선택(`docs/screens/04-new-terminal-dialog.png`).
+- 4b: 옵션은 `claude --help`(`--session-id`, `--resume`, `--settings`), `codex resume --help`(`[SESSION_ID]`, `--last` 는 기본이 현재 폴더로 걸러짐)로 확인. /tmp/symclaude 에서 claude 에 hello → 종료 → 재실행 시 `claude --resume <id>` 로 같은 대화 복원(`docs/screens/05-claude-resumed.png`). /tmp/symcodex 에서 codex 에 hello → 세션 파일에서 id 찾아 기록 → 재실행 시 `codex resume <id>` 로 복원(`docs/screens/06-claude-codex-resumed.png`).
+  - 고친 것: 앱을 Claude Code 세션 안에서 띄우면 CLAUDE_CODE_CHILD_SESSION 등이 자식에게 물려져 claude 가 대화 기록을 저장하지 않았다("Transcript saving is off" 경고를 화면에서 봄). 자식 환경에서 세션 표시 변수를 지운다. 또 /tmp 는 /private/tmp 로 기록되므로 realpath 로 맞춘다(claude 기록 존재 확인, codex 세션 cwd 비교 둘 다).
+- 3a: `--settings` 에 훅 JSON 을 넣어 주입(사용자 ~/.claude 설정은 건드리지 않음). 훅은 SYMBOARD_STATUS_FILE 에 상태 단어를 쓴다. hello 직후 state=working, 응답 뒤 status 파일 내용 `idle` 확인. 입력 기다림(PermissionRequest·Notification)은 실제 권한 요청을 일으키지 않으려고 실행 확인은 안 했고 단위 테스트(hookSettingsIsValidJSON·hooksOverrideOutput)로만 봤다. 폴더 신뢰 화면처럼 훅이 켜지기 전 화면은 Idle 로 보인다.
+- 3b: 훅 없는 노드는 마지막 출력 후 3초가 지나면 Idle. vim 출력 중 Working → 멈춘 뒤 Idle 확인(디버그 `state`, 스크린샷 01).
+- 3c: 오른쪽 Mission 패널에 모든 작업공간의 터미널 노드와 상태·유휴 시간·작업공간 이름, 상단에 상태별 개수(스크린샷 03). 줄을 누르면 그 노드로 이동.
 
 ## 막힌 것
 

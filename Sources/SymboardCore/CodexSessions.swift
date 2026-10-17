@@ -35,7 +35,8 @@ public enum CodexSessions {
     public static func findSession(root: String, cwd: String, startedAfter: Date, excluded: Set<String>) -> Meta? {
         let fm = FileManager.default
         var found: [(Date, Meta)] = []
-        let want = (cwd as NSString).standardizingPath
+        // codex 는 /private/tmp 처럼 실제 경로를 적으므로 양쪽 다 실제 경로로 맞춘다.
+        let want = LaunchPlanner.resolvedPath(cwd)
         // 전체를 훑지 않고 시작일 전날부터 오늘까지의 날짜 폴더만 본다.
         var paths: [String] = []
         var day = startedAfter.addingTimeInterval(-86400)
@@ -52,7 +53,7 @@ public enum CodexSessions {
             guard let attrs = try? fm.attributesOfItem(atPath: path),
                   let mtime = attrs[.modificationDate] as? Date, mtime >= startedAfter,
                   let line = firstLine(of: path), let meta = parseMeta(firstLine: line, path: path),
-                  (meta.cwd as NSString).standardizingPath == want, !excluded.contains(meta.id) else { continue }
+                  LaunchPlanner.resolvedPath(meta.cwd) == want, !excluded.contains(meta.id) else { continue }
             let created = (attrs[.creationDate] as? Date) ?? mtime
             found.append((created, meta))
         }

@@ -99,6 +99,26 @@ public enum LaunchPlanner {
         }
     }
 
+    /// 앱을 띄운 쪽(예: 다른 Claude Code 세션)에서 물려받으면 안 되는 세션 표시 변수.
+    /// CLAUDE_CODE_CHILD_SESSION 이 남아 있으면 자식 claude 가 대화 기록을 저장하지 않아 이어하기가 깨진다(직접 확인).
+    public static let inheritedSessionKeys: Set<String> = [
+        "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_CHILD_SESSION",
+        "CLAUDE_CODE_SESSION_ATTENDED", "CLAUDE_CODE_MESSAGING_SOCKET", "CLAUDE_CODE_MESSAGING_TOKEN",
+        "CLAUDE_CODE_EXECPATH", "CLAUDE_CODE_SSE_PORT", "CLAUDE_PID",
+    ]
+
+    public static func sanitized(_ env: [String: String]) -> [String: String] {
+        env.filter { !inheritedSessionKeys.contains($0.key) }
+    }
+
+    /// claude 는 심볼릭 링크를 푼 실제 경로(/tmp → /private/tmp)로 프로젝트 폴더를 정한다(직접 확인).
+    public static func resolvedPath(_ path: String) -> String {
+        // resolvingSymlinksInPath 는 /private 를 도로 떼어 내므로 realpath 를 쓴다.
+        guard let p = realpath(path, nil) else { return path }
+        defer { free(p) }
+        return String(cString: p)
+    }
+
     /// claude 가 프로젝트 기록을 두는 폴더 이름. cwd 의 ASCII 영숫자가 아닌 문자를 '-' 로 바꾼다.
     public static func claudeProjectDirName(for cwd: String) -> String {
         String(cwd.map { ($0.isASCII && ($0.isLetter || $0.isNumber)) ? $0 : "-" })
@@ -106,7 +126,7 @@ public enum LaunchPlanner {
 
     public static func claudeSessionExists(sessionID: String, cwd: String, configDir: String?) -> Bool {
         let base = configDir ?? (NSHomeDirectory() + "/.claude")
-        let path = "\(base)/projects/\(claudeProjectDirName(for: cwd))/\(sessionID).jsonl"
+        let path = "\(base)/projects/\(claudeProjectDirName(for: resolvedPath(cwd)))/\(sessionID).jsonl"
         return FileManager.default.fileExists(atPath: path)
     }
 

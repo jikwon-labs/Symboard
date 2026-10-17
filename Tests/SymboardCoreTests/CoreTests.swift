@@ -132,3 +132,15 @@ import Testing
         #expect(t.status(now: t0) == .idle)
     }
 }
+
+@Suite struct EnvironmentTests {
+    @Test func stripsInheritedClaudeSessionMarkers() {
+        let env = ["CLAUDE_CODE_CHILD_SESSION": "1", "CLAUDECODE": "1", "PATH": "/bin", "CLAUDE_CONFIG_DIR": "/x"]
+        let out = LaunchPlanner.sanitized(env)
+        #expect(out == ["PATH": "/bin", "CLAUDE_CONFIG_DIR": "/x"])
+    }
+
+    @Test func resolvesTmpSymlink() {
+        #expect(LaunchPlanner.resolvedPath("/tmp") == "/private/tmp")
+    }
+}

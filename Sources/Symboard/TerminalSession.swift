@@ -157,7 +157,7 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
 /// 자식 프로세스 환경 변수. 앱을 Finder 에서 띄우면 환경이 빈약하므로 최소한을 채운다.
 enum ProcessEnvironment {
     static func base() -> [String: String] {
-        var env = ProcessInfo.processInfo.environment
+        var env = LaunchPlanner.sanitized(ProcessInfo.processInfo.environment)
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
         env["LANG"] = env["LANG"] ?? "en_US.UTF-8"
