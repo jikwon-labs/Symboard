@@ -144,3 +144,19 @@ import Testing
         #expect(LaunchPlanner.resolvedPath("/tmp") == "/private/tmp")
     }
 }
+
+@Suite struct ComposerTests {
+    @Test func gridIsClampedAndCentered() {
+        let f = Composer.frames(count: 20, center: Point(x: 0, y: 0), size: (100, 50), gap: 10)
+        #expect(f.count == 12)
+        // 12 개 → 4열 3행
+        #expect(Set(f.map(\.x)).count == 4)
+        #expect(Set(f.map(\.y)).count == 3)
+        let minX = f.map(\.x).min()!, maxX = f.map { $0.x + $0.w }.max()!
+        #expect(abs((minX + maxX) / 2) < 0.001)
+    }
+
+    @Test func rolesPadWithNil() {
+        #expect(Composer.roles(from: "Lead, Coder,, ", count: 3) == ["Lead", "Coder", nil])
+    }
+}

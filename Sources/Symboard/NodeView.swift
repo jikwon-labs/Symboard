@@ -136,11 +136,13 @@ final class NodeView: NSView {
         if !menu.items.isEmpty { menu.addItem(.separator()) }
         menu.addItem(ClosureMenuItem(title: "Rename...") { [weak self] in self?.rename() })
         menu.addItem(ClosureMenuItem(title: "Set Role...") { [weak self] in self?.setRole() })
-        if let ws = canvas?.workspace, !ws.teams.isEmpty {
+        if let ws = canvas?.workspace {
             let teamItem = NSMenuItem(title: "Team", action: nil, keyEquivalent: "")
             let sub = NSMenu()
             sub.addItem(ClosureMenuItem(title: "None") { [weak self] in self?.assignTeam(nil) })
             for t in ws.teams { sub.addItem(ClosureMenuItem(title: t.name) { [weak self] in self?.assignTeam(t.id) }) }
+            sub.addItem(.separator())
+            sub.addItem(ClosureMenuItem(title: "New Team...") { [weak self] in self?.newTeam() })
             teamItem.submenu = sub
             menu.addItem(teamItem)
         }
@@ -161,6 +163,14 @@ final class NodeView: NSView {
             model.mutateNode(nodeID) { $0.role = role.isEmpty ? nil : role }
             syncFromModel()
         }
+    }
+
+    private func newTeam() {
+        guard let ws = canvas?.workspace,
+              let name = Prompt.text(title: "New team", value: "Team \(ws.teams.count + 1)"), !name.isEmpty else { return }
+        let team = Team(name: name, colorHex: Composer.teamColors[ws.teams.count % Composer.teamColors.count])
+        model.mutateWorkspace(ws.id) { $0.teams.append(team) }
+        assignTeam(team.id)
     }
 
     private func assignTeam(_ id: UUID?) {

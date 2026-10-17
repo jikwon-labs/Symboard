@@ -116,6 +116,13 @@ final class DebugBridge {
                 }
                 log.append("drag \(part)")
             } else { log.append("drag: no node") }
+        case "team":
+            let spec = TerminalSpec(agent: AgentKind(rawValue: cmd["agent"] as? String ?? "shell") ?? .shell,
+                                    cwd: cmd["cwd"] as? String ?? NSHomeDirectory())
+            let count = cmd["count"] as? Int ?? 4
+            let t = controller.launchTeam(spec: spec, count: count, teamName: cmd["name"] as? String ?? "Team",
+                                          roles: Composer.roles(from: cmd["roles"] as? String ?? "", count: count))
+            log.append("team \(t.name)")
         case "pen":
             controller.setPen(cmd["on"] as? Bool ?? true)
             log.append("pen")

@@ -45,6 +45,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         toolbarStack.orientation = .horizontal
         toolbarStack.spacing = 6
         toolbarStack.addArrangedSubview(toolButton("New Terminal", symbol: "terminal", action: #selector(newTerminalMenu(_:))))
+        toolbarStack.addArrangedSubview(toolButton("Composer", symbol: "square.grid.3x3", action: #selector(openComposer(_:))))
         toolbarStack.addArrangedSubview(toolButton("Add", symbol: "plus.square.on.square", action: #selector(addMenu(_:))))
         penButton = toolButton("Pen", symbol: "pencil.tip", action: #selector(togglePen))
         penButton.setButtonType(.pushOnPushOff)
@@ -251,6 +252,28 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         configure(&node)
         model.addNode(node)
         currentCanvas?.select(node.id)
+    }
+
+    @objc func openComposer(_ sender: Any?) {
+        guard let r = ComposerDialog.run() else { return }
+        launchTeam(spec: r.spec, count: r.count, teamName: r.teamName, roles: r.roles)
+    }
+
+    /// 노드 여러 개를 격자로 띄우고 새 팀으로 묶는다.
+    @discardableResult
+    func launchTeam(spec: TerminalSpec, count: Int, teamName: String, roles: [String?]) -> Team {
+        let wsID = model.selectedWorkspace.id
+        let color = Composer.teamColors[model.selectedWorkspace.teams.count % Composer.teamColors.count]
+        let team = Team(name: teamName, colorHex: color)
+        model.mutateWorkspace(wsID) { $0.teams.append(team) }
+        let frames = Composer.frames(count: count, center: scrollView.visibleCenter, size: (w: 520, h: 330))
+        for (i, f) in frames.enumerated() {
+            let role = i < roles.count ? roles[i] : nil
+            addTerminal(spec: spec, at: Point(x: f.x, y: f.y), size: CGSize(width: f.w, height: f.h),
+                        teamID: team.id, role: role)
+        }
+        zoomToFit(nil)
+        return team
     }
 
     /// 메모·도구 노드 추가 메뉴.
