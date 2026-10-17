@@ -1,0 +1,5 @@
+.overnight/
+.build/
+build/
+.swiftpm/
+*.xcodeproj
