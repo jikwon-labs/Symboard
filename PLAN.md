@@ -20,8 +20,8 @@ STATUS: IN_PROGRESS
 - [ ] 5. 컴포저(최대 12개 한 번에)와 팀(묶기·역할 이름)
 - [ ] 6. 루프(시간 간격/유휴/특정 출력 시작, 목표 문구로 자동 종료)
 - [ ] 7. 넘겨주기(보내는 노드 CLI 에 요약 요청 → 다른 노드에 입력)
-- [ ] 8a. 메모 도구: 스티키·텍스트·체크리스트·칸반 노드
-- [ ] 8b. 메모 도구: 펜 그리기, 이미지 드롭 후 표시
+- [x] 8a. 메모 도구: 스티키·텍스트·체크리스트·칸반 노드
+- [x] 8b. 메모 도구: 펜 그리기, 이미지 드롭 후 표시
 - [ ] 9. 웹 타일(WKWebView, 웹 인스펙터)
 - [ ] 10. git 카드(브랜치·상태, commit·push·pull)
 - [ ] 11a. 스튜디오: 코드(파일 트리·하이라이트·노드로 고정)
@@ -47,6 +47,8 @@ STATUS: IN_PROGRESS
 - 3a: `--settings` 에 훅 JSON 을 넣어 주입(사용자 ~/.claude 설정은 건드리지 않음). 훅은 SYMBOARD_STATUS_FILE 에 상태 단어를 쓴다. hello 직후 state=working, 응답 뒤 status 파일 내용 `idle` 확인. 입력 기다림(PermissionRequest·Notification)은 실제 권한 요청을 일으키지 않으려고 실행 확인은 안 했고 단위 테스트(hookSettingsIsValidJSON·hooksOverrideOutput)로만 봤다. 폴더 신뢰 화면처럼 훅이 켜지기 전 화면은 Idle 로 보인다.
 - 3b: 훅 없는 노드는 마지막 출력 후 3초가 지나면 Idle. vim 출력 중 Working → 멈춘 뒤 Idle 확인(디버그 `state`, 스크린샷 01).
 - 3c: 오른쪽 Mission 패널에 모든 작업공간의 터미널 노드와 상태·유휴 시간·작업공간 이름, 상단에 상태별 개수(스크린샷 03). 줄을 누르면 그 노드로 이동.
+- 8a: 도구 막대 Add 메뉴로 스티키(색 바꾸기)·텍스트·체크리스트(진행 막대)·칸반(카드 좌우 이동) 노드. SwiftUI 본문을 NSHostingView 로 붙이고 편집 즉시 모델에 저장. 디버그 `addNode` 로 만들고 화면 확인(`docs/screens/07-notes.png`), 재실행 후 내용 유지 확인. 키보드로 직접 타이핑하는 경로는 자동 확인하지 않았다.
+- 8b: 펜 버튼을 켜고 보드 위를 끌면 획 저장(디버그 `stroke` 로 실제 마우스 이벤트, state.json strokes 1). 이미지는 끌어다 놓기 또는 Add > Image... 로 추가하고, 펜이 켜진 채 이미지 위를 끌면 이미지 기준 0~1 좌표로 표시 저장(스크린샷 07 의 빨간 선). Add > Clear Pen Drawings, 노드 메뉴 Clear Markup.
 
 ## 막힌 것
 

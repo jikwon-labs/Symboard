@@ -5,7 +5,20 @@ import SymboardCore
 @MainActor
 enum NodeContentFactory {
     static func make(node: BoardNode, model: AppModel) -> NodeContent {
-        PlaceholderContent(text: node.kind.rawValue)
+        switch node.kind {
+        case .sticky:
+            return HostedContent(node: node, model: model, menu: StickyColors.menu) { StickyView(box: $0, isSticky: true) }
+        case .text:
+            return HostedContent(node: node, model: model) { StickyView(box: $0, isSticky: false) }
+        case .checklist:
+            return HostedContent(node: node, model: model) { ChecklistView(box: $0) }
+        case .kanban:
+            return HostedContent(node: node, model: model) { KanbanView(box: $0) }
+        case .image:
+            return ImageContent(node: node, model: model)
+        default:
+            return PlaceholderContent(text: node.kind.rawValue)
+        }
     }
 }
 

@@ -62,8 +62,20 @@ final class DebugBridge {
             controller.addNode(kind: kind, size: CGSize(width: cmd["w"] as? Double ?? 260, height: cmd["h"] as? Double ?? 200),
                                title: cmd["title"] as? String ?? kind.rawValue) { n in
                 n.text = cmd["text"] as? String
-                if kind == .checklist { n.checklist = [] }
-                if kind == .kanban { n.kanban = [KanbanColumn(title: "Todo"), KanbanColumn(title: "Doing"), KanbanColumn(title: "Done")] }
+                n.colorHex = cmd["color"] as? String
+                if let x = cmd["x"] as? Double, let y = cmd["y"] as? Double { n.frame.x = x; n.frame.y = y }
+                if kind == .checklist {
+                    n.checklist = (cmd["items"] as? [String] ?? []).enumerated().map { ChecklistItem(text: $0.element, done: $0.offset == 0) }
+                }
+                if kind == .kanban {
+                    let cards = cmd["cards"] as? [[String]] ?? [[], [], []]
+                    n.kanban = ["Todo", "Doing", "Done"].enumerated().map { KanbanColumn(title: $0.element, cards: $0.offset < cards.count ? cards[$0.offset] : []) }
+                }
+                if kind == .image {
+                    // 확인용 표시 하나(이미지 영역 기준 0~1 좌표).
+                    n.strokes = (cmd["mark"] as? Bool ?? false)
+                        ? [Stroke(points: [Point(x: 0.2, y: 0.3), Point(x: 0.5, y: 0.7), Point(x: 0.8, y: 0.3)])] : []
+                }
             }
             log.append("addNode \(kind.rawValue)")
         case "send":
@@ -104,6 +116,23 @@ final class DebugBridge {
                 }
                 log.append("drag \(part)")
             } else { log.append("drag: no node") }
+        case "pen":
+            controller.setPen(cmd["on"] as? Bool ?? true)
+            log.append("pen")
+        case "stroke":
+            // 캔버스 좌표 점들을 따라 마우스를 끈다. 펜이 켜져 있으면 보드나 이미지 노드 위에 그려진다.
+            if let canvas = controller.currentCanvas, let pts = cmd["points"] as? [[Double]], pts.count > 1 {
+                for (i, q) in pts.enumerated() {
+                    let p = canvas.convert(CanvasGeometry.viewPoint(Point(x: q[0], y: q[1])), to: nil)
+                    let type: NSEvent.EventType = i == 0 ? .leftMouseDown : (i == pts.count - 1 ? .leftMouseUp : .leftMouseDragged)
+                    if let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: controller.window?.windowNumber ?? 0, context: nil,
+                                                  eventNumber: 0, clickCount: 1, pressure: 1) {
+                        controller.window?.sendEvent(e)
+                    }
+                }
+                log.append("stroke \(pts.count)")
+            }
         case "windowID":
             // screencapture -l 로 이 창만 찍을 때 쓴다.
             log.append("windowID \(controller.window?.windowNumber ?? 0)")

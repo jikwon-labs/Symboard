@@ -45,6 +45,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         toolbarStack.orientation = .horizontal
         toolbarStack.spacing = 6
         toolbarStack.addArrangedSubview(toolButton("New Terminal", symbol: "terminal", action: #selector(newTerminalMenu(_:))))
+        toolbarStack.addArrangedSubview(toolButton("Add", symbol: "plus.square.on.square", action: #selector(addMenu(_:))))
         penButton = toolButton("Pen", symbol: "pencil.tip", action: #selector(togglePen))
         penButton.setButtonType(.pushOnPushOff)
         toolbarStack.addArrangedSubview(penButton)
@@ -250,6 +251,65 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         configure(&node)
         model.addNode(node)
         currentCanvas?.select(node.id)
+    }
+
+    /// 메모·도구 노드 추가 메뉴.
+    @objc func addMenu(_ sender: NSButton) {
+        let m = NSMenu()
+        m.addItem(ClosureMenuItem(title: "Sticky Note") { [weak self] in
+            self?.addNode(kind: .sticky, size: CGSize(width: 240, height: 200), title: "Note") { $0.text = ""; $0.colorHex = "#FFD60A" }
+        })
+        m.addItem(ClosureMenuItem(title: "Text") { [weak self] in
+            self?.addNode(kind: .text, size: CGSize(width: 360, height: 240), title: "Text") { $0.text = "" }
+        })
+        m.addItem(ClosureMenuItem(title: "Checklist") { [weak self] in
+            self?.addNode(kind: .checklist, size: CGSize(width: 280, height: 300), title: "Checklist") { $0.checklist = [] }
+        })
+        m.addItem(ClosureMenuItem(title: "Kanban") { [weak self] in
+            self?.addNode(kind: .kanban, size: CGSize(width: 620, height: 360), title: "Kanban") {
+                $0.kanban = [KanbanColumn(title: "Todo"), KanbanColumn(title: "Doing"), KanbanColumn(title: "Done")]
+            }
+        })
+        m.addItem(ClosureMenuItem(title: "Image...") { [weak self] in self?.addImageFromPanel() })
+        for item in extraAddItems() { m.addItem(item) }
+        m.addItem(.separator())
+        m.addItem(ClosureMenuItem(title: "Clear Pen Drawings") { [weak self] in
+            guard let self, let id = self.shownWorkspaceID else { return }
+            self.model.mutateWorkspace(id) { $0.strokes = [] }
+            self.currentCanvas?.needsDisplay = true
+        })
+        m.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 2), in: sender)
+    }
+
+    /// 다른 기능(웹 타일·git 카드 등)이 Add 메뉴에 넣을 항목.
+    var extraAddItemProviders: [() -> [NSMenuItem]] = []
+    private func extraAddItems() -> [NSMenuItem] {
+        let items = extraAddItemProviders.flatMap { $0() }
+        return items.isEmpty ? [] : [.separator()] + items
+    }
+
+    func addImageFromPanel() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        addImage(url: url, at: nil)
+    }
+
+    func addImage(url: URL, at point: Point?) {
+        let size = NSImage(contentsOf: url)?.size ?? CGSize(width: 400, height: 300)
+        let scale = min(1, 520 / max(size.width, 1))
+        let s = CGSize(width: size.width * scale, height: size.height * scale + NodeView.headerHeight)
+        var frame = model.suggestedFrame(size: s, near: scrollView.visibleCenter)
+        if let point { frame.x = point.x; frame.y = point.y }
+        let node = BoardNode(kind: .image, frame: frame, title: url.lastPathComponent, text: url.path, strokes: [])
+        model.addNode(node)
+        currentCanvas?.select(node.id)
+    }
+
+    func setPen(_ on: Bool) {
+        penButton.state = on ? .on : .off
+        togglePen()
     }
 
     @objc func togglePen() {
