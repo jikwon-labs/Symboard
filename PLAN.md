@@ -1,4 +1,4 @@
-STATUS: IN_PROGRESS
+STATUS: DONE
 
 # Symboard 계획
 
@@ -30,7 +30,7 @@ STATUS: IN_PROGRESS
 - [x] 12. 사용량(로컬 세션 로그에서 날짜별·에이전트별 토큰)
 - [x] 13. 계정 프로필(CLI 별 설정 폴더 환경 변수)
 - [x] 14. 메모리(레포별·전역 메모, 버튼으로 노드에 보내기)
-- [ ] 15. 완료 기준 확인(스크린샷 docs/screens/, README.md, REPORT.md)
+- [x] 15. 완료 기준 확인(스크린샷 docs/screens/, README.md, REPORT.md)
 
 ## 메모
 
@@ -63,6 +63,7 @@ STATUS: IN_PROGRESS
 - 12: 패널 Usage 탭. claude 는 ~/.claude/projects/*/*.jsonl 의 assistant 줄 message.usage(같은 응답이 여러 줄이라 message.id+requestId 로 한 번만), codex 는 ~/.codex/sessions 의 token_count 누적값 증가분(형식은 디스크에서 확인, 단위 테스트 UsageTests). 계정 프로필 폴더도 함께 본다. 7/14/30일, 날짜별 쌓은 막대(Swift Charts)와 날짜별 줄. 이 맥 로그 549개 30.9초 → 바이트로 거르고 usage 객체만 푸는 방식으로 6.7초, 날짜별 합계는 두 방식이 같았다(`docs/screens/22-usage.png`).
 - 13: 패널 Profiles 탭(추가·삭제·Launch), New Terminal 대화상자에서 프로필 선택. 환경 변수는 claude 바이너리 안 문자열(CLAUDE_CONFIG_DIR)과 `codex --help` 의 `$CODEX_HOME` 설명으로 확인. 빈 폴더 /tmp/symprof-claude·/tmp/symprof-codex 프로필로 띄우자 claude 는 첫 실행 화면(테마 고르기), codex 는 로그인 화면이 나와 기본 계정과 따로 도는 것 확인(`docs/screens/23-profiles.png`). 로그인은 하지 않았다.
 - 14: 패널 Memory 탭. 범위는 Global 또는 레포(보드 터미널 노드 폴더에서 가장 가까운 .git 폴더, 단위 테스트 MemoryScopeTests). 메모 추가·편집·삭제, state.json 에 저장. Send to Node 버튼을 눌렀을 때만 보드에서 고른 터미널 노드에 입력(기본은 Enter 없이 붙여넣기, 켜면 Enter 까지). /tmp/symgit 셸 노드에 레포 메모가 들어온 것과 전역·레포 메모 2개 저장 확인(`docs/screens/24-memory.png`).
+- 15: `swift build -c release` 성공, `swift test` 37개 통과, `scripts/bundle.sh` 로 build/Symboard.app 생성. `open build/Symboard.app`(기본 상태 폴더)로 띄워 터미널 3개 → 하나에서 vim 열고 Esc :q! 로 닫음 → 하나에서 claude(/tmp/symclaude) → 종료 → 다시 `open` 했을 때 세 노드 frame 이 같고 claude 는 같은 세션 id 로 다시 뜸(`docs/screens/final-1-vim-open.png`, `final-2-before-quit.png`, `final-3-after-relaunch.png`). README.md·REPORT.md 작성.
 
 ## 막힌 것
 
