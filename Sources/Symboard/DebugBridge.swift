@@ -145,6 +145,34 @@ final class DebugBridge {
             }
         case "handoffResult":
             log.append("handoff \(model.handoff.lastResult)")
+        case "git":
+            // git 카드에서 커밋·푸시·풀을 버튼과 같은 경로로 부른다.
+            if let n = node(cmd), let g = controller.currentCanvas?.nodeViews[n.id]?.content as? GitContent {
+                let action = cmd["action"] as? String ?? "refresh"
+                g.card.message = cmd["message"] as? String ?? ""
+                Task { @MainActor in
+                    switch action {
+                    case "commit": await g.card.commit()
+                    case "push": await g.card.perform("push", [["push"]])
+                    case "pull": await g.card.perform("pull", [["pull", "--ff-only"]])
+                    default: await g.card.refresh()
+                    }
+                }
+                log.append("git \(action)")
+            }
+        case "gitState":
+            if let n = node(cmd), let g = controller.currentCanvas?.nodeViews[n.id]?.content as? GitContent {
+                let s = g.card.status
+                log.append("git branch=\(s?.branch ?? "-") ahead=\(s?.ahead ?? 0) changes=\(s?.changes.count ?? -1)\n\(g.card.log)")
+            }
+        case "nodeMenu":
+            // 노드 본문 메뉴 항목을 제목으로 실행한다.
+            if let n = node(cmd), let nv = controller.currentCanvas?.nodeViews[n.id],
+               let item = nv.content.menuItems().first(where: { $0.title == cmd["title"] as? String }),
+               let action = item.action {
+                NSApp.sendAction(action, to: item.target, from: item)
+                log.append("nodeMenu \(item.title)")
+            } else { log.append("nodeMenu: not found") }
         case "pen":
             controller.setPen(cmd["on"] as? Bool ?? true)
             log.append("pen")

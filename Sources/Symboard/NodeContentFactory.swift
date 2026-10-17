@@ -16,6 +16,10 @@ enum NodeContentFactory {
             return HostedContent(node: node, model: model) { KanbanView(box: $0) }
         case .image:
             return ImageContent(node: node, model: model)
+        case .web:
+            return WebContent(node: node, model: model)
+        case .git:
+            return GitContent(node: node, model: model)
         default:
             return PlaceholderContent(text: node.kind.rawValue)
         }

@@ -238,3 +238,22 @@ import Testing
         #expect(Handoff.codexLastReply(jsonl: lines) == "second")
     }
 }
+
+@Suite struct GitStatusTests {
+    @Test func parsesPorcelainV2() {
+        let text = """
+        # branch.oid 0123
+        # branch.head main
+        # branch.upstream origin/main
+        # branch.ab +2 -1
+        1 .M N... 100644 100644 100644 aaa bbb Sources/a b.swift
+        2 R. N... 100644 100644 100644 aaa bbb R100 new.txt\told.txt
+        ? notes.md
+        """
+        let s = GitStatus.parse(text)
+        #expect(s.branch == "main")
+        #expect(s.upstream == "origin/main")
+        #expect(s.ahead == 2 && s.behind == 1)
+        #expect(s.changes == [.init(code: ".M", path: "Sources/a b.swift"), .init(code: "R.", path: "new.txt"), .init(code: "??", path: "notes.md")])
+    }
+}

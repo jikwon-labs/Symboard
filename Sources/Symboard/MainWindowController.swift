@@ -302,6 +302,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             }
         })
         m.addItem(ClosureMenuItem(title: "Image...") { [weak self] in self?.addImageFromPanel() })
+        m.addItem(.separator())
+        m.addItem(ClosureMenuItem(title: "Web Tile...") { [weak self] in
+            guard let url = Prompt.text(title: "Web tile", message: "Address to open, e.g. a local dev server.", value: "http://localhost:3000"), !url.isEmpty else { return }
+            self?.addNode(kind: .web, size: CGSize(width: 640, height: 460), title: url) { $0.text = url }
+        })
+        m.addItem(ClosureMenuItem(title: "Git Card...") { [weak self] in
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true
+            panel.canChooseFiles = false
+            panel.message = "Choose a git repository"
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            self?.addNode(kind: .git, size: CGSize(width: 380, height: 360), title: url.lastPathComponent) { $0.text = url.path }
+        })
         for item in extraAddItems() { m.addItem(item) }
         m.addItem(.separator())
         m.addItem(ClosureMenuItem(title: "Clear Pen Drawings") { [weak self] in

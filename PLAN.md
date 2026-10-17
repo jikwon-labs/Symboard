@@ -22,8 +22,8 @@ STATUS: IN_PROGRESS
 - [x] 7. 넘겨주기(보내는 노드 CLI 에 요약 요청 → 다른 노드에 입력)
 - [x] 8a. 메모 도구: 스티키·텍스트·체크리스트·칸반 노드
 - [x] 8b. 메모 도구: 펜 그리기, 이미지 드롭 후 표시
-- [ ] 9. 웹 타일(WKWebView, 웹 인스펙터)
-- [ ] 10. git 카드(브랜치·상태, commit·push·pull)
+- [x] 9. 웹 타일(WKWebView, 웹 인스펙터)
+- [x] 10. git 카드(브랜치·상태, commit·push·pull)
 - [ ] 11a. 스튜디오: 코드(파일 트리·하이라이트·노드로 고정)
 - [ ] 11b. 스튜디오: 마크다운(파일 트리·자동 저장 편집기·링크 그래프)
 - [ ] 11c. 스튜디오: 문서(마크다운 → PDF), 다이어그램(PNG 내보내기)
@@ -53,6 +53,8 @@ STATUS: IN_PROGRESS
 - 6: 판정은 SymboardCore LoopEngine(단위 테스트 5개), 실행은 LoopRunner(1초 틱 + 노드 출력 구독). 패널 Loops 탭(켜기/끄기·삭제·New Loop), 터미널 노드 메뉴 Add Loop.... 셸 노드 3개로 확인: 5초 간격 2회 전송 → `echo GOALHIT` 출력에 스스로 꺼짐, 출력에 PING 이 나오자 1회 전송, 유휴 4초 조건 2회 후 최대 횟수로 정지(디버그 `loops`, `docs/screens/10-loops.png`).
 - 7: 터미널 노드 메뉴 Hand Off To... → 받을 노드 선택 → 보내는 노드에 요약 요청(HANDOFF-BEGIN/END 표시 사이에 쓰라고) → 일했다가 다시 쉬면 답을 읽어 확인 창(편집 가능) 뒤 받는 노드에 입력. 답은 claude 는 대화 기록 jsonl, codex 는 세션 jsonl 의 마지막 assistant 글(형식은 디스크에서 확인, 단위 테스트 HandoffTests), 그 밖은 화면 출력에서 표시 사이를 찾는다. 실제 에이전트에 일을 시키지 않으려고 가짜 에이전트 스크립트 두 개로 확인(디버그 `handoff` 자동 전송, `docs/screens/11-handoff.png`). claude·codex 로 실제 요약을 받는 것은 실행 확인하지 않았다.
   - 고친 것: bracketed paste 를 프로그램이 그 모드를 켰을 때만 쓰게 했다(안 켠 프로그램에 ^[[200~ 가 그대로 찍혔다).
+- 9: Add > Web Tile... 로 주소 입력. WKWebView + 주소 칸, Info.plist 에 NSAllowsLocalNetworking. 노드 메뉴 Open Web Inspector(WKWebView 내부 _inspector 객체가 있으면 show, 없으면 오른쪽 클릭 Inspect Element 안내; developerExtrasEnabled·isInspectable 켬). /tmp/symweb 를 python http.server 8765 로 띄워 페이지 표시와 인스펙터 열림 확인(`docs/screens/12-web-git.png`, `13-web-inspector.png`).
+- 10: Add > Git Card... 로 레포 선택. `git status --porcelain=v2 --branch` 파싱(단위 테스트 GitStatusTests)으로 브랜치·추적·앞뒤 개수·변경 파일, Commit All(add -A + commit)·Pull(--ff-only)·Push 버튼, 결과 로그 표시. GIT_TERMINAL_PROMPT=0 으로 비밀번호 대기 방지. /tmp/symgit(+ /tmp 로컬 bare 레포를 origin 으로) 에서 커밋 → 푸시 → 다른 클론에서 푸시한 것 풀까지 확인(디버그 `git`/`gitState`).
 
 ## 막힌 것
 
