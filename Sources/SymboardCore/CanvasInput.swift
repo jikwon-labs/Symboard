@@ -36,6 +36,59 @@ public enum CanvasLayout {
         let fit = min(safe.w / (maxX - minX + margin * 2), safe.h / (maxY - minY + margin * 2))
         return (Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2), magnification * min(1, fit))
     }
+
+    /// 보드 위에서 새 노드가 피해야 할 사각형들. 팀에 든 노드는 그룹 프레임(여백·머리 포함) 하나로, 나머지는 노드 하나씩.
+    /// 접힌 팀은 접힌 프레임 크기만 차지한다. pad·head 는 GroupFrameView 와 같은 값.
+    public static func obstacles(nodes: [BoardNode], teams: [Team], pad: Double = 14, head: Double = 30) -> [Rect] {
+        var out: [Rect] = []
+        let teamIDs = Set(teams.map(\.id))
+        for n in nodes where n.teamID == nil || !teamIDs.contains(n.teamID!) { out.append(n.frame) }
+        for t in teams {
+            let members = nodes.filter { $0.teamID == t.id }
+            guard let first = members.first else { continue }
+            var minX = first.frame.x, minY = first.frame.y, maxX = first.frame.x + first.frame.w, maxY = first.frame.y + first.frame.h
+            for m in members.dropFirst() {
+                minX = min(minX, m.frame.x); minY = min(minY, m.frame.y)
+                maxX = max(maxX, m.frame.x + m.frame.w); maxY = max(maxY, m.frame.y + m.frame.h)
+            }
+            if t.collapsed ?? false {
+                out.append(Rect(x: minX - pad, y: minY - pad - head, w: 320, h: head + 52))
+            } else {
+                out.append(Rect(x: minX - pad, y: minY - pad - head, w: maxX - minX + pad * 2, h: maxY - minY + pad * 2 + head))
+            }
+        }
+        return out
+    }
+
+    /// frame 이 obstacles 와 (gap 만큼 띄워서) 겹치지 않는 가장 가까운 자리. 겹치지 않으면 그대로.
+    /// 후보는 원래 x·y 와 각 장애물의 네 변에 gap 을 두고 붙인 x·y 의 조합이라, 장애물 사이 틈도 찾는다.
+    public static func nearestFree(_ frame: Rect, avoiding obstacles: [Rect], gap: Double = 24) -> Rect {
+        func hits(_ f: Rect) -> Bool {
+            obstacles.contains { o in
+                f.x < o.x + o.w + gap && o.x < f.x + f.w + gap && f.y < o.y + o.h + gap && o.y < f.y + f.h + gap
+            }
+        }
+        guard hits(frame) else { return frame }
+        var xs = [frame.x], ys = [frame.y]
+        for o in obstacles {
+            xs.append(o.x + o.w + gap); xs.append(o.x - frame.w - gap)
+            ys.append(o.y + o.h + gap); ys.append(o.y - frame.h - gap)
+        }
+        var best: Rect?
+        var bestD = Double.infinity
+        for x in xs {
+            let dx = x - frame.x
+            if dx * dx >= bestD { continue }
+            for y in ys {
+                let dy = y - frame.y
+                let d = dx * dx + dy * dy
+                if d >= bestD { continue }
+                let f = Rect(x: x, y: y, w: frame.w, h: frame.h)
+                if !hits(f) { best = f; bestD = d }
+            }
+        }
+        return best ?? frame
+    }
 }
 
 /// 키 입력 해석.

@@ -773,7 +773,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let s = p.size
         let isShape: Bool = { if case .shape = p { return true }; return false }()
         let raw = Rect(x: point.x - s.width / 2, y: isShape ? point.y - s.height / 2 : point.y - 20, w: s.width, h: s.height)
-        let placed = visiblePlacement(raw)
+        var placed = visiblePlacement(raw)
+        // 글·도형은 다른 것 위에 덧붙이는 용도라 그대로 둔다. 나머지는 그룹 프레임·노드와 겹치면 가장 가까운 빈 자리로 민다.
+        if !isShape, !{ if case .text = p { return true }; return false }() {
+            let ws = model.selectedWorkspace
+            let free = CanvasLayout.nearestFree(placed, avoiding: CanvasLayout.obstacles(nodes: ws.nodes, teams: ws.teams))
+            if free != placed { placed = free; reveal([free]) }
+        }
         let origin = Point(x: placed.x, y: placed.y)
         switch p {
         case .agent(let id):
