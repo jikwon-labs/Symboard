@@ -1325,8 +1325,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     @objc func zoomToFit(_ sender: Any?) {
         let nodes = model.selectedWorkspace.nodes
         guard !nodes.isEmpty else { scrollView.center(on: Point(x: 0, y: 0), zoom: 1); return }
-        let minX = nodes.map(\.frame.x).min()!, minY = nodes.map(\.frame.y).min()!
-        let maxX = nodes.map { $0.frame.x + $0.frame.w }.max()!, maxY = nodes.map { $0.frame.y + $0.frame.h }.max()!
+        zoomToFit(frames: nodes.map(\.frame))
+    }
+
+    /// 주어진 사각형들만 담게 화면을 부드럽게 맞춘다.
+    func zoomToFit(frames: [Rect]) {
+        guard !frames.isEmpty else { return }
+        let minX = frames.map(\.x).min()!, minY = frames.map(\.y).min()!
+        let maxX = frames.map { $0.x + $0.w }.max()!, maxY = frames.map { $0.y + $0.h }.max()!
         let size = scrollView.frame.size
         let zoom = min((size.width - 160) / (maxX - minX + 40), (size.height - 220) / (maxY - minY + 40), 1)
         scrollView.glide(to: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / max(zoom, 0.1)), zoom: zoom)

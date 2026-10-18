@@ -68,7 +68,11 @@ STATUS: IN_PROGRESS
   - 원본 장면: `studio-code.mp4` 17~19초. 고치면 크기 옆 "• Edited", Save 를 누르면 단추가 흐린 "✓ Saved" 로 바뀌고 Edited 가 사라진다.
   - 바꾼 것: 코드 스튜디오 Save 단추가 저장 직후(바뀐 것 없음 + 저장 메모) "✓ Saved" 로 바뀐다. 다시 고치면 Save 로. 크기 옆 초록 "Saved" 글은 단추와 겹쳐 빼고, 실패 메모만 남겼다. 마크다운 스튜디오는 원래 자동 저장 + "Saved 시각" 이라 그대로.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-7): 오른쪽 막대 Code studio → README.md → 마지막 줄 클릭 → End → " (edited)" 타이핑 → "• Edited", 단추 Save → Cmd+S → 단추 "✓ Saved", 파일 마지막 줄에 "(edited)" 저장됨(확인 뒤 표본 파일은 되돌림). 비교 그림 `compare/10-code-saved.png`.
-- [ ] 11. studio-diagrams: 화면 맞춤이 다이어그램만, 노드 고르면 노드 편집 패널
+- [x] 11. studio-diagrams: 화면 맞춤이 다이어그램만, 노드 고르면 노드 편집 패널
+  - 원본 장면: `studio-diagrams.mp4` 6~10초(그려진 뒤 화면이 다이어그램만 담는다), 12초(노드를 고르면 왼쪽에 TEXT COLOR 7색+스포이트, FONT Ag 칸, FONT SIZE S·M·L·XL(M 골라짐), ALIGNMENT 셋(가운데), OPACITY 100%, 맨 아래 앞으로·뒤로·복제·삭제).
+  - 바꾼 것: 다이어그램이 만든 노드(그룹 틀·그룹 이름·제목·노드)에 `role = "diagram"` 을 붙이고, 다 그린 뒤 `zoomToFit(frames:)` 로 그 노드들만 담는다(보드 전체 맞춤은 그대로 남김). 글 있는 다이어그램 도형을 고르면 `SelectionPanel` 이 도형 패널 대신 노드 편집 패널을 보인다(크기 S14·M18·L24·XL32 — 처음 크기 18 이 M). 손으로 그린 도형은 예전 도형 패널.
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-7, 웹 타일 둘이 있는 보드): 왼쪽 막대 Diagram → STARTER SHAPES Steps(질문 없음) → 다이어그램이 그려지고 화면이 63% 로 Steps 만 담음(웹 타일은 왼쪽 밖으로, `compare/11-diagram-fit.png`) → Step 2 클릭 → 노드 편집 패널(M·가운데 골라짐) → XL → 빨강 → Step 2 글이 크고 빨갛게, state.json fontSize 32·#E8564A(`compare/11-diagram-panel.png`).
+  - 처음 한 번 XL 이 안 눌린 것처럼 보였는데 화면 배율(1.094)을 빼먹은 내 좌표 실수였다(디버그 `hit` 로 패널이 클릭을 받는 것 확인).
 - [ ] 12. studio-documents: GENERATE PDF 누르면 작은 메뉴 먼저
 - [ ] 13. studio-markdown: 카드 바닥 "Open in Studio · PDF" 글 단추
 - [ ] 14. teams: 오른쪽 기본 패널 Fleet / Structure 두 카드

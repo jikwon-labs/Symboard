@@ -10,6 +10,10 @@ struct SelectionPanel: View {
 
     static let paper = ["#C9A227", "#C8662E", "#B23A3A", "#3E8E5A", "#2E8C88", "#3F63C9", "#7A45C2", "#2B2926"]
     static let ink = ["#ECE7E2", "#F05A38", "#E9C46A", "#6FCF97", "#56A8F5", "#B48CF2"]
+    /// 다이어그램 노드 글자 색(원본 순서: 흰·검·빨·초·파·주·보).
+    static let nodeInk = ["#ECE7E2", "#1E1C1A", "#E8564A", "#6FCF97", "#5E9BEA", "#F05A38", "#B48CF2"]
+    /// 다이어그램 노드 글자 크기. 처음 그린 크기 18 이 M.
+    static let nodeSizes: [(String, Double)] = [("S", 14), ("M", 18), ("L", 24), ("XL", 32)]
     static let fills = ["#3A2420", "#3A3220", "#203A2A", "#20303A", "#2E243A", "#2B2926"]
 
     var node: BoardNode? {
@@ -48,6 +52,40 @@ struct SelectionPanel: View {
                     section("OPACITY") {
                         Slider(value: Binding(get: { st.opacity ?? 1 }, set: { v in style(n.id) { $0.opacity = v } }), in: 0.2...1)
                             .tint(Color.symAccent).frame(width: 200)
+                    }
+                case .shape where n.role == DiagramMaker.role && n.shape?.kind != "arrow" && !(n.text ?? "").isEmpty:
+                    // 원본 studio-diagrams 의 노드 편집 패널: 글자 색·글꼴·크기·정렬·불투명도.
+                    let st = n.style ?? NodeStyle()
+                    section("TEXT COLOR") { swatches(Self.nodeInk, current: st.textColorHex ?? Self.nodeInk[0]) { hex in style(n.id) { $0.textColorHex = hex } } }
+                    section("FONT") {
+                        HStack(spacing: 4) {
+                            ForEach(TextStyleFonts.fonts, id: \.0) { f in
+                                Button { style(n.id) { $0.font = f.0 } } label: { Text("Ag").font(Font(TextStyleFonts.font(NodeStyle(fontSize: 13, font: f.0)))).frame(width: 34) }
+                                    .buttonStyle(ChipStyle(on: (st.font ?? "hand") == f.0)).axName("Font \(f.1)")
+                            }
+                        }
+                    }
+                    section("FONT SIZE") {
+                        HStack(spacing: 4) {
+                            ForEach(Self.nodeSizes, id: \.0) { sz in
+                                chip(sz.0, on: (st.fontSize ?? 18) == sz.1) { style(n.id) { $0.fontSize = sz.1 } }.frame(width: 48)
+                            }
+                        }
+                    }
+                    section("ALIGNMENT") {
+                        HStack(spacing: 4) {
+                            ForEach([("left", "text.alignleft"), ("center", "text.aligncenter"), ("right", "text.alignright")], id: \.0) { a in
+                                Button { style(n.id) { $0.align = a.0 } } label: { Image(systemName: a.1).frame(width: 52) }.tip("Align \(a.0)")
+                                    .buttonStyle(ChipStyle(on: (st.align ?? "center") == a.0))
+                            }
+                        }
+                    }
+                    section("OPACITY") {
+                        HStack {
+                            Slider(value: Binding(get: { st.opacity ?? 1 }, set: { v in style(n.id) { $0.opacity = v } }), in: 0.2...1)
+                                .tint(Color.symAccent).frame(width: 160)
+                            Text("\(Int(((st.opacity ?? 1) * 100).rounded()))%").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
+                        }
                     }
                 case .shape:
                     let sp = n.shape ?? ShapeSpec()

@@ -72,6 +72,8 @@ final class DiagramMaker: ObservableObject {
         let lay = spec.layout(origin: origin, nodeW: 250, nodeH: 120)
         let wsID = c.model.selectedWorkspace.id
         var created: [String: UUID] = [:]
+        // 이번에 그린 노드들. 끝나면 화면을 이것들에만 맞춘다(원본: 다이어그램만 담는다).
+        var madeIDs: [UUID] = []
         var step = 0.0
         func later(_ body: @escaping () -> Void) {
             DispatchQueue.main.asyncAfter(deadline: .now() + step, execute: body)
@@ -85,10 +87,14 @@ final class DiagramMaker: ObservableObject {
                 self.c.addNode(kind: .shape, size: CGSize(width: r.w, height: r.h), title: g.label, at: Point(x: r.x, y: r.y)) {
                     $0.shape = ShapeSpec(kind: "rect", strokeHex: tint, fillHex: colorful ? Self.dim(tint) : nil, strokeWidth: 1, dash: "dashed", roughness: 1, cornerRadius: 14)
                     $0.text = ""
+                    $0.role = Self.role
+                    madeIDs.append($0.id)
                 }
                 self.c.addNode(kind: .text, size: CGSize(width: max(140, r.w - 20), height: 40), title: g.label, at: Point(x: r.x + 18, y: r.y + 8)) {
                     $0.text = g.label.uppercased()
                     $0.style = NodeStyle(fontSize: 18, font: "hand", textColorHex: tint)
+                    $0.role = Self.role
+                    madeIDs.append($0.id)
                 }
             }
         }
@@ -97,6 +103,8 @@ final class DiagramMaker: ObservableObject {
             self.c.addNode(kind: .text, size: CGSize(width: titleW, height: 70), title: spec.title, at: Point(x: lay.title.x, y: lay.title.y - 60)) {
                 $0.text = spec.title
                 $0.style = NodeStyle(fontSize: 40, font: "hand")
+                $0.role = Self.role
+                madeIDs.append($0.id)
             }
         }
         let groupIndex = Dictionary(uniqueKeysWithValues: (spec.groups ?? []).enumerated().map { ($0.element.id, $0.offset) })
@@ -115,6 +123,8 @@ final class DiagramMaker: ObservableObject {
                                          strokeWidth: 2, dash: "solid", roughness: 1, cornerRadius: 14)
                     $0.text = [n.label, n.sub].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
                     $0.style = NodeStyle(fontSize: 18, font: "hand", textColorHex: "#ECE7E2", align: "center")
+                    $0.role = Self.role
+                    madeIDs.append($0.id)
                 }
                 if let id = newID {
                     created[n.id] = id
@@ -135,9 +145,13 @@ final class DiagramMaker: ObservableObject {
             }
             self.c.currentCanvas?.select(nil)
             self.c.currentCanvas?.layoutLinks()
-            self.c.zoomToFit(nil)
+            let frames = madeIDs.compactMap { self.c.model.node($0)?.frame }
+            if frames.isEmpty { self.c.zoomToFit(nil) } else { self.c.zoomToFit(frames: frames) }
         }
     }
+
+    /// 다이어그램이 만든 노드 표시(BoardNode.role). 고르면 노드 편집 패널이 뜬다.
+    static let role = "diagram"
 
     static func dim(_ hex: String) -> String {
         let c = NSColor(hex: hex).usingColorSpace(.sRGB)!
