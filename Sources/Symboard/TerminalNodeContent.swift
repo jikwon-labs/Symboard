@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import SymboardCore
 
 /// 터미널 노드 본문. 세션의 SwiftTerm 뷰를 그대로 붙인다.
@@ -24,7 +25,22 @@ final class TerminalNodeContent: NSObject, NodeContent {
         }
         container.addSubview(exitBanner)
         container.banner = exitBanner
+        let bubble = NSHostingView(rootView: ResumeBubble { [weak self] yes in
+            guard let self else { return }
+            self.model.sessions.answerResume([self.nodeID], resume: yes)
+        })
+        bubble.isHidden = !model.sessions.pendingResume.contains(node.id)
+        container.addSubview(bubble)
+        container.bubble = bubble
+        resumeObserver = NotificationCenter.default.addObserver(forName: .resumeChanged, object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self, note.object as? UUID == self.nodeID else { return }
+                self.container.bubble?.isHidden = true
+            }
+        }
     }
+
+    private var resumeObserver: NSObjectProtocol?
 
     func sync(node: BoardNode) {}
 
@@ -50,6 +66,22 @@ final class TerminalNodeContent: NSObject, NodeContent {
     }
 }
 
+/// 다시 열었을 때 노드마다 뜨는 "지난 대화 이어 할까요?" 말풍선.
+struct ResumeBubble: View {
+    var answer: (Bool) -> Void
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock.arrow.circlepath").foregroundStyle(Color.symAccent)
+            Text("Resume last conversation?").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
+            Button("Yes") { answer(true) }.buttonStyle(PillButtonStyle(prominent: true))
+            Button("No") { answer(false) }.buttonStyle(PillButtonStyle())
+        }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .floatingCapsule(radius: 12)
+        .fixedSize()
+    }
+}
+
 final class TerminalContainerView: NSView {
     var terminal: NSView? {
         didSet {
@@ -59,6 +91,7 @@ final class TerminalContainerView: NSView {
         }
     }
     weak var banner: NSView?
+    weak var bubble: NSView?
 
     override var isFlipped: Bool { true }
 
@@ -67,6 +100,10 @@ final class TerminalContainerView: NSView {
         terminal?.frame = bounds.insetBy(dx: 4, dy: 2)
         if let b = banner {
             b.frame = NSRect(x: (bounds.width - 260) / 2, y: bounds.height - 40, width: 260, height: 28)
+        }
+        if let b = bubble {
+            let s = b.fittingSize
+            b.frame = NSRect(x: bounds.width - s.width - 10, y: 8, width: s.width, height: s.height)
         }
     }
 

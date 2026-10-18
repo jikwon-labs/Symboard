@@ -389,13 +389,14 @@ final class NodeHeaderView: NSView {
             return
         }
         let paused = nodeView.flatMap { nv in nv.model.sessions.session(for: nv.nodeID)?.paused } ?? false
+        let onHold = nodeView.map { $0.model.sessions.pendingResume.contains($0.nodeID) } ?? false
         let wasHidden = statusPill.isHidden
         statusDot.isHidden = false
         statusPill.isHidden = false
         statusDot.layer?.backgroundColor = status.color.cgColor
-        let text = paused ? "PAUSED" : status.pillText
+        let text = onHold ? "ON HOLD" : (paused ? "PAUSED" : status.pillText)
         if statusPill.text != text || wasHidden {
-            statusPill.set(text: text, color: paused ? Theme.textDim : status.color, filled: false)
+            statusPill.set(text: text, color: (paused || onHold) ? Theme.textDim : status.color, filled: false)
             needsLayout = true
         }
     }

@@ -101,3 +101,15 @@ public enum PermissionMode {
         return nil
     }
 }
+
+/// 다시 열었을 때 "이어 할까요?" 를 물을 콘솔.
+public enum ResumePolicy {
+    public static func canResume(_ spec: TerminalSpec?) -> Bool {
+        guard let spec, spec.hasLaunched, spec.sessionID != nil else { return false }
+        return spec.agent == .claude || spec.agent == .codex
+    }
+
+    public static func candidates(in state: AppState) -> [UUID] {
+        state.workspaces.flatMap { $0.nodes.filter { $0.kind == .terminal && canResume($0.terminal) }.map(\.id) }
+    }
+}

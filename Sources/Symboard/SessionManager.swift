@@ -4,6 +4,8 @@ import SymboardCore
 extension Notification.Name {
     /// 1초마다 노드 상태를 다시 계산한 뒤 보낸다.
     static let statusTick = Notification.Name("symboard.statusTick")
+    /// 이어하기 대기 콘솔이 답을 받았을 때. object 는 노드 id.
+    static let resumeChanged = Notification.Name("symboard.resumeChanged")
 }
 
 /// 노드 id 별 터미널 세션. 작업공간을 바꿔도 프로세스는 계속 돈다.
@@ -15,8 +17,12 @@ final class SessionManager {
     private var timer: Timer?
     let shell = ProcessEnvironment.userShell
 
+    /// 다시 열었을 때 이어 할지 답을 기다리는 콘솔. 답할 때까지 띄우지 않는다.
+    private(set) var pendingResume: Set<UUID> = []
+
     init(model: AppModel) {
         self.model = model
+        pendingResume = Set(ResumePolicy.candidates(in: model.state))
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -30,8 +36,29 @@ final class SessionManager {
         guard let spec = node.terminal else { return nil }
         let s = TerminalSession(nodeID: node.id, statusDirectory: model.statusDirectory, usesHooks: spec.agent.supportsHooks)
         sessions[node.id] = s
-        launch(s, spec: spec)
+        if !pendingResume.contains(node.id) { launch(s, spec: spec) }
         return s
+    }
+
+    /// 기다리던 콘솔을 띄운다. yes 면 지난 대화를 이어 가고, 아니면 새로 시작한다.
+    /// 여러 개면 조금씩 간격을 두고 차례로 띄운다.
+    func answerResume(_ ids: [UUID], resume yes: Bool, completion: (() -> Void)? = nil) {
+        let list = ids.filter { pendingResume.contains($0) }
+        for (i, id) in list.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35 * Double(i)) { [weak self] in
+                guard let self, self.pendingResume.contains(id) else { return }
+                self.pendingResume.remove(id)
+                if !yes { self.model.mutateNode(id) { $0.terminal?.sessionID = nil } }
+                if let s = self.sessions[id], let spec = self.model.node(id)?.terminal {
+                    s.view.feed(text: yes ? "\u{1b}[2mRestored - picking up the last conversation...\u{1b}[0m\r\n"
+                                          : "\u{1b}[2mStarting a new conversation...\u{1b}[0m\r\n")
+                    self.launch(s, spec: spec)
+                }
+                NotificationCenter.default.post(name: .resumeChanged, object: id)
+                if i == list.count - 1 { completion?() }
+            }
+        }
+        if list.isEmpty { completion?() }
     }
 
     func restart(_ nodeID: UUID) {

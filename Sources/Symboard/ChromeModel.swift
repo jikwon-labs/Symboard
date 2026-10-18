@@ -55,6 +55,9 @@ final class ChromeModel: ObservableObject {
     @Published var toast: String?
     @Published var loopBadge = 0
     @Published var resetText = "usage"
+    /// 이어하기 답을 기다리는 콘솔 수와 토스트를 닫았는지.
+    @Published var resumeCount = 0
+    @Published var resumeDismissed = false
     /// 확인을 기다리는 동작(여러 콘솔 닫기 등).
     @Published var confirm: PendingConfirm?
     private var toastWork: DispatchWorkItem?

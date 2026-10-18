@@ -28,8 +28,8 @@ STATUS: IN_PROGRESS
 
 ## F. 이어하기
 
-- [ ] F1. 재실행 시 오른쪽 위 토스트 "Resume all conversations?" Yes/No/× (agent1/resume-top.jpg)
-- [ ] F2. 노드 헤더 "Resume last conversation?" 말풍선, Yes 후 복원 문구·차례 부팅·줌아웃 (node-resume.jpg)
+- [x] F1. 재실행 시 오른쪽 위 토스트 "Resume all conversations?" Yes/No/× (agent1/resume-top.jpg)
+- [x] F2. 노드 헤더 "Resume last conversation?" 말풍선, Yes 후 복원 문구·차례 부팅·줌아웃 (node-resume.jpg)
 
 ## E. 컴포저
 
@@ -104,5 +104,6 @@ STATUS: IN_PROGRESS
 - B1: 원본 agent1/resume-mid.jpg / 내 것 `v2/B1-node-headers.png`. 글자 배지+꺾쇠(메뉴), 상태 점, 짧은 이름(Ada, Pip... 자동, 이름 두 번 눌러 바꿈, 1차 "프로그램 - 폴더" 이름은 시작할 때 바꿈), 역할은 이름 옆 흐린 글씨, 모노 대문자 상태 알약(READY/RUNNING/NEEDS YOU/EXITED, 일시정지면 PAUSED), 권한 배지(실행 인자에 자동 승인 옵션이 있으면 AUTO), 다시 시작·복제·닫기. 남은 차이: 원본 글리프는 CLI 로고, 여기는 글자 배지.
 - B2·B3: 원본 agent1/board-0.jpg 오른쪽, voice.jpg r3c3, board.jpg r2c2 / 내 것 `v2/B2-B3-group-frame-links.png`, `v2/B2-group-collapsed.png`. 팀마다 둥근 프레임(색 점·이름·개수·"N running"/idle·꺾쇠), 머리를 끌면 멤버가 함께 이동(디버그 dragGroup 로 4개 노드 frame 이 +1100 이동 확인), 꺾쇠로 접기, 오른쪽 클릭 메뉴(이름 바꾸기·풀기·모두 닫기). 노드 메뉴 Link To 로 노드·그룹 사이 곡선, 선 위로 점이 흐름(CAKeyframeAnimation). 남은 차이: 연결선은 메뉴로만 만든다(원본은 오케스트레이터 Connect 로 생김, C 에서).
 - B4: 원본 voice.jpg r3c3 / 내 것 `v2/B4-close-confirm.png`. `/close @backend` 또는 그룹 메뉴 → 아래 바 위에 "이름들: about to close 4 consoles" + Close 4 / Cancel. 고친 것: 숨긴 홈 화면 호스팅 뷰가 클릭을 가로채던 문제(숨겨지면 hitTest nil).
+- F1·F2: 원본 agent1/resume-top.jpg, node-resume.jpg / 내 것 `v2/F1-F2-resume-toast.png`, `v2/F2-resumed.png`. 한 번 실행됐고 세션 id 가 있는 claude·codex 콘솔은 다시 열 때 띄우지 않고 기다린다(헤더 ON HOLD, 본문 위 "Resume last conversation? Yes/No" 말풍선). 오른쪽 위 토스트 Yes → 0.35초 간격으로 차례로 "Restored - picking up the last conversation..." 을 찍고 이어 띄운 뒤 전체 보기, No → 세션 id 를 지우고 새로 시작, × → 토스트만 닫고 노드별로 답. 확인은 /tmp/symsample 에 claude 노드 2개(세션 id 만 넣고 대화는 보내지 않음)로 했다: 대기 2 → Yes → 대기 0, 두 노드 claude 실행. 남은 차이: 원본은 기다리는 동안에도 CLI 가 새로 떠 있다가 Yes 에 이어 가지만, 여기는 답할 때까지 띄우지 않는다(같은 대화가 두 번 열리지 않게).
 
 ## 막힌 것

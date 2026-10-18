@@ -94,7 +94,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let zoom = host(ZoomControl(chrome: chrome, c: self))
         let hint = host(HintBanner(chrome: chrome))
         let selection = host(SelectionPanel(model: model, chrome: chrome, c: self))
-        for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection] as [NSView] { content.addSubview(v) }
+        let resume = host(ResumeToast(chrome: chrome, c: self))
+        for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume] as [NSView] { content.addSubview(v) }
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: content.topAnchor),
@@ -121,6 +122,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             zoom.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
             zoom.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16),
             hint.topAnchor.constraint(equalTo: content.topAnchor, constant: 56),
+            resume.topAnchor.constraint(equalTo: topRight.bottomAnchor, constant: 10),
+            resume.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
             selection.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 10),
             selection.centerYAnchor.constraint(equalTo: left.centerYAnchor),
             hint.centerXAnchor.constraint(equalTo: content.centerXAnchor),
@@ -269,6 +272,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         }
         sidePanel.refreshStatuses()
         currentCanvas?.layoutGroups()
+        let pending = model.sessions.pendingResume.count
+        if chrome.resumeCount != pending { chrome.resumeCount = pending }
         let live = model.sessions.liveCount
         if chrome.liveCount != live { chrome.liveCount = live }
         let loops = model.selectedWorkspace.loops.filter(\.enabled).count
@@ -445,6 +450,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         }
         model.addNode(copy)
         currentCanvas?.select(copy.id)
+    }
+
+    /// 토스트의 Yes/No: 기다리는 콘솔을 모두 차례로 띄운다. Yes 면 끝난 뒤 전체가 보이게 줄인다.
+    func answerResumeAll(_ yes: Bool) {
+        let ids = Array(model.sessions.pendingResume)
+        // 지금 작업공간 것부터 화면 순서(위→아래, 왼→오른)로.
+        let order = model.selectedWorkspace.nodes.map(\.id)
+        let sorted = ids.sorted { (order.firstIndex(of: $0) ?? Int.max) < (order.firstIndex(of: $1) ?? Int.max) }
+        chrome.resumeCount = 0
+        model.sessions.answerResume(sorted, resume: yes) { [weak self] in
+            guard yes else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.zoomToFit(nil) }
+        }
     }
 
     func renameTeam(_ id: UUID) {

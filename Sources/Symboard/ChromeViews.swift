@@ -565,6 +565,32 @@ extension View {
     }
 }
 
+/// 다시 열었을 때 오른쪽 위 토스트.
+struct ResumeToast: View {
+    @ObservedObject var chrome: ChromeModel
+    let c: MainWindowController
+    var body: some View {
+        if chrome.resumeCount > 0 && !chrome.resumeDismissed && !chrome.showingHome {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.arrow.circlepath").font(.system(size: 16)).foregroundStyle(Color.symAccent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Resume all conversations?").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                    Text("\(chrome.resumeCount) console\(chrome.resumeCount == 1 ? "" : "s") can pick up their last chat")
+                        .font(.system(size: 11)).foregroundStyle(Color.symDim)
+                }
+                Button("Yes") { c.answerResumeAll(true) }.buttonStyle(PillButtonStyle(prominent: true))
+                Button("No") { c.answerResumeAll(false) }.buttonStyle(PillButtonStyle())
+                Button { chrome.resumeDismissed = true } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
+                    .buttonStyle(.plain).foregroundStyle(Color.symDim)
+                    .help("Decide per console")
+            }
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .floatingCapsule(radius: 14)
+            .fixedSize()
+        }
+    }
+}
+
 /// 도구 안내와 짧은 알림.
 struct HintBanner: View {
     @ObservedObject var chrome: ChromeModel

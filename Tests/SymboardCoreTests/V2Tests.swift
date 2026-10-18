@@ -64,3 +64,16 @@ import Testing
         #expect(PermissionMode.label(for: TerminalSpec(agent: .codex, cwd: "/")) == nil)
     }
 }
+
+@Suite struct ResumePolicyTests {
+    @Test func onlyLaunchedAgentsWithSession() {
+        var st = AppState.initial()
+        let mk = { (spec: TerminalSpec) in BoardNode(kind: .terminal, frame: Rect(x: 0, y: 0, w: 1, h: 1), title: "n", terminal: spec) }
+        let a = mk(TerminalSpec(agent: .claude, cwd: "/", sessionID: "x", hasLaunched: true))
+        let b = mk(TerminalSpec(agent: .claude, cwd: "/", sessionID: "y", hasLaunched: false))
+        let c = mk(TerminalSpec(agent: .shell, cwd: "/", sessionID: "z", hasLaunched: true))
+        let d = mk(TerminalSpec(agent: .codex, cwd: "/", sessionID: "w", hasLaunched: true))
+        st.workspaces[0].nodes = [a, b, c, d]
+        #expect(ResumePolicy.candidates(in: st) == [a.id, d.id])
+    }
+}

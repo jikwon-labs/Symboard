@@ -333,6 +333,11 @@ final class DebugBridge {
                 if cmd["yes"] as? Bool ?? false { cf.action() }
                 log.append("confirm \(cf.message)")
             } else { log.append("confirm: none") }
+        case "resumeAll":
+            controller.answerResumeAll(cmd["yes"] as? Bool ?? true)
+            log.append("resumeAll")
+        case "pending":
+            log.append("pending \(controller.model.sessions.pendingResume.count)")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }
