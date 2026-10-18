@@ -151,7 +151,11 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, /tmp/symv5-1, 1번에서 만든 문서 재사용): 오른쪽 막대 문서 아이콘 → 같은 꼴 Documents 창(Quick 0:22) → "symsample Notes" → 흰 종이(276 words · ~1 min read, 읽기·원문·다시·보드·Export PDF) → 보드 아이콘 → 패널이 줄어들며 DOCUMENT 카드 → 오른쪽 아래 모서리 끌기 → 넓어지고 다시 흐름(`v14-document-card.png`). 생성 과정(실시간 종이)은 1번 질문 1 과 4차 R 항목에서 확인.
   - 쓰는 데 지장 있는 차이: 없음.
   - 모양 차이(남김): 원본은 오른쪽 막대 아이콘이 먼저 작은 GENERATE PDF 메뉴를 열고, 우리는 바로 Documents 창을 연다. 원본 카드 바닥의 날짜·Export PDF 줄, 우리는 머리에 단어 수.
-- [ ] V15. studio-markdown.mp4
+- [x] V15. studio-markdown.mp4
+  - 원본 조작: 오른쪽 막대 문서 아이콘 → Markdown 창(파일 나무·검색, README Reading) → Source → Graph(힘 그래프, 마우스를 올리면 이웃 강조) → 노드 01-threat-model 클릭 → 그 글 Reading → Add to Board → 카드 → 모서리 끌기 → Open in Studio → 다른 글 → Export PDF → 저장 시트 → Cancel.
+  - 우리(`env -i`, /tmp/symv5-1): 같은 아이콘 → 같은 꼴 창(README 57 words, Reading/Source/Graph·Add to Board·Export PDF) → Source → Graph(Link graph · 5 notes) → architecture 노드 → architecture.md Reading → Add to Board → 카드 → 카드 오른쪽 위 펼치기 → 스튜디오 다시 열림(architecture.md) → Export PDF → 저장 시트(architecture.pdf, `v15-export-pdf.png`) → Cancel.
+  - 쓰는 데 지장 있는 차이(고침): 그래프 노드를 눌러도 그 글이 열리지 않았다(20pt 투명 원에 onTapGesture — 이 패널에서 클릭을 받지 못함). 점과 이름을 덮는 단추로 바꿨다. 확인: architecture 클릭 → 디버그 상태 file=architecture.md, 화면 Architecture.
+  - 모양 차이(남김): 원본 카드 바닥의 "Open in Studio · PDF" 글 단추(우리는 머리의 펼치기 아이콘).
 - [ ] V16. teams.mp4
 - [ ] V17. voice.mp4
 

@@ -493,9 +493,14 @@ struct LinkGraph2: View {
                             .fixedSize()
                             .position(x: pt.x, y: pt.y + 14)
                             .opacity(show || l.points.count < 40 ? 1 : 0)
-                        Circle().fill(Color.white.opacity(0.001)).frame(width: 20, height: 20).position(x: pt.x, y: pt.y)
-                            .onHover { hover = $0 ? i : (hover == i ? nil : hover) }
-                            .onTapGesture { studio.open(l.urls[i]); studio.mdMode = "Reading" }
+                        // 점과 이름을 함께 덮는 넉넉한 누름 자리(점만 20pt 이면 잘 안 눌렸다).
+                        // 단추로 둔다(onTapGesture 는 이 패널에서 자동 입력 도구의 클릭을 받지 못했다).
+                        Button { studio.open(l.urls[i]); studio.mdMode = "Reading" } label: {
+                            Rectangle().fill(Color.white.opacity(0.001)).frame(width: 90, height: 40).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .onHover { hover = $0 ? i : (hover == i ? nil : hover) }
+                        .position(x: pt.x, y: pt.y + 6)
                     }
                 }
                 HStack {
