@@ -87,6 +87,9 @@ final class ChromeModel: ObservableObject {
     @Published var resumeDismissed = false
     /// 확인을 기다리는 동작(여러 콘솔 닫기 등).
     @Published var confirm: PendingConfirm?
+    /// 명령 바 THREAD 패널: 보드 명령과 그 결과(원본 voice 장면의 기록 자리).
+    @Published var thread = CommandThread()
+    @Published var threadOpen = false
     private var toastWork: DispatchWorkItem?
 
     func flash(_ text: String) {
@@ -103,4 +106,7 @@ struct PendingConfirm: Identifiable {
     var message: String
     var button: String
     var action: () -> Void
+    /// true 면 아래 확인 띠 대신 THREAD 안에 Confirm · Cancel 로 보인다.
+    var inThread = false
+    var onCancel: (() -> Void)? = nil
 }

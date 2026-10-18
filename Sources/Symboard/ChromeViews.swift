@@ -494,7 +494,10 @@ struct BottomBar: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            if let cf = chrome.confirm {
+            if chrome.threadOpen, !chrome.thread.entries.isEmpty {
+                CommandThreadView(chrome: chrome, folder: (c.projectPath as NSString).lastPathComponent)
+            }
+            if let cf = chrome.confirm, !cf.inThread {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.symAccent)
                     Text(cf.message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
@@ -542,6 +545,16 @@ struct BottomBar: View {
                     .foregroundStyle(Color.symText)
                     .focused($focused)
                     .onSubmit { c.runCommand() }
+                if !chrome.thread.entries.isEmpty {
+                    Button { chrome.threadOpen.toggle() } label: {
+                        Image(systemName: chrome.threadOpen ? "chevron.down" : "chevron.up").font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.symText)
+                            .frame(width: 26, height: 26)
+                            .background(Circle().stroke(Color.symBorder))
+                    }
+                    .buttonStyle(.plainHit)
+                    .tip(chrome.threadOpen ? "Hide thread" : "Show thread")
+                }
                 Button { c.runCommand() } label: {
                     Image(systemName: "arrow.up").font(.system(size: 12, weight: .bold))
                         .foregroundStyle(chrome.command.isEmpty ? Color.symDim : .white)
@@ -565,6 +578,77 @@ struct BottomBar: View {
             return "Message \(n.title) · @ to direct"
         }
         return "Type a command · @ to direct"
+    }
+}
+
+/// 명령 바 위 THREAD 카드: 보드 명령(오른쪽 말풍선)과 계획·결과(왼쪽 줄), 확인이 필요하면 Confirm · Cancel.
+struct CommandThreadView: View {
+    @ObservedObject var chrome: ChromeModel
+    let folder: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Text("THREAD").font(.system(size: 12, weight: .semibold, design: .monospaced)).tracking(1.6).foregroundStyle(Color.symDim)
+                Spacer()
+                Label(folder, systemImage: "folder").font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.8))
+                Button("Clear") { chrome.thread.clear(); chrome.threadOpen = false }
+                    .buttonStyle(.plainHit).font(.system(size: 12)).foregroundStyle(Color.symDim).axName("Clear thread")
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(chrome.thread.entries) { e in row(e).id(e.id) }
+                        if let cf = chrome.confirm, cf.inThread {
+                            HStack(spacing: 8) {
+                                mark
+                                Button(cf.button) { chrome.confirm = nil; cf.action() }
+                                    .buttonStyle(PillButtonStyle(prominent: true)).axName(cf.button)
+                                Button("Cancel") { chrome.confirm = nil; cf.onCancel?() }
+                                    .buttonStyle(PillButtonStyle()).axName("Cancel")
+                            }
+                            .id("confirm")
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 240)
+                .onAppear { scrollToEnd(proxy) }
+                .onChange(of: chrome.thread.entries.count) { _, _ in scrollToEnd(proxy) }
+                .onChange(of: chrome.confirm?.id) { _, _ in scrollToEnd(proxy) }
+            }
+        }
+        .padding(14)
+        .frame(width: 560)
+        .floatingCapsule(radius: 18)
+    }
+
+    func scrollToEnd(_ proxy: ScrollViewProxy) {
+        if chrome.confirm?.inThread == true { proxy.scrollTo("confirm", anchor: .bottom) }
+        else if let last = chrome.thread.entries.last { proxy.scrollTo(last.id, anchor: .bottom) }
+    }
+
+    /// 앱 쪽 줄 앞의 작은 표시(마스코트 대신 강조색 점).
+    var mark: some View {
+        Circle().fill(Color.symAccent.opacity(0.9)).frame(width: 8, height: 8).frame(width: 18)
+    }
+
+    @ViewBuilder func row(_ e: ThreadEntry) -> some View {
+        switch e.kind {
+        case .user:
+            HStack {
+                Spacer(minLength: 60)
+                Text(e.text).font(.system(size: 13)).foregroundStyle(Color.symText)
+                    .padding(.horizontal, 12).padding(.vertical, 7)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.symRaised))
+            }
+        case .plan, .result:
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                mark
+                Text(e.text).font(.system(size: 13)).foregroundStyle(e.kind == .plan ? Color.symDim : Color.symText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 

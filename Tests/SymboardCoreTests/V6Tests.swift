@@ -73,3 +73,18 @@ import Testing
         #expect(CLIIconState.note(for: .missing, name: "Gemini CLI", command: "gemini", feature: "profiles")!.contains("not installed"))
     }
 }
+
+@Suite struct CommandThreadTests {
+    @Test func keepsOnlyTheNewest() {
+        var t = CommandThread(limit: 3)
+        for i in 1...5 { t.add(.user, "m\(i)") }
+        #expect(t.entries.map(\.text) == ["m3", "m4", "m5"])
+        t.clear()
+        #expect(t.entries.isEmpty)
+    }
+
+    @Test func planLinesNameTheAction() {
+        #expect(BoardCommand.parse("spawn 4 shell")?.plan == "Plan · spawn 4 shell consoles in a new group")
+        #expect(BoardCommand.parse("delete the group called group 1")?.plan.contains("close every console") == true)
+    }
+}

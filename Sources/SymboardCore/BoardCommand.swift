@@ -76,3 +76,38 @@ public enum BoardCommand: Equatable, Sendable {
         return groups.firstIndex { $0.lowercased().hasPrefix(n) }
     }
 }
+
+/// 명령 바 THREAD 패널에 쌓이는 한 줄. user 는 사용자가 친 글(오른쪽 말풍선), plan 은 해석한 계획, result 는 결과.
+public struct ThreadEntry: Equatable, Sendable, Identifiable {
+    public enum Kind: String, Sendable { case user, plan, result }
+    public let id: UUID
+    public var kind: Kind
+    public var text: String
+    public init(id: UUID = UUID(), kind: Kind, text: String) { self.id = id; self.kind = kind; self.text = text }
+}
+
+/// THREAD 패널 기록. 오래된 것부터 버려 limit 개만 남긴다.
+public struct CommandThread: Equatable, Sendable {
+    public private(set) var entries: [ThreadEntry] = []
+    public var limit: Int
+    public init(limit: Int = 60) { self.limit = limit }
+
+    public mutating func add(_ kind: ThreadEntry.Kind, _ text: String) {
+        entries.append(ThreadEntry(kind: kind, text: text))
+        if entries.count > limit { entries.removeFirst(entries.count - limit) }
+    }
+
+    public mutating func clear() { entries = [] }
+}
+
+extension BoardCommand {
+    /// THREAD 의 "Plan · …" 줄에 쓸 짧은 해석.
+    public var plan: String {
+        switch self {
+        case .spawn(let n, let agent): return "Plan · spawn \(n) \(agent) console\(n == 1 ? "" : "s") in a new group"
+        case .orchestrator(let g): return "Plan · add an orchestrator wired to \(g)"
+        case .preset(let k): return "Plan · deploy preset \(k)"
+        case .closeGroup(let g): return "Plan · close every console in \(g)"
+        }
+    }
+}

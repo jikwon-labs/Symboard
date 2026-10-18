@@ -85,7 +85,10 @@ STATUS: IN_PROGRESS
   - 원본 장면: `teams.mp4` 6초. 미션 맵에서 아무것도 고르지 않으면 오른쪽에 "Fleet" 카드(Working·Needs you·Idle·Done 수, 0 은 흐림)와 "Structure" 카드(Orchestrators·Teams·Consoles·Active loops), 아래 안내 한 줄.
   - 바꾼 것: `MissionMapView.overview` 를 두 카드(`overviewCard`)로. Structure 의 Active loops 는 켜진 루프 수. 예전의 "N orchestrators wire …" 문장은 뺐다(같은 내용이 지도에 보임).
   - 확인한 실제 입력(`env -i`, /tmp/symv6-1: 그룹 셸 4 + 오케스트레이터 + claude 1): 위 오른쪽 메뉴 → Mission Map → 오른쪽 Fleet(Idle 5, 나머지 0 흐림)·Structure(1·1·5·0)·안내. 비교 그림 `compare/14-mission-overview.png`.
-- [ ] 15. voice: 명령 바 보드 명령 THREAD 패널, 프리셋에 콘솔 말고 다른 노드도
+- [x] 15. voice: 명령 바 보드 명령 THREAD 패널, 프리셋에 콘솔 말고 다른 노드도
+  - 원본 장면: `voice.mp4` 52초(THREAD 카드), 37~41초(프리셋이 오케스트레이터와 그룹을 함께 놓음). 근거·결정은 DECISIONS 6차-15.
+  - 바꾼 것: Core `ThreadEntry`·`CommandThread`(최근 60개)·`BoardCommand.plan`(단위 테스트 2개). `runBoardCommand` 가 친 글·계획·결과를 THREAD 에 쌓고 카드를 연다(예전 한 줄 알림 대신). 그룹 닫기 확인은 THREAD 안 "Confirm · N" / Cancel, 결과 "Closed N consoles"/"Cancelled…". `CommandThreadView`: THREAD·폴더·Clear, 오른쪽 말풍선, 왼쪽 점+줄, 끝으로 자동 스크롤, 입력칸 옆 꺾쇠로 접기. `ComposerPreset.extras`(오케스트레이터·체크리스트)와 넷째 프리셋 "Command post". `addOrchestrator(for:)` 로 묶고 자리는 `freePoint`(1번 규칙) — 처음엔 프리셋 오케스트레이터가 Group 1 위에 겹쳐 놓여 같이 고쳤다.
+  - 확인한 실제 입력(`env -i`, 새 /tmp/symv6-15): 명령 바에 `spawn 4 shell` → `add an orchestrator wired to group 1` → `please put me preset 4 in the board` → `delete the group called group 1` 타이핑·Return. THREAD 에 각 말풍선·Plan·결과, 프리셋 셸 3·이은 오케스트레이터(빈 위쪽 자리)·체크리스트, 마지막에 "Confirm · 4"(`compare/15-thread.png`) → Confirm 클릭 → "Closed 4 consoles", state.json 에 셸 3·오케스트레이터 2·체크리스트 1, 팀은 Command post 하나. 꺾쇠 클릭 → 카드 접힘 → 다시 → 펼침.
 
 ## 마지막 점검
 
