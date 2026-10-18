@@ -31,7 +31,11 @@ STATUS: IN_PROGRESS
   - 원인: 알약(`UsageStore.resetText`)이 `/usage` 값을 보지 않았다.
   - 고침: `UsagePill.display`(Core) 가 `/usage` 의 세션 줄과 초기화 시각이 있고 그 시각이 아직 안 지났으면(`PlanUsageParser.resetDate` 로 "9:59pm (Asia/Seoul)" 을 실제 시각으로 바꿔 비교) "resets 9:59pm" 과 세션 % 를, 아니면 짐작값을 쓴다. 알약에는 원본처럼 작은 % 링(`SessionRing`)을 시계 아이콘 옆에 그린다. 앱 시작 3초 뒤와 5분마다 `/usage` 가 15분 넘게 묵었거나 초기화 시각이 지났으면 다시 읽는다(claude 가 깔렸을 때만, 질문 아님). 단위 테스트 5개.
   - 확인한 실제 입력(`env -i`, /tmp/symv5-1): 띄우고 20초 뒤 알약 "링 5 · resets 10pm". 알약 클릭 → 팝오버 "5% used · Resets 10pm (Asia/Seoul)" 로 같다(`2-pill-matches-usage.png`).
-- [ ] 3. codex 사용량 (X 탭)
+- [x] 3. codex 사용량 (X 탭)
+  - 확인한 화면: codex 0.157.1 `/status` 상자 끝에 `Weekly limit: [████] 100% left (resets 5:34 PM on 25 Oct)`(Plus 요금제라 5h 줄은 없음). 질문 없이 읽힌다. 세션 로그(`~/.codex/sessions/**.jsonl`)의 `token_count` 에도 `rate_limits.primary{used_percent, window_minutes, resets_at}` 가 있지만 마지막 codex 응답 때 값이라 묵는다(로그는 24일 00:10, /status 는 25일 17:34).
+  - 고침: `CodexStatusProbe` 가 화면 없는 터미널에 `codex --no-daemon` 을 띄워 `/status` 를 읽는다(`--no-daemon` 은 데몬 설정 메뉴를 피한다). 업데이트 안내는 Esc(건너뛰기) 한 번, Enter 는 입력칸에 `/status` 가 보일 때만 보낸다. 폴더 신뢰 화면이면 답하지 않고 그만두고 가장 최근 세션 로그의 `rate_limits` 를 보이며 이유를 적는다. `CodexLimitParser`(Core, 단위 테스트 3개)가 `% left` 를 used % 로 바꾼다. 팝오버 X 탭은 claude 탭과 같은 꼴: 큰 링(세션 한도가 없으면 첫 한도, 이름 "Weekly limit"), 나머지 한도 막대, 바닥 "codex · /status · local session logs".
+  - 확인한 실제 입력(`env -i`): /tmp/symsample(codex 가 신뢰 안 한 폴더) → 알약 → X → "Weekly limit 0% · Resets 12:10 AM on 24 Oct · codex is asking a question in this folder… · showing the last session log"(`3-codex-tab-log-fallback.png`). Home → Open folder `/tmp/symtrust-5`(4차에서 신뢰한 폴더) → 알약 → X → "Weekly limit 0% used · Resets 5:38 PM on 25 Oct", 바닥 "codex · /status"(`3-codex-tab-status.png`). 끝난 뒤 codex 프로세스 남지 않음, `codex --version` 0.157.1 그대로.
+  - **사고 기록**: 처음 화면을 살피려고 파이썬 pty 로 codex 를 띄워 `/status` + Enter 를 보냈는데, 그때 화면이 업데이트 메뉴(기본값 "1. Update now")여서 Enter 가 `npm install -g @openai/codex` 를 돌려 0.157.1 → 0.163.0 으로 올라갔다(전역 설치 금지 위반). 바로 `npm install -g @openai/codex@0.157.1` 로 원래 버전으로 되돌렸다. 앱의 탐침은 이 때문에 업데이트 메뉴에서 Enter 를 절대 보내지 않게 만들었다. `~/.codex/config.toml` 은 건드리지 않았다(신뢰 화면에서 그만둠).
 - [ ] 4. 움직임 (스튜디오 → 카드 줄어들기, 다이어그램 노드 미끄러지기, 노드 추가·닫기, 팝오버)
 - [ ] 5. 앱 아이콘과 Dock (번들 아이콘, Dock·Cmd+Tab, 창 닫은 뒤 Dock 클릭으로 다시 열기)
 

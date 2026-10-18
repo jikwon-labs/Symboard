@@ -371,3 +371,70 @@ public enum PlanUsageParser {
         return out
     }
 }
+
+/// codex 한도. `/status` 화면 또는 세션 로그의 `rate_limits` 에서 읽는다.
+/// 화면 모양(0.157.1):
+///   │  5h limit:     [████████░░░░]  72% left (resets 9:01 PM)          │
+///   │  Weekly limit: [████████████] 100% left (resets 5:34 PM on 25 Oct) │
+public enum CodexLimitParser {
+    public static func parseStatus(_ screen: String) -> [PlanLimit] {
+        var out: [PlanLimit] = []
+        for raw in screen.replacingOccurrences(of: "\u{0}", with: " ").split(separator: "\n") {
+            let line = raw.trimmingCharacters(in: CharacterSet(charactersIn: "│| ").union(.whitespaces))
+            guard let colon = line.range(of: "limit:", options: .caseInsensitive) else { continue }
+            let name = String(line[..<colon.lowerBound]).trimmingCharacters(in: .whitespaces) + " limit"
+            let rest = line[colon.upperBound...]
+            guard let pr = rest.range(of: #"(\d{1,3})% (left|used)"#, options: .regularExpression) else { continue }
+            let token = rest[pr]
+            guard let n = Int(token.prefix { $0.isNumber }) else { continue }
+            let used = token.hasSuffix("left") ? 100 - n : n
+            var resets: String?
+            if let r = rest.range(of: #"\(resets [^)]*\)"#, options: .regularExpression) {
+                resets = String(rest[r].dropFirst("(resets ".count).dropLast())
+            }
+            let pretty = name.prefix(1).uppercased() + name.dropFirst()
+            out.append(PlanLimit(name: pretty, percent: max(0, min(100, used)), resets: resets))
+        }
+        return out
+    }
+
+    /// 창 길이(분)로 이름을 붙인다.
+    public static func windowName(minutes: Int) -> String {
+        switch minutes {
+        case ..<(6 * 60): return "\(max(1, minutes / 60))h limit"
+        case ..<(2 * 24 * 60): return "Daily limit"
+        case ..<(10 * 24 * 60): return "Weekly limit"
+        default: return "Monthly limit"
+        }
+    }
+
+    /// 세션 로그(jsonl) 에서 마지막 `rate_limits` 를 읽는다. 마지막 codex 응답 때의 값이라 /status 보다 오래됐을 수 있다.
+    public static func parseLog(_ jsonl: String, timeZone: TimeZone = .current) -> (limits: [PlanLimit], at: Date?) {
+        for line in jsonl.split(separator: "\n").reversed() where line.contains("\"rate_limits\"") {
+            guard let d = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+                  let payload = d["payload"] as? [String: Any], let rl = payload["rate_limits"] as? [String: Any] else { continue }
+            var out: [PlanLimit] = []
+            for key in ["primary", "secondary"] {
+                guard let w = rl[key] as? [String: Any], let used = (w["used_percent"] as? NSNumber)?.doubleValue else { continue }
+                let minutes = (w["window_minutes"] as? NSNumber)?.intValue ?? 0
+                var resets: String?
+                if let at = (w["resets_at"] as? NSNumber)?.doubleValue {
+                    let f = DateFormatter()
+                    f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = timeZone
+                    f.dateFormat = minutes < 24 * 60 ? "h:mm a" : "h:mm a 'on' d MMM"
+                    resets = f.string(from: Date(timeIntervalSince1970: at))
+                }
+                out.append(PlanLimit(name: windowName(minutes: minutes), percent: Int(used.rounded()), resets: resets))
+            }
+            var when: Date?
+            if let ts = d["timestamp"] as? String {
+                let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                when = iso.date(from: ts)
+            }
+            // 짧은 창(세션)을 앞에.
+            out.sort { ($0.name.hasSuffix("h limit") ? 0 : 1) < ($1.name.hasSuffix("h limit") ? 0 : 1) }
+            return (out, when)
+        }
+        return ([], nil)
+    }
+}

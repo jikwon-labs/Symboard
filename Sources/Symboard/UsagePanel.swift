@@ -15,6 +15,13 @@ final class UsageStore: ObservableObject {
     @Published var limitsNote = ""
     @Published var limitsAt: Date?
     let probe = PlanUsageProbe()
+    /// codex `/status`(없으면 마지막 세션 로그) 의 한도.
+    @Published var codexLimits: [PlanLimit] = []
+    @Published var codexLimitsNote = ""
+    @Published var codexLimitsAt: Date?
+    /// "/status" 또는 "session log".
+    @Published var codexLimitsSource = ""
+    let codexProbe = CodexStatusProbe()
     unowned let model: AppModel
 
     init(model: AppModel) { self.model = model }
@@ -43,6 +50,50 @@ final class UsageStore: ObservableObject {
             if !limits.isEmpty { self.limits = limits; self.limitsAt = Date() }
             self.limitsNote = error ?? ""
         }
+    }
+
+    /// codex 를 화면 없이 띄워 `/status` 를 읽는다. 못 읽으면 가장 최근 세션 로그의 rate_limits 를 쓴다.
+    func refreshCodexLimits() {
+        guard !codexProbe.running, AgentCatalog.shared.installed.contains("codex") else { return }
+        let cwd = model.selectedWorkspace.projectPath ?? NSHomeDirectory()
+        let profile = model.profiles.active(for: .codex).flatMap { id in model.state.profiles.first { $0.id == id } }
+        codexLimitsNote = "reading codex /status…"
+        codexProbe.run(cwd: cwd, configDir: profile?.configDir) { [weak self] limits, error in
+            guard let self else { return }
+            if !limits.isEmpty {
+                self.codexLimits = limits; self.codexLimitsAt = Date(); self.codexLimitsSource = "/status"; self.codexLimitsNote = ""
+                return
+            }
+            let roots = [profile?.configDir ?? NSHomeDirectory() + "/.codex"]
+            Task.detached(priority: .utility) {
+                let r = Self.latestCodexLog(roots: roots)
+                await MainActor.run {
+                    if !r.limits.isEmpty {
+                        self.codexLimits = r.limits; self.codexLimitsAt = r.at; self.codexLimitsSource = "session log"
+                        self.codexLimitsNote = (error ?? "") + " · showing the last session log"
+                    } else {
+                        self.codexLimitsNote = error ?? "no codex limits found"
+                    }
+                }
+            }
+        }
+    }
+
+    nonisolated static func latestCodexLog(roots: [String]) -> (limits: [PlanLimit], at: Date?) {
+        let fm = FileManager.default
+        var files: [(String, Date)] = []
+        for root in roots {
+            guard let e = fm.enumerator(at: URL(fileURLWithPath: root + "/sessions"), includingPropertiesForKeys: [.contentModificationDateKey]) else { continue }
+            for case let u as URL in e where u.pathExtension == "jsonl" {
+                files.append((u.path, (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast))
+            }
+        }
+        for (path, _) in files.sorted(by: { $0.1 > $1.1 }).prefix(10) {
+            guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
+            let r = CodexLimitParser.parseLog(text)
+            if !r.limits.isEmpty { return r }
+        }
+        return ([], nil)
     }
 
     /// 15분이 지났거나 세션 초기화 시각이 지났으면 /usage 를 다시 읽는다. claude 가 없으면 하지 않는다.
@@ -149,7 +200,7 @@ struct UsagePopover: View {
             Divider().overlay(Color.symBorder)
             HStack(spacing: 6) {
                 Circle().fill(tint).frame(width: 6, height: 6)
-                Text(agent == .claude && !store.limits.isEmpty ? "claude · /usage · local session logs" : "local session logs").font(.system(size: 10, design: .monospaced))
+                Text(footerSource).font(.system(size: 10, design: .monospaced))
                 Spacer()
                 Text(store.note).font(.system(size: 10))
             }
@@ -163,6 +214,20 @@ struct UsagePopover: View {
         .onAppear {
             if store.stats.isEmpty || (store.scannedAt.map { Date().timeIntervalSince($0) > 120 } ?? true) { store.refresh() }
             if store.limitsAt.map({ Date().timeIntervalSince($0) > 120 }) ?? true { store.refreshLimits() }
+        }
+        .onChange(of: agent) { _, a in
+            if a == .codex, store.codexLimitsSource != "/status" || (store.codexLimitsAt.map { Date().timeIntervalSince($0) > 120 } ?? true) {
+                store.refreshCodexLimits()
+            }
+        }
+    }
+
+    var footerSource: String {
+        if agent == .claude { return store.limits.isEmpty ? "local session logs" : "claude · /usage · local session logs" }
+        switch store.codexLimitsSource {
+        case "/status": return "codex · /status · local session logs"
+        case "session log": return "codex · last session log · local session logs"
+        default: return "local session logs"
         }
     }
 
@@ -183,7 +248,7 @@ struct UsagePopover: View {
             Spacer()
             Button { page = page == "tokens" ? "overview" : "tokens" } label: { Image(systemName: "chart.bar.fill") }
                 .buttonStyle(.plainHit).tip("Token details")
-            Button { store.refresh(); store.refreshLimits() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).tip("Rescan logs and /usage")
+            Button { store.refresh(); if agent == .codex { store.refreshCodexLimits() } else { store.refreshLimits() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).tip("Rescan logs and /usage")
             Button(action: close) { Image(systemName: "xmark") }.buttonStyle(.plainHit)
         }
         .foregroundStyle(Color.symText)
@@ -207,8 +272,10 @@ struct UsagePopover: View {
     var overview: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                let limits = agent == .claude ? store.limits : []
-                let session = limits.first { $0.name.hasPrefix("Current session") }
+                let limits = agent == .claude ? store.limits : store.codexLimits
+                // 큰 링: claude 는 세션, codex 는 세션(5h)이 없으면 첫 한도(주간·월간).
+                let session = limits.first { PlanUsageParser.isSession($0.name) } ?? (agent == .codex ? limits.first : nil)
+                let note = agent == .claude ? store.limitsNote : store.codexLimitsNote
                 HStack(spacing: 14) {
                     ZStack {
                         Circle().stroke(Color.symBorder, lineWidth: 5)
@@ -220,9 +287,9 @@ struct UsagePopover: View {
                         }
                     }
                     .frame(width: 62, height: 62)
-                    .hint(session == nil ? "Plan limits are read from claude /usage. Open this once the project folder is trusted." : "From claude /usage")
+                    .hint(session == nil ? "Plan limits are read from \(agent == .claude ? "claude /usage" : "codex /status"). Open this once the project folder is trusted." : (agent == .claude ? "From claude /usage" : "From codex \(store.codexLimitsSource)"))
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Current session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
+                        Text(agent == .codex ? (session?.name ?? "Current session") : "Current session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                         if let r = session?.resets {
                             Text("Resets \(r)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                         } else if let end = stats.blockEnd {
@@ -231,14 +298,14 @@ struct UsagePopover: View {
                         } else {
                             Text("No activity in the last 5 hours").font(.system(size: 11)).foregroundStyle(Color.symDim)
                         }
-                        if session == nil, agent == .claude {
-                            Text(store.limitsNote.isEmpty ? "Limit % comes from claude /usage" : store.limitsNote)
+                        if session == nil || (agent == .codex && store.codexLimitsSource == "session log") {
+                            Text(note.isEmpty ? (agent == .claude ? "Limit % comes from claude /usage" : "Limit % comes from codex /status") : note)
                                 .font(.system(size: 10)).foregroundStyle(Color.symDim.opacity(0.7))
                         }
                     }
                 }
                 // 주간 한도(모든 모델, 모델별): 원본처럼 이름 · % · 막대 · 초기화 시각.
-                ForEach(limits.filter { !$0.name.hasPrefix("Current session") }, id: \.name) { l in
+                ForEach(limits.filter { $0 != session }, id: \.name) { l in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text(l.name).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)

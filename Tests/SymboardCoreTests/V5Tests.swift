@@ -126,3 +126,36 @@ import Testing
         #expect(PlanUsageParser.shortReset("10PM") == "10pm")
     }
 }
+
+@Suite struct CodexLimitTests {
+    @Test func parsesStatusBox() {
+        let screen = """
+        ╭──────────────────────────────────────────────╮
+        │  Account: Plus                               │
+        │  5h limit:     [██████░░░░]  72% left (resets 9:01 PM)          │
+        │  Weekly limit: [████████████████████]100% left (resets 5:34 PM on 25 Oct) │
+        ╰──────────────────────────────────────────────╯
+        """
+        #expect(CodexLimitParser.parseStatus(screen) == [
+            PlanLimit(name: "5h limit", percent: 28, resets: "9:01 PM"),
+            PlanLimit(name: "Weekly limit", percent: 0, resets: "5:34 PM on 25 Oct"),
+        ])
+        #expect(PlanUsageParser.isSession("5h limit"))
+    }
+
+    @Test func ignoresScreensWithoutLimits() {
+        #expect(CodexLimitParser.parseStatus("› Ask Codex to do anything\n? for shortcuts").isEmpty)
+    }
+
+    @Test func parsesLogRateLimits() {
+        let log = """
+        {"timestamp":"2026-10-17T20:29:36.309Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":27.0,"window_minutes":43200,"resets_at":1792768206},"secondary":{"used_percent":3.4,"window_minutes":300,"resets_at":1792700000}}}}
+        {"timestamp":"2026-10-17T20:30:00.000Z","type":"response_item","payload":{}}
+        """
+        let r = CodexLimitParser.parseLog(log, timeZone: TimeZone(identifier: "Asia/Seoul")!)
+        #expect(r.limits.map(\.name) == ["5h limit", "Monthly limit"])
+        #expect(r.limits.map(\.percent) == [3, 27])
+        #expect(r.limits[1].resets == "12:10 AM on 24 Oct")
+        #expect(r.at != nil)
+    }
+}
