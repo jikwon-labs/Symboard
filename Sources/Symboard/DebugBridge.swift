@@ -270,6 +270,7 @@ final class DebugBridge {
             case "kanban": tool = .place(.kanban)
             case "web": tool = .place(.web)
             case "orchestrator": tool = .place(.orchestrator)
+            case "calendar": tool = .place(.calendar)
             default: tool = t.hasPrefix("agent:") ? .place(.agent(String(t.dropFirst(6)))) : .select
             }
             controller.setTool(tool)
@@ -418,6 +419,19 @@ final class DebugBridge {
             }
         case "cardEditor":
             if let n = node(cmd) { NotificationCenter.default.post(name: .openCardEditor, object: n.id, userInfo: ["column": cmd["column"] as? Int ?? 0]) }
+        case "event":
+            if let n = node(cmd) {
+                let day = Calendar.current.startOfDay(for: Date().addingTimeInterval(Double(cmd["day"] as? Int ?? 0) * 86400))
+                if cmd["editor"] as? Bool == true {
+                    NotificationCenter.default.post(name: .openEventEditor, object: n.id, userInfo: ["day": day])
+                } else {
+                    model.mutateNode(n.id) { $0.events = ($0.events ?? []) + [CalendarEvent(title: cmd["title"] as? String ?? "Event", day: day, colorHex: cmd["color"] as? String ?? "#56A8F5")] }
+                    controller.currentCanvas?.nodeViews[n.id]?.syncFromModel()
+                }
+                log.append("event")
+            }
+        case "insertMenu":
+            controller.chrome.insertOpen = cmd["open"] as? Bool ?? true
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

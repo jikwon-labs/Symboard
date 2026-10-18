@@ -473,6 +473,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             addNode(kind: .web, size: s, title: "Web", at: origin) { $0.text = "http://localhost:3000" }
         case .orchestrator:
             addNode(kind: .orchestrator, size: s, title: "Orchestrator", at: origin)
+        case .calendar:
+            addNode(kind: .calendar, size: s, title: "Calendar", at: origin) { $0.events = [] }
         }
         setTool(.select)
     }

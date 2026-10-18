@@ -44,7 +44,7 @@ final class HostedContent: NodeContent {
             }
         }
         extraMenu = menu
-        host = NSHostingView(rootView: make(box).environment(\.colorScheme, .dark))
+        host = NSHostingView(rootView: make(box).environment(\.colorScheme, .dark).environment(\.locale, Locale(identifier: "en_US")))
     }
 
     func sync(node: BoardNode) {
@@ -133,52 +133,85 @@ enum StickyColors {
 struct ChecklistView: View {
     @ObservedObject var box: NodeBox
     @State private var draft = ""
+    @State private var adding = false
+    @FocusState private var focused: Bool
 
     var items: [ChecklistItem] { box.node.checklist ?? [] }
 
     var body: some View {
+        let done = items.filter(\.done).count
         VStack(alignment: .leading, spacing: 0) {
-            let done = items.filter(\.done).count
-            if !items.isEmpty {
-                ProgressView(value: Double(done), total: Double(max(items.count, 1)))
-                    .padding(.horizontal, 10).padding(.top, 8)
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().stroke(Color.symBorder, lineWidth: 3)
+                    Circle().trim(from: 0, to: items.isEmpty ? 0 : CGFloat(done) / CGFloat(items.count))
+                        .stroke(Color.symAccent, style: StrokeStyle(lineWidth: 3, lineCap: .round)).rotationEffect(.degrees(-90))
+                    Text("\(items.count - done)").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(Color.symText)
+                }
+                .frame(width: 30, height: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(items.isEmpty ? "No objectives" : "\(done) of \(items.count) done").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                    Text(items.isEmpty ? "Add one to begin" : (done == items.count ? "All clear" : "\(items.count - done) left")).font(.system(size: 11)).foregroundStyle(Color.symDim)
+                }
             }
+            .padding(12)
             ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
+                    if items.isEmpty {
+                        ForEach([0.55, 0.4, 0.3], id: \.self) { w in
+                            HStack(spacing: 10) {
+                                Circle().stroke(Color.symBorder).frame(width: 14, height: 14)
+                                RoundedRectangle(cornerRadius: 3).fill(Color.symBorder.opacity(0.7)).frame(width: 200 * w, height: 6)
+                            }
+                            .padding(.vertical, 8).padding(.horizontal, 12)
+                        }
+                        .opacity(0.6)
+                    }
                     ForEach(items) { item in
-                        HStack(spacing: 6) {
+                        HStack(spacing: 10) {
                             Button {
                                 box.update { n in
                                     if let i = n.checklist?.firstIndex(where: { $0.id == item.id }) { n.checklist?[i].done.toggle() }
                                 }
                             } label: {
-                                Image(systemName: item.done ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(item.done ? Color.green : Color.secondary)
+                                Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(item.done ? Color.symAccent : Color.symDim)
                             }
                             .buttonStyle(.plain)
-                            Text(item.text).strikethrough(item.done).foregroundStyle(item.done ? .secondary : .primary)
+                            Text(item.text).strikethrough(item.done).foregroundStyle(item.done ? Color.symDim : Color.symText)
                             Spacer()
                             Button {
                                 box.update { $0.checklist?.removeAll { $0.id == item.id } }
                             } label: { Image(systemName: "xmark").font(.system(size: 9)) }
-                                .buttonStyle(.plain).foregroundStyle(.secondary)
+                                .buttonStyle(.plain).foregroundStyle(Color.symDim)
                         }
                         .font(.system(size: 13))
+                        .padding(.vertical, 6).padding(.horizontal, 12)
                     }
                 }
-                .padding(10)
             }
-            TextField("Add item", text: $draft)
-                .textFieldStyle(.roundedBorder)
-                .padding(8)
-                .onSubmit {
-                    let t = draft.trimmingCharacters(in: .whitespaces)
-                    guard !t.isEmpty else { return }
-                    box.update { $0.checklist = ($0.checklist ?? []) + [ChecklistItem(text: t)] }
-                    draft = ""
+            if adding {
+                TextField("", text: $draft, prompt: Text("New objective").foregroundColor(Color.symDim))
+                    .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color.symText)
+                    .focused($focused)
+                    .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
+                    .padding(8)
+                    .onSubmit {
+                        let t = draft.trimmingCharacters(in: .whitespaces)
+                        if !t.isEmpty { box.update { $0.checklist = ($0.checklist ?? []) + [ChecklistItem(text: t)] } }
+                        draft = ""
+                        if t.isEmpty { adding = false }
+                    }
+            } else {
+                Button { adding = true; focused = true } label: {
+                    Label("Add an objective", systemImage: "plus").font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.85))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                 }
+                .buttonStyle(.plain).padding(8)
+            }
         }
-        .background(Color(white: 0.12))
+        .background(Color.symSurface)
     }
 }
 

@@ -58,8 +58,8 @@ STATUS: IN_PROGRESS
 
 - [x] H1. 칸반 4열·열 머리·No cards·Add card·+ Column·드래그 이동 (node-kanban.jpg, agent2/kanban-1~3.jpg)
 - [x] H2. 카드 추가 모달(제목·메모·마감 칩·우선순위)과 카드 모양 (agent2/k-newcard.jpg)
-- [ ] H3. 오른쪽 막대 삽입 팝오버 Checklist/Board/Calendar, 체크리스트 원형 카운터 (node-kanban.jpg r1)
-- [ ] H4. 캘린더 노드: 월 격자·오늘·이벤트 팝오버·칩 (node-kanban.jpg r3)
+- [x] H3. 오른쪽 막대 삽입 팝오버 Checklist/Board/Calendar, 체크리스트 원형 카운터 (node-kanban.jpg r1)
+- [x] H4. 캘린더 노드: 월 격자·오늘·이벤트 팝오버·칩 (node-kanban.jpg r3)
 - [ ] H5. 스티키: 헤더 없는 종이·손글씨체·접힌 모서리·종이 색 8개 팝오버 (node-kanban.jpg)
 - [ ] H6. 도형(사각·원·마름모·화살표)·속성 팝오버·도형 안 텍스트·스케치풍 (agent2/k-shape.jpg)
 - [ ] I1. 펜 팝오버(색 9+사용자·굵기 5)·스무딩 곡선·십자 커서·지우개, 이미지 헤더 없음 (node-ink.jpg)
@@ -118,5 +118,6 @@ STATUS: IN_PROGRESS
 - H1·H2: 원본 node-kanban.jpg, agent2/k-shape.jpg(보드), agent2/k-newcard.jpg / 내 것 `v2/H1-kanban.png`, `v2/H2-new-card.png`. 기본 4열 BACKLOG/TO DO/IN PROGRESS/DONE, 열 머리(색 점·제목·개수·⋯ 이름 바꾸기/지우기), 빈 열 "No cards", 열 아래 + Add card, 오른쪽 + Column. 카드: 완료 원·제목·마감 칩(Today/Tomorrow/날짜)·우선순위 칩·왼쪽 색 띠, 누르면 고치기. 카드 모달: 제목·메모·마감(Today/Tomorrow/Next week, 지우기)·우선순위 None/Low/Med/High, 고칠 때 삭제. 1차 글자 카드는 처음 옮기거나 고칠 때 새 카드 형식으로 바뀐다(Board.move, 단위 테스트).
   - 카드 끌어 옮기기는 SwiftUI draggable/dropDestination 으로 만들었고 자동 확인은 모델 이동(디버그 kanbanMove)까지만 했다. 실제 마우스 끌기는 확인하지 못했다.
   - 고친 것: 창이 뒤에 있을 때 캔버스 첫 클릭이 창 활성화로만 쓰여 놓기가 안 되던 문제(acceptsFirstMouse).
+- H3·H4: 원본 agent2/k-shape.jpg(체크리스트·캘린더), node-kanban.mp4 20~28초(일정 팝오버) / 내 것 `v2/H3-insert-menu-checklist.png`, `v2/H4-calendar.png`, `v2/H4-calendar-event.png`. 오른쪽 막대 삽입 팝오버: Checklist/Board/Calendar(+ 스티키·오케스트레이터). 체크리스트: 남은 수 원형 카운터(진행 링), 빈 상태 "No objectives / Add one to begin" + 흐린 자리 줄, 아래 + Add an objective. 캘린더 노드: 월 이름·+ New·Today·위/아래, 월요일 시작 6주 격자(Board.monthGrid 단위 테스트), 오늘 강조색 원, 날짜 누르면 일정 팝오버(제목·날짜·종일·색 6개·메모·Cancel/Add event), 일정 칩 누르면 고치기·삭제. 재실행 후 일정 유지 확인. 노드 안 날짜 글은 영어 로캘로 고정.
 
 ## 막힌 것

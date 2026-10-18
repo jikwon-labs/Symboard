@@ -297,7 +297,6 @@ struct HoverRowStyle: ButtonStyle {
 struct RightRail: View {
     @ObservedObject var chrome: ChromeModel
     let c: MainWindowController
-    @State private var insertOpen = false
     @State private var layersOpen = false
 
     var body: some View {
@@ -305,10 +304,10 @@ struct RightRail: View {
             Button { layersOpen.toggle() } label: { Image(systemName: "square.3.layers.3d") }
                 .buttonStyle(RailButtonStyle()).help("Layers")
                 .popover(isPresented: $layersOpen, arrowEdge: .leading) { LayersList(model: c.model, c: c) }
-            Button { insertOpen.toggle() } label: { Image(systemName: "checklist") }
+            Button { chrome.insertOpen.toggle() } label: { Image(systemName: "checklist") }
                 .buttonStyle(RailButtonStyle()).help("Insert checklist, board, note")
-                .popover(isPresented: $insertOpen, arrowEdge: .leading) {
-                    InsertMenu { p in insertOpen = false; c.setTool(.place(p)) }
+                .popover(isPresented: $chrome.insertOpen, arrowEdge: .leading) {
+                    InsertMenu { p in chrome.insertOpen = false; c.setTool(.place(p)) }
                 }
             Button { c.openSettings() } label: { Image(systemName: "slider.horizontal.3") }
                 .buttonStyle(RailButtonStyle()).help("Settings")
@@ -348,6 +347,7 @@ struct InsertMenu: View {
         VStack(alignment: .leading, spacing: 2) {
             row("checklist", "Checklist", "Objectives with a progress counter") { pick(.checklist) }
             row("rectangle.split.3x1", "Board", "Kanban columns with cards") { pick(.kanban) }
+            row("calendar", "Calendar", "A month with events") { pick(.calendar) }
             row("note.text", "Sticky note", "A paper note") { pick(.sticky) }
             row("point.3.connected.trianglepath.dotted", "Orchestrator", "Watch and command many consoles") { pick(.orchestrator) }
         }

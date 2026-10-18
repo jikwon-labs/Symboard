@@ -20,6 +20,8 @@ enum NodeContentFactory {
             return WebContent(node: node, model: model)
         case .git:
             return GitContent(node: node, model: model)
+        case .calendar:
+            return HostedContent(node: node, model: model) { CalendarNodeView(box: $0) }
         case .orchestrator:
             return OrchestratorContent(node: node, model: model)
         case .file:
