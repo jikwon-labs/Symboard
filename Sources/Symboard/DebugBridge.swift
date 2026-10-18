@@ -338,6 +338,16 @@ final class DebugBridge {
             log.append("resumeAll")
         case "pending":
             log.append("pending \(controller.model.sessions.pendingResume.count)")
+        case "composer":
+            // open, count, tiles(배열), role(이름), name, spawn
+            let cs = controller.composer
+            if cmd["open"] as? Bool ?? true { if !cs.open { controller.openComposer(nil) } }
+            if let n = cmd["count"] as? Int { cs.setCount(n) }
+            if let t = cmd["tiles"] as? [String] { cs.tiles = t }
+            if let r = cmd["role"] as? String, let role = ComposerState.roles.first(where: { $0.name == r }) { cs.pick(role: role) }
+            if let name = cmd["name"] as? String { cs.teamName = name }
+            if cmd["spawn"] as? Bool ?? false { controller.spawnComposer() }
+            log.append("composer \(cs.teamName) \(cs.tiles)")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

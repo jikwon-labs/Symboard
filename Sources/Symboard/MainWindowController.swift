@@ -6,6 +6,7 @@ import SymboardCore
 final class MainWindowController: NSWindowController, NSWindowDelegate {
     let model: AppModel
     let chrome = ChromeModel()
+    let composer = ComposerState()
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
@@ -89,7 +90,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let topRight = host(TopRightBar(chrome: chrome, c: self))
         let left = host(LeftRail(chrome: chrome, c: self))
         let right = host(RightRail(chrome: chrome, c: self))
-        let bottom = host(BottomBar(chrome: chrome, c: self))
+        let bottom = host(BottomBar(chrome: chrome, composer: composer, c: self))
         let branch = host(BranchChip(chrome: chrome))
         let zoom = host(ZoomControl(chrome: chrome, c: self))
         let hint = host(HintBanner(chrome: chrome))
@@ -645,9 +646,16 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
     @objc func openComposer(_ sender: Any?) {
-        NewTerminalDialog.lastCwd = projectPath
-        guard let r = ComposerDialog.run() else { return }
-        launchTeam(spec: r.spec, count: r.count, teamName: r.teamName, roles: r.roles)
+        if !composer.open { composer.reset(default: AgentCatalog.shared.lastChoiceID) }
+        composer.open.toggle()
+    }
+
+    /// 컴포저 카드의 Spawn N: 역할 색 그룹 프레임을 만들고 노드를 차례로 띄운다.
+    func spawnComposer() {
+        let specs = composer.tiles.map { (AgentCatalog.choice(id: $0) ?? AgentCatalog.shared.lastChoice).spec(cwd: projectPath) }
+        let name = composer.teamName.trimmingCharacters(in: .whitespaces).isEmpty ? composer.role.name : composer.teamName
+        composer.open = false
+        launchTeam(specs: specs, teamName: name, roles: [], colorHex: composer.role.colorHex, stagger: true)
     }
 
     /// 노드 여러 개를 격자로 띄우고 새 팀으로 묶는다.
@@ -657,19 +665,48 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
     @discardableResult
-    func launchTeam(specs: [TerminalSpec], teamName: String, roles: [String?], colorHex: String? = nil) -> Team {
+    func launchTeam(specs: [TerminalSpec], teamName: String, roles: [String?], colorHex: String? = nil, stagger: Bool = false) -> Team {
         let wsID = model.selectedWorkspace.id
         let color = colorHex ?? Composer.teamColors[model.selectedWorkspace.teams.count % Composer.teamColors.count]
         let team = Team(name: teamName, colorHex: color)
         model.mutateWorkspace(wsID) { $0.teams.append(team) }
-        let frames = Composer.frames(count: specs.count, center: scrollView.visibleCenter, size: (w: 520, h: 330))
+        let frames = Composer.frames(count: specs.count, center: freeSpotCenter(count: specs.count), size: (w: 520, h: 330))
         for (i, f) in frames.enumerated() {
             let role = i < roles.count ? roles[i] : nil
-            addTerminal(spec: specs[i], at: Point(x: f.x, y: f.y), size: CGSize(width: f.w, height: f.h),
-                        teamID: team.id, role: role)
+            let add = { [weak self] in
+                guard let self else { return }
+                self.addTerminal(spec: specs[i], at: Point(x: f.x, y: f.y), size: CGSize(width: f.w, height: f.h),
+                                 teamID: team.id, role: role)
+                if i == frames.count - 1 { self.zoomToFit(nil) }
+            }
+            if stagger && i > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.18 * Double(i), execute: add) } else { add() }
         }
-        zoomToFit(nil)
+        if stagger { zoomToFitFrames(frames) }
         return team
+    }
+
+    /// 새 묶음을 놓을 자리: 화면 가운데가 비어 있으면 거기, 아니면 기존 노드 오른쪽.
+    private func freeSpotCenter(count: Int) -> Point {
+        let c = scrollView.visibleCenter
+        let nodes = model.selectedWorkspace.nodes
+        let cols = Double(Int(ceil(Double(count).squareRoot())))
+        let w = cols * 544, h = ceil(Double(count) / cols) * 354
+        let probe = NSRect(x: c.x - w / 2, y: c.y - h / 2, width: w, height: h)
+        if !nodes.contains(where: { CanvasGeometry.viewRect($0.frame).offsetBy(dx: -CanvasGeometry.origin, dy: -CanvasGeometry.origin).intersects(probe) }) { return c }
+        let maxX = nodes.map { $0.frame.x + $0.frame.w }.max() ?? 0
+        let minY = nodes.map(\.frame.y).min() ?? 0
+        return Point(x: maxX + 120 + w / 2, y: minY + h / 2)
+    }
+
+    private func zoomToFitFrames(_ frames: [Rect]) {
+        let existing = model.selectedWorkspace.nodes.map(\.frame)
+        let all = existing + frames
+        guard !all.isEmpty else { return }
+        let minX = all.map(\.x).min()!, minY = all.map(\.y).min()!
+        let maxX = all.map { $0.x + $0.w }.max()!, maxY = all.map { $0.y + $0.h }.max()!
+        let size = scrollView.frame.size
+        let zoom = min((size.width - 160) / (maxX - minX + 40), (size.height - 220) / (maxY - minY + 40), 1)
+        scrollView.center(on: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2), zoom: zoom)
     }
 
     func addImageFromPanel() {

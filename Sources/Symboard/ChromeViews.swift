@@ -423,6 +423,7 @@ struct LayersList: View {
 
 struct BottomBar: View {
     @ObservedObject var chrome: ChromeModel
+    @ObservedObject var composer: ComposerState
     let c: MainWindowController
     @FocusState private var focused: Bool
 
@@ -455,6 +456,9 @@ struct BottomBar: View {
                 Button("New console") { c.spawnQuick(count: 1) }
                 Button("Spawn 4") { c.spawnQuick(count: 4) }
                 Button("Group") { c.openComposer(nil) }
+                    .popover(isPresented: $composer.open, arrowEdge: .top) {
+                        ComposerCard(state: composer) { c.spawnComposer() }
+                    }
                 Menu("Presets") {
                     ForEach(ComposerPreset.all) { p in Button(p.name) { c.spawnPreset(p) } }
                 }

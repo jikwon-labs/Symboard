@@ -33,8 +33,8 @@ STATUS: IN_PROGRESS
 
 ## E. 컴포저
 
-- [ ] E1. 캔버스 위 카드형 팝오버: 팀 이름·역할 칩·4열 타일·Fill all·스테퍼·Spawn N (node-composer.jpg, agent1/comp.jpg)
-- [ ] E2. 결과: 그룹 프레임 생성 + 노드 차례 부팅 (node-composer.jpg r3)
+- [x] E1. 캔버스 위 카드형 팝오버: 팀 이름·역할 칩·4열 타일·Fill all·스테퍼·Spawn N (node-composer.jpg, agent1/comp.jpg)
+- [x] E2. 결과: 그룹 프레임 생성 + 노드 차례 부팅 (node-composer.jpg r3)
 
 ## C. 오케스트레이터와 일괄 명령
 
@@ -105,5 +105,6 @@ STATUS: IN_PROGRESS
 - B2·B3: 원본 agent1/board-0.jpg 오른쪽, voice.jpg r3c3, board.jpg r2c2 / 내 것 `v2/B2-B3-group-frame-links.png`, `v2/B2-group-collapsed.png`. 팀마다 둥근 프레임(색 점·이름·개수·"N running"/idle·꺾쇠), 머리를 끌면 멤버가 함께 이동(디버그 dragGroup 로 4개 노드 frame 이 +1100 이동 확인), 꺾쇠로 접기, 오른쪽 클릭 메뉴(이름 바꾸기·풀기·모두 닫기). 노드 메뉴 Link To 로 노드·그룹 사이 곡선, 선 위로 점이 흐름(CAKeyframeAnimation). 남은 차이: 연결선은 메뉴로만 만든다(원본은 오케스트레이터 Connect 로 생김, C 에서).
 - B4: 원본 voice.jpg r3c3 / 내 것 `v2/B4-close-confirm.png`. `/close @backend` 또는 그룹 메뉴 → 아래 바 위에 "이름들: about to close 4 consoles" + Close 4 / Cancel. 고친 것: 숨긴 홈 화면 호스팅 뷰가 클릭을 가로채던 문제(숨겨지면 hitTest nil).
 - F1·F2: 원본 agent1/resume-top.jpg, node-resume.jpg / 내 것 `v2/F1-F2-resume-toast.png`, `v2/F2-resumed.png`. 한 번 실행됐고 세션 id 가 있는 claude·codex 콘솔은 다시 열 때 띄우지 않고 기다린다(헤더 ON HOLD, 본문 위 "Resume last conversation? Yes/No" 말풍선). 오른쪽 위 토스트 Yes → 0.35초 간격으로 차례로 "Restored - picking up the last conversation..." 을 찍고 이어 띄운 뒤 전체 보기, No → 세션 id 를 지우고 새로 시작, × → 토스트만 닫고 노드별로 답. 확인은 /tmp/symsample 에 claude 노드 2개(세션 id 만 넣고 대화는 보내지 않음)로 했다: 대기 2 → Yes → 대기 0, 두 노드 claude 실행. 남은 차이: 원본은 기다리는 동안에도 CLI 가 새로 떠 있다가 Yes 에 이어 가지만, 여기는 답할 때까지 띄우지 않는다(같은 대화가 두 번 열리지 않게).
+- E1·E2: 원본 node-composer.jpg, agent1/comp.jpg / 내 것 `v2/E1-composer-card.png`, `v2/E2-composer-booting.png`, `v2/E2-composer-group.png`. 아래 바 Group → 바 위 카드 팝오버: 편집 가능한 팀 이름, 역할 칩 8개(고르면 팀 이름·Spawn 색이 역할 색), 4열 타일(누르면 그 타일만 다음 CLI), Fill all(설치된 CLI 배지), − N + (1~12, 타일 즉시 늘고 줆), Spawn N. 결과는 역할 색 그룹 프레임 + 0.18초 간격으로 노드가 차례로 생김, 비어 있는 자리(기존 노드 오른쪽)에 놓고 전체 보기. 6개 셸로 확인. 남은 차이: 원본 Fill all 줄에는 CLI 가 더 많다(여기는 이 맥에 깔린 것만).
 
 ## 막힌 것
