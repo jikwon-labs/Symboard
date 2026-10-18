@@ -424,6 +424,7 @@ struct LayersList: View {
         case .orchestrator: return "point.3.connected.trianglepath.dotted"
         case .calendar: return "calendar"
         case .shape: return "square.on.circle"
+        case .inspector: return "ladybug"
         }
     }
 }

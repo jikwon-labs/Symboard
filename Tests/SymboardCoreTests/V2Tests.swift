@@ -209,3 +209,20 @@ import Testing
         #expect(GitInfo.relative(now.addingTimeInterval(-86400 * 21), now: now) == "3 weeks ago")
     }
 }
+
+@Suite struct WebTileTests {
+    @Test func addresses() {
+        #expect(WebAddress.normalize(":3000") == "http://localhost:3000")
+        #expect(WebAddress.normalize("5173") == "http://localhost:5173")
+        #expect(WebAddress.normalize("localhost:8080/app") == "http://localhost:8080/app")
+        #expect(WebAddress.normalize("example.com") == "https://example.com")
+        #expect(WebAddress.normalize("http://x.test") == "http://x.test")
+    }
+
+    @Test func deviceFit() {
+        let d = DevicePreset.find("24in")!
+        let f = d.fit(in: 960, 800)
+        #expect(f.zoom == 0.5)
+        #expect(f.w == 960 && f.h == 540 && f.y == 130)
+    }
+}

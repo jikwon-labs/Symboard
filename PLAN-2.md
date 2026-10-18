@@ -67,8 +67,8 @@ STATUS: IN_PROGRESS
 ## L·M·N.
 
 - [x] L1. git 카드 헤더·변경 목록 체크·None·메시지 생성·Commit & Push·완료 상태·히스토리 (node-git.jpg, agent2/g-end.jpg)
-- [ ] M1. 웹 타일 탭·뒤/앞/새로고침·주소줄·시작 화면 포트 칩 (node-webtiles.jpg, agent2/w-open.jpg)
-- [ ] M2. 표시 크기 프리셋·기기 배지·인스펙터 별도 타일+연결선 (agent2/w-end.jpg)
+- [x] M1. 웹 타일 탭·뒤/앞/새로고침·주소줄·시작 화면 포트 칩 (node-webtiles.jpg, agent2/w-open.jpg)
+- [x] M2. 표시 크기 프리셋·기기 배지·인스펙터 별도 타일+연결선 (agent2/w-end.jpg)
 - [ ] N1. 사용량 팝오버: 링·주간 막대·히트맵·통계·토큰 상세 (node-usage.jpg, agent2/u-1.jpg)
 
 ## O·P·Q. 스튜디오
@@ -127,5 +127,8 @@ STATUS: IN_PROGRESS
 - L1: 원본 node-git.jpg, agent2/g-end.jpg / 내 것 `v2/L1-git-card-changes.png`, `v2/L1-git-card-pushed.png`. 원본처럼 아래 왼쪽 브랜치 칩을 누르면 카드가 뜬다(보드의 git 노드도 같은 카드). 헤더: 레포 이름·브랜치·synced/↑↓/local, 히스토리·Finder 열기·새로고침·닫기 원형 버튼. CHANGES 고른 수/전체 +더한 줄 −뺀 줄, 파일마다 체크·상태 글자(M/U/A/D/R)·폴더, None/All. 메시지 칸(비우면 "Add 2 files, update 1 file" 같은 기본 메시지) + 반짝이 버튼(claude -p 로 한 줄 메시지, 도구 없음). "Commit & Push N files" 하나 → Committing... → Pushing... → "Committed 3 files · pushed". RECENT 3개(상대 시간), 히스토리(제목·짧은 해시·작성자·시간). 파싱·기본 메시지·상대 시간 단위 테스트(GitInfo).
   - 실행 확인: /tmp/symsample 에 /tmp/symsample-remote.git(bare)을 origin 으로 두고 4개 변경 중 3개만 골라 커밋 → bare 레포 main 이 같은 커밋으로 올라감, 뺀 파일은 그대로 남음. add -A 대신 고른 경로만 add·commit(pathspec).
   - 남은 차이: 메시지 생성 버튼은 실제 CLI 호출 확인을 아직 하지 않았다(사용량 아끼려고 R·S 시험 때 함께 보기로). 새 파일 줄 수는 +/− 에 들어가지 않는다.
+- M1·M2: 원본 node-webtiles.jpg, agent2/w-open.jpg, agent2/w-end.jpg / 내 것 `v2/M1-web-start-page.png`, `v2/M2-web-device-inspector.png`. 탭 줄(탭마다 WKWebView, 제목, 닫기, +), 뒤로·앞으로·새로고침, 주소줄(":3000"·"5173" 처럼 포트만 써도 localhost, WebAddress 단위 테스트). 빈 탭은 시작 화면: localhost 입력 + 포트 칩 :3000/:3001/:4200/:5173/:8000/:8080 + 빠른 열기 카드 3개. 표시 크기 메뉴: Fit to tile + 모니터 24/27/32" 4K·노트북·휴대폰·태블릿 → 그 해상도로 배치하고 pageZoom 으로 타일에 맞춤(인스펙터로 본 본문 폭 1918px), 위에 기기 배지 "24\" 4K 1920 × 1080". 탭·고른 탭·크기는 저장되어 재실행 후 유지.
+  - 인스펙터: 별도 타일로 뜨고 웹 타일과 점 흐르는 연결선으로 이어짐. WKWebView 내장 인스펙터를 타일에 넣는 공개 API 가 없어서 페이지에 JS 를 돌려 직접 만들었다: Elements(DOM 나무, 누르면 페이지에 강조 테두리 + 상자 모델·margin/padding/display), Console(console.log/warn/error 와 오류를 메시지 처리기로 받아 표시, 아래 입력으로 식 실행). /tmp/symweb 를 python http.server 8765 로 띄워 확인("page ready 8765", "demo warning" 수집).
+  - 남은 차이: 원본 인스펙터는 Safari 웹 인스펙터 전체(Network·Sources·Timelines 등)이고 여기는 Elements·Console 두 가지뿐이다.
 
 ## 막힌 것

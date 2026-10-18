@@ -21,7 +21,7 @@ enum Placement: Equatable {
         case .sticky: return CGSize(width: 240, height: 220)
         case .checklist: return CGSize(width: 300, height: 320)
         case .kanban: return CGSize(width: 990, height: 440)
-        case .web: return CGSize(width: 760, height: 520)
+        case .web: return CGSize(width: 820, height: 600)
         case .orchestrator: return CGSize(width: 380, height: 500)
         case .calendar: return CGSize(width: 560, height: 470)
         case .shape(let k): return k == "arrow" ? CGSize(width: 240, height: 60) : (k == "rect" ? CGSize(width: 220, height: 130) : CGSize(width: 180, height: 160))

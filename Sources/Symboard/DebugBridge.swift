@@ -463,6 +463,26 @@ final class DebugBridge {
                 if cmd["refresh"] as? Bool == true { Task { await card.refresh() } }
                 log.append("projectGit \(card.status?.changes.count ?? -1) changes, result=\(card.resultLine ?? "-")\n\(card.log)")
             } else { log.append("projectGit: none") }
+        case "web":
+            // index: 웹 노드. url, device, newTab, inspector, select
+            if let n = node(cmd), let w = controller.currentCanvas?.nodeViews[n.id]?.content as? WebContent {
+                if cmd["newTab"] as? Bool == true { w.newTab() }
+                if let u = cmd["url"] as? String { w.navigate(u) }
+                if cmd.keys.contains("device") { w.setDevice(cmd["device"] as? String) }
+                if let t = cmd["tab"] as? Int { w.select(t) }
+                if cmd["inspector"] as? Bool == true { w.openInspector() }
+                log.append("web tabs=\(w.state.tabs) device=\(w.state.device ?? "-") console=\(w.state.console.map(\.text))")
+            }
+        case "inspect":
+            // index: 인스펙터 노드, path(배열) 고르기, tab
+            if let n = node(cmd), let ic = controller.currentCanvas?.nodeViews[n.id]?.content as? InspectorContent {
+                let m = ic.inspector
+                if let t = cmd["tab"] as? String { m.tab = t }
+                if cmd["refresh"] as? Bool == true { m.refresh() }
+                if let p = cmd["path"] as? [Int] { m.expanded.formUnion((0...p.count).map { p.prefix($0).map(String.init).joined(separator: ".") }); m.expanded.remove("0"); m.select(p) }
+                if let e = cmd["eval"] as? String { m.expr = e; m.evaluate() }
+                log.append("inspect root=\(m.root?.tag ?? "-") box=\(m.box)")
+            }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

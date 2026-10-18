@@ -180,3 +180,47 @@ public enum Ink {
         return false
     }
 }
+
+/// 웹 타일 표시 크기 프리셋.
+public struct DevicePreset: Equatable, Sendable, Identifiable {
+    public var id: String
+    public var name: String
+    public var width: Double
+    public var height: Double
+    public var group: String
+
+    public static let all: [DevicePreset] = [
+        DevicePreset(id: "24in", name: "24\" 4K", width: 1920, height: 1080, group: "Monitor"),
+        DevicePreset(id: "27in", name: "27\" 4K", width: 2560, height: 1440, group: "Monitor"),
+        DevicePreset(id: "32in", name: "32\" 4K", width: 3008, height: 1692, group: "Monitor"),
+        DevicePreset(id: "laptop", name: "Laptop", width: 1512, height: 982, group: "Monitor"),
+        DevicePreset(id: "phone", name: "Phone", width: 393, height: 852, group: "Phone"),
+        DevicePreset(id: "phone-max", name: "Phone Max", width: 430, height: 932, group: "Phone"),
+        DevicePreset(id: "tablet", name: "Tablet", width: 820, height: 1180, group: "Tablet"),
+    ]
+
+    public static func find(_ id: String?) -> DevicePreset? { all.first { $0.id == id } }
+
+    /// 타일 영역 안에 프리셋 비율로 맞춘 사각형과 축소 배율(pageZoom).
+    public func fit(in w: Double, _ h: Double) -> (x: Double, y: Double, w: Double, h: Double, zoom: Double) {
+        let z = min(w / width, h / height)
+        let fw = width * z, fh = height * z
+        return ((w - fw) / 2, (h - fh) / 2, fw, fh, z)
+    }
+}
+
+/// 주소창 입력을 URL 로. 포트만 쓰면 localhost.
+public enum WebAddress {
+    public static func normalize(_ input: String) -> String {
+        var s = input.trimmingCharacters(in: .whitespaces)
+        if s.isEmpty { return "" }
+        if s.hasPrefix(":"), Int(s.dropFirst()) != nil { s = "localhost" + s }
+        if Int(s) != nil { s = "localhost:" + s }
+        if !s.contains("://") {
+            let host = s.split(separator: "/").first.map(String.init) ?? s
+            let local = host.hasPrefix("localhost") || host.hasPrefix("127.") || host.hasPrefix("0.0.0.0")
+            s = (local ? "http://" : "https://") + s
+        }
+        return s
+    }
+}

@@ -474,7 +474,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
                 $0.kanban = ["Backlog", "To Do", "In Progress", "Done"].map { KanbanColumn(title: $0) }
             }
         case .web:
-            addNode(kind: .web, size: s, title: "Web", at: origin) { $0.text = "http://localhost:3000" }
+            addNode(kind: .web, size: s, title: "Web", at: origin) { $0.text = ""; $0.tabs = [""] }
         case .orchestrator:
             addNode(kind: .orchestrator, size: s, title: "Orchestrator", at: origin)
         case .calendar:

@@ -31,6 +31,7 @@ public enum NodeKind: String, Codable, Sendable, CaseIterable {
     case orchestrator
     case calendar
     case shape
+    case inspector
 }
 
 /// 글자·도형 노드의 겉모양. 비어 있는 값은 노드 종류의 기본값을 쓴다.
@@ -191,6 +192,10 @@ public struct BoardNode: Codable, Equatable, Sendable, Identifiable {
     public var style: NodeStyle?
     public var events: [CalendarEvent]?
     public var shape: ShapeSpec?
+    /// 웹 타일 탭 주소들(빈 문자열은 시작 화면)과 고른 탭, 표시 크기 프리셋 id.
+    public var tabs: [String]?
+    public var activeTab: Int?
+    public var device: String?
 
     public init(id: UUID = UUID(), kind: NodeKind, frame: Rect, title: String,
                 terminal: TerminalSpec? = nil, text: String? = nil, colorHex: String? = nil,
