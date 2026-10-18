@@ -64,7 +64,10 @@ STATUS: IN_PROGRESS
   - 원본 장면: `node-composer.mp4` 4초. "Fill all" 옆에 CLI 아이콘이 두 줄(5개 + 2개 + 더하기)로, 고른 것은 동그란 테두리.
   - 바꾼 것: Fill all 을 8번의 `CLIIconStrip` 로 바꿔 아는 CLI 8개를 모두 6개씩 두 줄로 늘어놓는다. 없는 CLI 는 흐리게 사선, 누르면 카드 안에 "not installed" 안내만(타일은 그대로, 띄우지 않음). 깔린 것을 누르면 예전처럼 모두 채우고 안내를 지운다. 타일을 눌러 바꾸는 것은 깔린 것 사이에서만 돈다(예전대로).
   - 확인한 실제 입력(`env -i`, /tmp/symv6-7): Group → 컴포저 → Fill all 줄에 C·X·G·A·Cu·Q / O·>_ (G·A·Cu·Q·O 사선) → G 클릭 → "Gemini CLI is not installed on this Mac…" 안내, 타일 Claude 4개 그대로, "0 live" → >_ 클릭 → 타일 넷 모두 Shell, 안내 사라짐 → Esc. 비교 그림 `compare/9-composer-fillall.png`.
-- [ ] 10. studio-code: 저장 뒤 "Saved"
+- [x] 10. studio-code: 저장 뒤 "Saved"
+  - 원본 장면: `studio-code.mp4` 17~19초. 고치면 크기 옆 "• Edited", Save 를 누르면 단추가 흐린 "✓ Saved" 로 바뀌고 Edited 가 사라진다.
+  - 바꾼 것: 코드 스튜디오 Save 단추가 저장 직후(바뀐 것 없음 + 저장 메모) "✓ Saved" 로 바뀐다. 다시 고치면 Save 로. 크기 옆 초록 "Saved" 글은 단추와 겹쳐 빼고, 실패 메모만 남겼다. 마크다운 스튜디오는 원래 자동 저장 + "Saved 시각" 이라 그대로.
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-7): 오른쪽 막대 Code studio → README.md → 마지막 줄 클릭 → End → " (edited)" 타이핑 → "• Edited", 단추 Save → Cmd+S → 단추 "✓ Saved", 파일 마지막 줄에 "(edited)" 저장됨(확인 뒤 표본 파일은 되돌림). 비교 그림 `compare/10-code-saved.png`.
 - [ ] 11. studio-diagrams: 화면 맞춤이 다이어그램만, 노드 고르면 노드 편집 패널
 - [ ] 12. studio-documents: GENERATE PDF 누르면 작은 메뉴 먼저
 - [ ] 13. studio-markdown: 카드 바닥 "Open in Studio · PDF" 글 단추

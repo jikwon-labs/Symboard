@@ -209,12 +209,17 @@ struct StudioOverlay: View {
                         .padding(.horizontal, 5).padding(.vertical, 2).background(RoundedRectangle(cornerRadius: 4).fill(Color(hex: "#56A8F5").opacity(0.15)))
                     Text("\(studio.lineCount) lines · \(Self.bytes(studio.byteCount))").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                     if studio.dirty { Text("• Edited").font(.system(size: 11, weight: .medium)).foregroundStyle(Color(hex: "#E9C46A")) }
-                    else if !studio.note.isEmpty { Text(studio.note).font(.system(size: 11)).foregroundStyle(Color(hex: "#6FCF97")) }
+                    else if !studio.note.isEmpty, studio.note != "Saved" { Text(studio.note).font(.system(size: 11)).foregroundStyle(Color.symAccent) }
                 }
                 Spacer()
                 Button { c.studioAddFolder() } label: { Label("Add folder", systemImage: "folder.badge.plus") }.buttonStyle(PillButtonStyle())
-                Button { studio.save() } label: { Label("Save", systemImage: "square.and.arrow.down") }.buttonStyle(PillButtonStyle())
-                    .keyboardShortcut("s", modifiers: .command).disabled(!studio.dirty)
+                // 원본처럼 저장하면 단추 자체가 흐린 "✓ Saved" 로 바뀌고, 다시 고치면 Save 로 돌아온다.
+                let justSaved = !studio.dirty && studio.note == "Saved"
+                Button { studio.save() } label: {
+                    Label(justSaved ? "Saved" : "Save", systemImage: justSaved ? "checkmark" : "square.and.arrow.down")
+                }
+                .buttonStyle(PillButtonStyle()).axName(justSaved ? "Saved" : "Save")
+                .keyboardShortcut("s", modifiers: .command).disabled(!studio.dirty)
                 Button { c.studioInsert() } label: { Label("Insert", systemImage: "rectangle.on.rectangle") }.buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(studio.selected == nil)
             }
