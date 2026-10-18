@@ -64,6 +64,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             }
         }
         showWorkspace(model.selectedWorkspace.id)
+        // 다른 작업공간 탭의 콘솔도 앱이 켜지면 바로 돈다(원본처럼 live 수가 전체). 이어하기를 기다리는 것은 답을 받은 뒤 띄운다.
+        for ws in model.state.workspaces { for n in ws.nodes where n.kind == .terminal { _ = model.sessions.ensureSession(for: n) } }
         // 열 프로젝트가 없으면(새 상태 폴더) 홈 화면의 폴더 열기로 시작한다.
         if model.selectedWorkspace.projectPath == nil, model.state.workspaces.allSatisfy({ $0.nodes.isEmpty }) { setHome(true) }
         refreshGit()

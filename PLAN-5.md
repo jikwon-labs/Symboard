@@ -90,6 +90,7 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, 새 작업공간 탭): 같은 순서(Group → + 여덟 번 → 셋째 줄 넷 → Testers → Backend → Spawn 12). 컴포저 모양·타일 색·단추 색이 원본과 같다(`compare/video-node-composer.png` 위). 4×3 "BACKEND" 그룹, Claude 8 READY(`v3-backend-12.png`).
   - 쓰는 데 지장 있는 차이(고침): Codex 4개가 "Background server has incompatible feature settings" 메뉴에서 멈췄다(이 맥에서 다른 codex 화면이 띄운 공용 데몬과 설정이 다름). 콘솔 codex 를 `--no-daemon` 으로 띄운다(사용자가 인자로 데몬을 고르면 그대로, 단위 테스트 1개 + 기존 2개 고침, DECISIONS.md). 고친 뒤 메뉴 없이 codex 자체 화면으로 간다.
   - 남은 것(사용자 결정이라 둠): codex 의 "Update available" 화면(Enter 기본값이 전역 업데이트)과 /tmp/symsample 폴더 신뢰 화면. 둘 다 NEEDS YOU 로 잘 보이고, 답하면 ~/.codex 를 바꾸거나 전역 설치가 되므로 시험에서는 답하지 않았다(Esc 로 업데이트 건너뛰기만 확인, codex 0.157.1 그대로).
+  - 쓰는 데 지장 있는 차이(고침, 따라 하다 찾음): 다시 켜면 지금 보이는 탭의 콘솔만 돌고 다른 탭 콘솔은 그 탭을 열어야 떴다(live 12, Main 의 셸 24개 꺼짐). 켤 때 모든 작업공간의 콘솔을 띄운다. 확인: Workspace 2 가 보이는 채 Cmd+Q → 다시 띄움 → "28 live", 토스트 "14 consoles"(두 탭의 claude 전부).
   - 모양 차이: 원본 Fill all 줄의 CLI 아이콘 열두 개(우리는 이 맥에 깔린 것만: Claude·Codex·Shell). 원본 그룹 머리 "12 running", 우리는 "4 need you"(상태가 다름).
 - [ ] V4. node-git.mp4
 - [ ] V5. node-ink.mp4
