@@ -107,6 +107,8 @@ final class CanvasView: NSView {
     weak var controller: MainWindowController?
     /// 놓기 도구일 때 마우스 위치(뷰 좌표). 점선 자리표시를 그린다.
     private var hoverPoint: NSPoint?
+    /// 웹 도구로 캔버스를 끄는 중이면 시작점과 지금 점(뷰 좌표). 원본처럼 끈 크기가 타일 크기가 된다.
+    private var sizingDrag: (start: NSPoint, current: NSPoint)?
     private(set) var nodeViews: [UUID: NodeView] = [:]
     private(set) var groupViews: [UUID: GroupFrameView] = [:]
     private(set) lazy var inkView: InkOverlayView = {
@@ -368,7 +370,22 @@ final class CanvasView: NSView {
             }
         }
 
-        if case .place(let p) = tool, let h = hoverPoint {
+        if let d = sizingDrag {
+            let r = Self.rect(d.start, d.current)
+            let path = NSBezierPath(rect: r)
+            path.lineWidth = 1.5 / max(mag, 0.2)
+            Theme.accent.withAlphaComponent(0.06).setFill()
+            path.fill()
+            Theme.accent.setStroke()
+            path.stroke()
+            // 네 모서리 손잡이.
+            let k = 7 / max(mag, 0.2)
+            for c in [NSPoint(x: r.minX, y: r.minY), NSPoint(x: r.maxX, y: r.minY), NSPoint(x: r.minX, y: r.maxY), NSPoint(x: r.maxX, y: r.maxY)] {
+                let dot = NSBezierPath(ovalIn: NSRect(x: c.x - k / 2, y: c.y - k / 2, width: k, height: k))
+                NSColor.white.setFill(); dot.fill()
+                Theme.accent.setStroke(); dot.lineWidth = 1.5 / max(mag, 0.2); dot.stroke()
+            }
+        } else if case .place(let p) = tool, let h = hoverPoint {
             let s = p.size
             let r = NSRect(x: h.x - s.width / 2, y: h.y - 20, width: s.width, height: s.height)
             let path = NSBezierPath(roundedRect: r, xRadius: 12, yRadius: 12)
@@ -428,6 +445,10 @@ final class CanvasView: NSView {
         window?.makeFirstResponder(self)
         select(nil)
         let p = convert(event.locationInWindow, from: nil)
+        if case .place(.web) = tool {
+            sizingDrag = (p, p)
+            return
+        }
         if case .place(let placement) = tool {
             controller?.place(placement, at: CanvasGeometry.modelPoint(p))
             return
@@ -449,7 +470,16 @@ final class CanvasView: NSView {
         NSCursor.closedHand.push()
     }
 
+    static func rect(_ a: NSPoint, _ b: NSPoint) -> NSRect {
+        NSRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
+    }
+
     override func mouseDragged(with event: NSEvent) {
+        if let d = sizingDrag {
+            sizingDrag = (d.start, convert(event.locationInWindow, from: nil))
+            needsDisplay = true
+            return
+        }
         if tool == .eraser {
             erase(at: CanvasGeometry.modelPoint(convert(event.locationInWindow, from: nil)))
             return
@@ -468,6 +498,19 @@ final class CanvasView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if let d = sizingDrag {
+            sizingDrag = nil
+            needsDisplay = true
+            let r = Self.rect(d.start, convert(event.locationInWindow, from: nil))
+            // 거의 끌지 않았으면 클릭으로 보고 기본 크기로 놓는다.
+            if r.width < 24 && r.height < 24 {
+                controller?.place(.web, at: CanvasGeometry.modelPoint(d.start))
+            } else {
+                let o = CanvasGeometry.modelPoint(r.origin)
+                controller?.placeWeb(in: Rect(x: o.x, y: o.y, w: max(r.width, 320), h: max(r.height, 220)))
+            }
+            return
+        }
         if let pts = currentStroke {
             currentStroke = nil
             if pts.count > 0 {

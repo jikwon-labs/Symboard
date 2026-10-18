@@ -51,7 +51,11 @@ STATUS: IN_PROGRESS
   - 원본 장면: `node-loops.mp4` 12초. STOP 에서 "When a goal is met" 를 켜면 "A command passes" 가 먼저 골라져 있고 칸은 비어 있다(안내 글만). 고르는 칩은 두 개(A command passes · An agent judges). 스위치는 글 왼쪽.
   - 바꾼 것: 목표 기본 종류를 "agent" 에서 "command" 로(새 루프·초기화 둘 다). 칩 순서를 원본처럼 command → agent 로 하고, 우리만 있는 "Output shows text" 는 맨 뒤로. STOP·BEHAVIOR 스위치를 글 왼쪽에 두고 글을 눌러도 켜지게.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-5): 오른쪽 막대 Loops → Start from scratch → 아래로 스크롤 → "When a goal is met" 글 클릭 → 스위치 켜짐, "A command passes" 골라짐, 칸 비어 있음(안내 "e.g. swift test"). 비교 그림 `compare/6-loops-goal.png`.
-- [ ] 7. node-webtiles: 지구 도구 고른 뒤 끌어서 타일 크기
+- [x] 7. node-webtiles: 지구 도구 고른 뒤 끌어서 타일 크기
+  - 원본 장면: `node-webtiles.mp4` 0~1.5초(2장/초). 지구 도구 → 캔버스를 끌면 주황 사각형과 모서리 손잡이 4개 → 놓으면 그 크기의 웹 타일.
+  - 바꾼 것: 웹 도구일 때 캔버스 `mouseDown` 이 바로 놓지 않고 `sizingDrag` 를 시작한다. 끄는 동안 주황 사각형 + 흰 모서리 손잡이를 그리고, 놓으면 `placeWeb(in:)` 이 그 사각형(최소 320×220)에 타일을 놓는다. 24pt 미만으로 끌면 클릭으로 보고 예전처럼 기본 크기로 놓는다(이때는 1번 규칙으로 밀림). 직접 그린 자리는 밀지 않는다.
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-7): 지구 도구 클릭 → 캔버스 (300,200)→(900,600) 끌기 → 600×400 웹 타일, 주소 칸에 초점(`compare/7-webtile-drag.png`). 지구 도구 → 빈 곳 클릭 → 820×600 기본 크기, 첫 타일 오른쪽으로 24pt 띄워 놓임(state.json 으로 크기 확인).
+  - 못 본 것: orca 끌기는 한 번에 끝나 끄는 중의 사각형 화면은 찍지 못했다.
 - [ ] 8. node-accounts: 팝오버 머리 CLI 아이콘, 없는 CLI 는 흐리게 + "설치되지 않음"
 - [ ] 9. node-composer: Fill all 도 8번 규칙
 - [ ] 10. studio-code: 저장 뒤 "Saved"

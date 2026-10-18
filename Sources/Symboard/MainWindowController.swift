@@ -819,6 +819,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         setTool(.select)
     }
 
+    /// 웹 도구로 끌어 그린 사각형 자리에 그 크기로 웹 타일을 놓는다(원본 node-webtiles). 직접 그린 자리라 밀지 않는다.
+    func placeWeb(in r: Rect) {
+        addNode(kind: .web, size: CGSize(width: r.w, height: r.h), title: "Web", at: Point(x: r.x, y: r.y)) { $0.text = ""; $0.tabs = [""] }
+        setTool(.select)
+    }
+
     /// 선택한 노드를 옆에 하나 더 만든다. 터미널은 같은 CLI 로 새 세션.
     func duplicateSelection() {
         guard let id = currentCanvas?.selectedNodeID, let n = model.node(id) else {
