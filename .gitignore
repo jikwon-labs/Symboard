@@ -4,3 +4,4 @@ build/
 .swiftpm/
 *.xcodeproj
 docs/screens/v5/compare/
+docs/screens/v6/compare/
