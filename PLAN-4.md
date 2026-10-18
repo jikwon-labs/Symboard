@@ -45,7 +45,10 @@ STATUS: IN_PROGRESS
   - 고침: `.autoFocus()`(창이 붙은 뒤 0.05·0.25초에 초점) 를 위 SwiftUI 칸에 붙였다(이미 내용이 있는 고치기 창과 주소가 있는 웹 탭은 제외). 칸반·캘린더는 Enter 저장(제목이 비면 무시)·Esc 취소(`onExitCommand`). 루프·메모리는 Enter 저장, 여러 줄 칸에서는 Cmd+Enter 로 저장 단추. NSAlert 는 `Prompt.run` 이 창이 뜬 뒤 칸에 초점을 주고 글자를 모두 골라 둔다(바로 치면 바뀜). 여러 줄 Prompt 는 Cmd+Enter 가 OK.
   - 확인한 실제 입력(새 상태 /tmp/symv4e, /tmp/symfocus git 레포): 칸반 DOING "Add card" 클릭 → 바로 "Write docs" → Return → 카드 생김(`5-kanban-typed-enter.png`). Add card → "nope" → Esc → 카드 안 생김. … → Rename… → 바로 "Sprint board" → Return → 이름 바뀜(`5-rename-typed.png`). 루프 → Start from scratch → 바로 "Hourly ping"(`5-loop-scratch-typed.png`) → 지시 칸 클릭 "say hi" → Cmd+Return → 루프 생김. Memory → New memory → 바로 "Use pnpm not npm" → Return → 저장(`5-memory-typed.png`). 브랜치 칩 → 바로 "Add b line" → Return → `/tmp/symfocus` 에 커밋 a671b03(`5-git-typed.png`). 문서 스튜디오 → 바로 "a short README"(`5-docs-typed.png`, Enter 는 질문이 되어 R 항목에서). 다이어그램 → 바로 "login flow"(`5-diagram-typed.png`). 웹 타일 놓기 → 바로 "example.invalid" → Return → 그 주소로 이동(`5-web-typed.png`). 캘린더 + New → 바로 "Standup" → Return → 18일에 일정(`5-calendar-typed.png`, `5-calendar-enter.png`).
   - 시험 도구 한계: git 팝오버에서 커밋한 뒤 orca 가 "초점 창 없음" 으로 Esc·클릭을 거부했다(AppKit 키 창은 본 창이었다 — 디버그 `windows` 로 확인). CGEvent 도구는 이 터미널에 손쉬운 사용 권한이 없어(`CGPreflightPostEventAccess` false) 이벤트가 버려진다. 팝오버는 디버그 통로로 닫았다.
-- [ ] 6. 칸반 Done 열 카드 표시
+- [x] 6. 칸반 Done 열 카드 표시
+  - 원본: `videos/node-kanban.mp4` 48초 장면(`6-original-done-column.png`)에서 "Research market trends" 카드를 DONE 열로 옮긴 뒤에도 앞 동그라미는 비어 있고, 우선순위 색 막대와 Today·Low 칩이 그대로다. 열은 자리일 뿐이고, 동그라미는 따로 누르는 완료 표시다.
+  - 결정: 원본대로 열을 옮겨도 동그라미를 자동으로 채우지 않는다(DECISIONS.md). 동그라미를 누르면 완료(3차에서 확인한 동작).
+  - 확인한 실제 입력: 칸반 머리 클릭 → "Write docs" 카드를 DOING 에서 DONE 열로 끌기 → DONE 1, 빈 동그라미·왼쪽 막대(`6-kanban-done-column.png`). 고친 코드는 없다.
 - [ ] 7. 앱이 스스로 만드는 노드(인스펙터, 복제, 컴포저 그룹, 문서·다이어그램 결과)도 보이는 영역 안으로
 - [ ] 8. 셸 Ctrl+C 실제 입력 확인(`sleep 100` 끊기)
 
