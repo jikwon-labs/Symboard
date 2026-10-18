@@ -87,8 +87,16 @@ STATUS: IN_PROGRESS
   - 차이(쓰는 데 지장): 끌어서 연결하는 방법이 없었다(Connect 단추 흐름만).
   - 고침: 오케스트레이터 오른쪽 가장자리에 주황 연결 손잡이(`WirePortView`). 누르고 끌면 점선 곡선이 따라오고, 그룹 틀(머리·여백) 위에 놓으면 그 그룹, 콘솔 위에 놓으면 그 콘솔의 연결을 켜거나 끈다. 결과를 "Wired Beta"/"Unwired Beta" 로 알린다.
   - 확인한 실제 입력(새 상태 /tmp/symv4l, 셸 그룹 Alpha·Beta 두 개는 디버그로 깔고): 오른쪽 막대 → Orchestrator → 캔버스 클릭 → 손잡이를 Beta 틀 아래 여백으로 끌기 → "Wired Beta", 연결선, BETA 섹션 Maya·Iris(`C-drag-wired.png`) → 오케스트레이터 입력 "echo only-beta" Return → Maya·Iris 에만 출력, Ada·Pip 은 없음(`C-command-beta-only.png`) → 같은 자리로 다시 끌기 → "Unwired Beta", links 비고 "No agents wired"(`C-drag-unwired.png`).
-- [ ] 6. O·P 코드 스튜디오: 파일 열기, 고치기, 저장, 탭 여러 개
-- [ ] 7. Q 마크다운 스튜디오: Reading/Source/Graph 전환, 링크 따라가기
+- [x] 6. O·P 코드 스튜디오: 파일 열기, 고치기, 저장, 탭 여러 개
+  - 원본(`studio-code.jpg`, `agent3/code-16.png`): 왼쪽 파일 나무, 경로 조각·언어 배지·줄 수·크기·"• Edited", Add folder · Save · Insert, 줄 번호 편집기. 우리 쪽이 같다. 원본에는 열린 파일 탭 줄이 없다.
+  - 차이(쓰는 데 지장): 파일을 바꿔 열면 앞 파일로 돌아갈 길이 나무뿐이었다(진행표가 요구한 "탭 여러 개" 없음).
+  - 고침: 연 파일을 `openFiles` 로 남기고, 둘 이상이면 위쪽에 탭 줄(이름, 고친 탭은 노란 점, ×)을 보인다. 하나일 때는 원본처럼 숨긴다. × 를 누르면 고친 내용을 저장하고 남은 탭으로 옮긴다. × 누를 자리를 16pt 로 키웠다(8pt 글자만 눌리던 것을 실제 클릭으로 찾음). 탭은 코드 스튜디오 안에서만 쓴다.
+  - 확인한 실제 입력(새 상태 /tmp/symv4m, 예제 /tmp/symcode): 오른쪽 막대 코드 아이콘 → src 펼치기 → calc.py → main.py(경로 src › main.py, PY, 줄 수) → 2행 끝 클릭 → End, Return, "print('saved')" → Cmd+S → 디스크 반영(`O-code-saved.png`). 탭 줄 calc.py·main.py → calc.py 탭 → 끝에 "# edited in tab" → "• Edited"·탭 노란 점(`O-tabs-edited.png`) → Cmd+S → "Saved", 디스크 반영 → main.py 탭 × → calc.py 만 남고 탭 줄 숨김(`O-tab-closed.png`).
+- [x] 7. Q 마크다운 스튜디오: Reading/Source/Graph 전환, 링크 따라가기
+  - 원본(`studio-markdown.jpg`, `agent3/md-graph.png`): 읽기 화면, Reading/Source/Graph, 링크 그래프, Add to Board·Export PDF. 모양은 같다.
+  - 차이(쓰는 데 지장): 읽기 화면에서 `[notes](notes.md)` 링크를 눌러도 아무 일이 없었다(웹뷰가 이동만 시도).
+  - 고침: 읽기 웹뷰가 링크 누르기를 가로챈다(`HTMLPreview.onLink`). 같은 컴퓨터의 마크다운 파일이면(.md 를 빼먹은 링크도) 스튜디오에서 읽기로 열고, http(s) 는 보드에 웹 타일로 연다(다른 앱을 띄우지 않음). 문서 안 #앵커는 그대로.
+  - 확인한 실제 입력: 오른쪽 막대 마크다운 아이콘 → README 가 읽기로 열림 → 본문 "notes" 링크 클릭 → notes.md 로 이동, 나무 선택도 notes(`Q-link-followed.png`) → Source(`Q-source.png`) → Graph: README—notes 선, 2 notes(`Q-graph.png`) → 그래프 마디 클릭 → 그 노트가 읽기로 열림. 그래프는 힘 배치라 마디가 움직여, README 를 겨눈 클릭이 notes 마디에 맞았다.
 - [ ] 8. R 문서 생성: 실제 질문 1회, 실시간으로 그려지는지
 - [ ] 9. S 다이어그램 생성: 실제 질문 1회, 손그림 스타일, 노드 옮기면 선이 따라옴
 

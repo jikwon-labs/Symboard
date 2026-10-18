@@ -18,6 +18,8 @@ final class StudioState: ObservableObject {
     @Published var query = ""
     @Published var note = ""
     @Published var extraRoots: [URL] = []
+    /// 연 파일(탭). 둘 이상이면 위쪽에 탭 줄이 보인다.
+    @Published var openFiles: [URL] = []
 
     init(root: URL) { self.root = root }
 
@@ -41,6 +43,7 @@ final class StudioState: ObservableObject {
     func open(_ url: URL) {
         if dirty, let cur = selected { try? text.write(to: cur, atomically: true, encoding: .utf8) }
         selected = url
+        if !openFiles.contains(where: { Self.key($0) == Self.key(url) }) { openFiles.append(url) }
         text = CodeStyle.load(url)
         savedText = text
         note = ""
@@ -50,6 +53,36 @@ final class StudioState: ObservableObject {
         guard let url = selected, dirty else { return }
         do { try text.write(to: url, atomically: true, encoding: .utf8); savedText = text; note = "Saved" }
         catch { note = "Save failed" }
+    }
+
+    /// 읽기 화면에서 누른 링크. 같은 컴퓨터의 마크다운 파일이면 스튜디오에서 연다.
+    /// 웹 주소는 보드의 웹 타일로 연다(다른 앱을 띄우지 않는다).
+    @discardableResult
+    func followLink(_ url: URL) -> Bool {
+        if url.isFileURL {
+            var u = url
+            if u.pathExtension.isEmpty { u = u.appendingPathExtension("md") }
+            guard FileManager.default.fileExists(atPath: u.path) else { note = "Not found: \(u.lastPathComponent)"; return false }
+            open(u)
+            mdMode = "Reading"
+            return true
+        }
+        if let scheme = url.scheme, ["http", "https"].contains(scheme) {
+            MainWindowController.current?.openWebTile(url.absoluteString)
+            return true
+        }
+        return false
+    }
+
+    /// 탭 닫기. 지금 탭이면 남은 탭 중 마지막으로 옮긴다(고친 내용은 저장).
+    func closeTab(_ url: URL) {
+        let k = Self.key(url)
+        let wasCurrent = selected.map { Self.key($0) == k } ?? false
+        if wasCurrent, dirty { try? text.write(to: url, atomically: true, encoding: .utf8); savedText = text }
+        openFiles.removeAll { Self.key($0) == k }
+        if wasCurrent {
+            if let next = openFiles.last { open(next) } else { selected = nil; text = ""; savedText = "" }
+        }
     }
 
     /// 경로를 루트 기준 조각으로(브레드크럼).
@@ -83,6 +116,10 @@ struct StudioOverlay: View {
                             VStack(spacing: 0) {
                                 topBar(kind)
                                 Divider().overlay(Color.symBorder)
+                                if kind == "Code" && studio.openFiles.count > 1 {
+                                    tabRow
+                                    Divider().overlay(Color.symBorder)
+                                }
                                 content(kind)
                             }
                         }
@@ -189,6 +226,30 @@ struct StudioOverlay: View {
 
     static func bytes(_ n: Int) -> String { n < 1024 ? "\(n) B" : String(format: "%.1f KB", Double(n) / 1024) }
 
+    /// 연 파일 탭 줄(코드 스튜디오, 둘 이상일 때).
+    var tabRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(studio.openFiles, id: \.self) { u in
+                    let on = studio.isSelected(u)
+                    HStack(spacing: 6) {
+                        Button { if !on { studio.open(u) } } label: {
+                            Text(u.lastPathComponent).font(.system(size: 12, weight: on ? .semibold : .regular))
+                                .foregroundStyle(on ? Color.symText : Color.symDim)
+                        }
+                        .buttonStyle(.plainHit).axName("Tab \(u.lastPathComponent)")
+                        if on && studio.dirty { Circle().fill(Color(hex: "#E9C46A")).frame(width: 6, height: 6) }
+                        Button { studio.closeTab(u) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).frame(width: 16, height: 16).contentShape(Rectangle()) }
+                            .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close \(u.lastPathComponent)")
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(RoundedRectangle(cornerRadius: 7).fill(on ? Color.symRaised : Color.clear))
+                }
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+        }
+    }
+
     @ViewBuilder func content(_ kind: String) -> some View {
         if studio.selected == nil {
             VStack(spacing: 8) {
@@ -201,7 +262,8 @@ struct StudioOverlay: View {
             case "Source": CodeEditor(text: $studio.text, ext: "md").padding(12)
             case "Graph": LinkGraph2(studio: studio)
             default: HTMLPreview(html: Markdown.html(studio.text, title: studio.selected?.lastPathComponent ?? "", theme: "dark"),
-                                 base: studio.selected?.deletingLastPathComponent())
+                                 base: studio.selected?.deletingLastPathComponent(),
+                                 onLink: { url in studio.followLink(url) })
             }
         } else {
             CodeEditor(text: $studio.text, ext: studio.selected?.pathExtension ?? "").padding(12)

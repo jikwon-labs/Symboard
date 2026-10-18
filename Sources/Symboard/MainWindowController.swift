@@ -499,6 +499,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         } else if kind == "Code", studioState.selected?.pathExtension.lowercased() == "md" {
             studioState.selected = nil
         }
+        // 탭은 코드 스튜디오 안에서만 쓴다. 다른 스튜디오에서 열었던 파일은 넘기지 않는다.
+        if studioState.kind != kind { studioState.openFiles = studioState.selected.map { [$0] } ?? [] }
         studioState.kind = kind
     }
 
@@ -1099,6 +1101,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         addImage(url: url, at: nil)
+    }
+
+    /// 주소 하나로 웹 타일을 보드에 놓는다(스튜디오의 바깥 링크).
+    func openWebTile(_ address: String) {
+        closeStudio()
+        addNode(kind: .web, size: CGSize(width: 900, height: 620), title: "Web") { $0.text = address; $0.tabs = [address] }
     }
 
     /// 클립보드의 그림을 보드에 놓는다. 그림 파일이면 그 파일을, 그림 자체(스크린샷 복사 등)면 상태 폴더 images/ 에 PNG 로 저장해 쓴다.

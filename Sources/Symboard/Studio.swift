@@ -501,18 +501,36 @@ struct DocsTab: View {
 struct HTMLPreview: NSViewRepresentable {
     var html: String
     var base: URL?
+    /// 사용자가 링크를 눌렀을 때. true 를 돌려주면 웹뷰는 이동하지 않는다.
+    var onLink: ((URL) -> Bool)? = nil
 
-    final class Coordinator { var last = "" }
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        var last = ""
+        var onLink: ((URL) -> Bool)?
+        func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+                     decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+            if action.navigationType == .linkActivated, let u = action.request.url {
+                // 문서 안 #앵커는 그대로 두고, 그 밖의 링크는 부른 쪽이 처리한다(처리 못 하면 이동하지 않음).
+                if u.fragment != nil, u.path == webView.url?.path || u.path.isEmpty { decisionHandler(.allow); return }
+                _ = onLink?(u)
+                decisionHandler(.cancel)
+                return
+            }
+            decisionHandler(.allow)
+        }
+    }
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> WKWebView {
         let w = WKWebView()
+        w.navigationDelegate = context.coordinator
         w.setValue(false, forKey: "drawsBackground")
         w.underPageBackgroundColor = Theme.terminalBackground
         return w
     }
 
     func updateNSView(_ v: WKWebView, context: Context) {
+        context.coordinator.onLink = onLink
         guard context.coordinator.last != html else { return }
         context.coordinator.last = html
         v.loadHTMLString(html, baseURL: base)
