@@ -139,6 +139,12 @@ final class NodeView: NSView {
         header.roleLabel.stringValue = node.role ?? ""
         if let spec = node.terminal {
             header.glyph.choice = AgentCatalog.choice(for: spec)
+            // 다른 계정(설정 폴더)으로 띄운 콘솔은 원본처럼 머리에 계정 머리글자("5A")를 붙인다.
+            if let pid = spec.profileID, let p = model.state.profiles.first(where: { $0.id == pid }) {
+                header.accountBadge.set(text: AccountProfile.initials(p.name), color: Theme.accent, filled: false)
+                header.accountBadge.isHidden = false
+                header.accountBadge.toolTip = "Account: \(p.name)"
+            } else { header.accountBadge.isHidden = true }
             if let perm = PermissionMode.label(for: spec) {
                 header.permBadge.set(text: perm, color: Theme.accent, filled: true)
                 header.permBadge.isHidden = false
@@ -321,6 +327,7 @@ final class NodeHeaderView: NSView {
     let statusDot = NSView()
     let statusPill = PillLabel()
     let permBadge = PillLabel()
+    let accountBadge = PillLabel()
     let restartButton = NSButton()
     let duplicateButton = NSButton()
     let closeButton = NSButton()
@@ -344,6 +351,7 @@ final class NodeHeaderView: NSView {
         statusDot.isHidden = true
         statusPill.isHidden = true
         permBadge.isHidden = true
+        accountBadge.isHidden = true
         permBadge.set(text: "AUTO", color: Theme.accent, filled: true)
         kindIcon.contentTintColor = Theme.textDim
         for (b, sym, tip) in [(closeButton, "xmark", "Close"), (menuButton, "ellipsis", "More"),
@@ -356,7 +364,7 @@ final class NodeHeaderView: NSView {
             b.contentTintColor = Theme.textDim
             b.toolTip = tip
         }
-        [glyph, chevron, statusDot, titleLabel, roleLabel, permBadge, statusPill, restartButton, duplicateButton,
+        [glyph, chevron, accountBadge, statusDot, titleLabel, roleLabel, permBadge, statusPill, restartButton, duplicateButton,
          closeButton, menuButton, kindIcon].forEach(addSubview)
         applyKind()
     }
@@ -385,6 +393,11 @@ final class NodeHeaderView: NSView {
             x += 19
             chevron.frame = NSRect(x: x, y: mid(16), width: 12, height: 16)
             x += 16
+            if !accountBadge.isHidden {
+                let w = accountBadge.fittingWidth
+                accountBadge.frame = NSRect(x: x, y: mid(16), width: w, height: 16)
+                x += w + 6
+            }
         } else {
             kindIcon.frame = NSRect(x: x + 2, y: mid(14), width: 14, height: 14)
             x += 22

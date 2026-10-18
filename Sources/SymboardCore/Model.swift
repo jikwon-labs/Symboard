@@ -367,3 +367,12 @@ public struct AppState: Codable, Equatable, Sendable {
         return workspaces.firstIndex { $0.id == id } ?? (workspaces.isEmpty ? nil : 0)
     }
 }
+
+public extension AccountProfile {
+    /// 계정 이름의 머리글자 두 개("5 Account Claude Code" → "5A", "work" → "WO").
+    static func initials(_ name: String) -> String {
+        let words = name.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "_" }).map(String.init)
+        if words.count >= 2 { return (String(words[0].prefix(1)) + String(words[1].prefix(1))).uppercased() }
+        return String((words.first ?? "?").prefix(2)).uppercased()
+    }
+}

@@ -79,7 +79,12 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, /tmp/symv5-6 28개 보드): 별 → Claude Code → 캔버스 클릭(Dax2) → Dax2 고른 채 오른쪽 막대 셋째 → Orchestrator → Connect → Backend·Testers·Dax2 → 주황 행·선(`compare/video-board.png` 위) → Done → "15 agents · 2 groups" 목록 → 입력에 같은 글 타이핑(보내지 않음, 아래).
   - 쓰는 데 지장 있는 차이(고침): ① 오른쪽 막대 셋째가 원본은 오케스트레이터, 우리는 아무것도 안 하는 Settings(알림만) → 오케스트레이터를 바로 놓는 단추(고른 노드 아래)로, 코드 스튜디오 아이콘도 원본처럼 폴더로. ② 고른 콘솔에서 만들면 원본은 그 콘솔이 처음부터 연결("1 agent") → 같게.
   - 모양 차이(남김): 원본은 연결 중 각 그룹 테두리 위에 "Click to wire group" 알약이 떠서 보드에서 그룹을 바로 잇는다(우리는 목록 행으로 같은 일). 머리의 "0/21"(원본은 일하는 수 / 전체로 보임, 우리는 준비된 수 / 전체). 목록 행에 마우스를 올리면 원본은 ⛶·❚❚ 아이콘.
-- [ ] V2. node-accounts.mp4
+- [x] V2. node-accounts.mp4
+  - 원본 조작: 위쪽 계정 팝오버(열린 채 시작) → CONNECT ANOTHER ACCOUNT 칸 클릭 → "5 Account Claude Code" 타이핑 → + Connect → 팝오버 닫히고 가운데에 고른 상태의 새 claude 콘솔 "Ada 3"(머리에 "5A" 계정 칩), live 32 → 33.
+  - 우리(`env -i`): 위쪽 사람 아이콘 → 팝오버(경고·Your sign-in ACTIVE·Save current sign-in·CONNECT ANOTHER ACCOUNT, 칸에 이미 초점) → 같은 글 타이핑 → Connect → 새 claude 콘솔(자기 설정 폴더, 첫 실행 화면이라 NEEDS YOU), live 29 → 30.
+  - 쓰는 데 지장 있는 차이: 없음.
+  - 모양 차이(고침): 다른 계정으로 띄운 콘솔인지 머리에서 알 수 없었다 → 원본처럼 계정 머리글자 칩("5A")을 CLI 배지 옆에(`AccountProfile.initials`, 단위 테스트 1개, `v2-account-chip.png`).
+  - 모양 차이(남김): 원본 팝오버 머리의 CLI 아이콘 다섯 개(우리는 claude·codex 둘), 프로필 카드의 Use·터미널·연필·× 줄은 우리도 있으나 이 상태 폴더엔 저장된 프로필이 없어 비교 못 함.
 - [ ] V3. node-composer.mp4
 - [ ] V4. node-git.mp4
 - [ ] V5. node-ink.mp4

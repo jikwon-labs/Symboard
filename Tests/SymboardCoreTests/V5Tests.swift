@@ -185,3 +185,12 @@ import Testing
         #expect(merged.map(\.counts.input) == [1, 5, 2, 5])
     }
 }
+
+@Suite struct AccountInitialsTests {
+    @Test func initials() {
+        #expect(AccountProfile.initials("5 Account Claude Code") == "5A")
+        #expect(AccountProfile.initials("Second Account 200 plan max") == "SA")
+        #expect(AccountProfile.initials("work") == "WO")
+        #expect(AccountProfile.initials("") == "?")
+    }
+}
