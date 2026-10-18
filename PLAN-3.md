@@ -32,7 +32,10 @@ STATUS: IN_PROGRESS
   - 재현: 체크리스트 아이콘 → Board → 캔버스 왼쪽 끝 클릭 → 칸반 왼쪽이 왼쪽 막대 밑으로 들어감(1번 재현 때 같이 봄).
   - 원인: 놓기는 누른 점을 중심으로 그대로 놓았다. 위 70·좌우 80·아래 110 포인트를 뺀 보이는 영역 안으로 옮기고(`CanvasLayout.fit`, 단위 테스트 3개), 영역보다 크면 들어오게 축소한다.
   - 확인(실제 클릭, 100%): Board 를 왼쪽 막대 바로 옆(x 110) 클릭 → 막대 오른쪽·버튼 줄 위로 놓임. 별 → Shell → 오른쪽 아래 구석 클릭 → 오른쪽 막대 왼쪽·버튼 줄 위로 놓임.
-- [ ] 7. `SYMBOARD_HOME` 을 새 폴더로 줘도 이전 프로젝트(symclaude)로 열림 → 모든 상태를 SYMBOARD_HOME 아래로, 없으면 홈 화면
+- [x] 7. `SYMBOARD_HOME` 을 새 폴더로 줘도 이전 프로젝트(symclaude)로 열림 → 모든 상태를 SYMBOARD_HOME 아래로, 없으면 홈 화면
+  - 재현: 빈 `/tmp/symv3` 로 띄우자 위쪽 프로젝트가 symclaude. `defaults read local.symboard.app` 에 `lastCwd = /tmp/symclaude` 가 남아 있었고, 빈 작업공간이 이 값을 프로젝트로 받았다.
+  - 원인/고침: lastCwd·lastAgentChoice·docTiming·창 위치를 UserDefaults 대신 상태 폴더의 `prefs.json`(`Prefs`, 단위 테스트 1개)에 둔다. 빈 작업공간에는 프로젝트를 추측해 붙이지 않고, 노드가 하나도 없으면 홈 화면으로 시작한다. 폴더를 열면 처음 생긴 빈 작업공간에 붙인다.
+  - 확인(실제 입력): 빈 `/tmp/symv3h` 로 실행 → Projects 화면(Open folder 만) → Open folder 클릭 → 열기 창에서 Cmd+Shift+G, `/tmp/symsample` 입력, Return, Return → 보드가 symsample 로 열림, `prefs.json` 에 lastCwd. Cmd+Q 후 다시 실행 → symsample 로 열림.
 - [ ] 8. 사용량 알약 글자가 "usage" 와 "resets 5:00pm" 사이를 오감
 - [ ] 9. 이름 없는 접근성 button 40개 이상 → 모든 아이콘 버튼에 accessibilityLabel
 - [ ] 10. 루프 템플릿 7개 이름·설명 다시 쓰기 (원본과 같은 "Commit checkpoint" 등)

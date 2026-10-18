@@ -83,3 +83,21 @@ import Testing
         #expect(f.x == 0 && f.y == 0)
     }
 }
+
+@Suite struct PrefsTests {
+    @Test func valuesLiveInsideTheGivenFolder() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("prefs-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let a = Prefs(directory: dir)
+        #expect(a.string("lastCwd") == nil)
+        a.set("/tmp/x", for: "lastCwd")
+        a.set(12.5, for: "docTiming.quick")
+        let b = Prefs(directory: dir)
+        #expect(b.string("lastCwd") == "/tmp/x")
+        #expect(b.double("docTiming.quick") == 12.5)
+        #expect(FileManager.default.fileExists(atPath: dir.appendingPathComponent("prefs.json").path))
+        // 다른 폴더에는 따라가지 않는다.
+        let other = dir.appendingPathComponent("other")
+        #expect(Prefs(directory: other).string("lastCwd") == nil)
+    }
+}

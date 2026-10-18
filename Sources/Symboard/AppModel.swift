@@ -98,7 +98,8 @@ final class AppModel: ObservableObject {
     func assignProjects(fallback: String) {
         var changed = false
         for i in state.workspaces.indices {
-            if state.workspaces[i].projectPath == nil {
+            // 빈 작업공간은 프로젝트를 정하지 않는다(처음 실행이면 홈 화면에서 폴더를 고른다).
+            if state.workspaces[i].projectPath == nil, !state.workspaces[i].nodes.isEmpty {
                 state.workspaces[i].projectPath = Projects.inferPath(for: state.workspaces[i], fallback: fallback)
                 changed = true
             }

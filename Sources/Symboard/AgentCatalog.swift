@@ -37,11 +37,11 @@ final class AgentCatalog: ObservableObject {
 
     @Published private(set) var installed: Set<String> = ["shell"]
     @Published var lastChoiceID: String {
-        didSet { UserDefaults.standard.set(lastChoiceID, forKey: "lastAgentChoice") }
+        didSet { Prefs.shared.set(lastChoiceID, for: "lastAgentChoice") }
     }
 
     init() {
-        lastChoiceID = UserDefaults.standard.string(forKey: "lastAgentChoice") ?? "claude"
+        lastChoiceID = Prefs.shared.string("lastAgentChoice") ?? "claude"
         detect()
     }
 

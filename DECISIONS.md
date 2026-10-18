@@ -13,3 +13,4 @@
 - 2차: 손글씨 글꼴은 따로 넣지 않고 macOS 기본 Chalkboard SE 를 쓴다.
 - 2차: git 카드는 원본처럼 아래 왼쪽 브랜치 칩에서 여는 팝오버로 두고, 보드에 놓는 git 노드도 같은 카드를 쓴다. Commit & Push 는 고른 경로만 `git add -- 경로` 후 `git commit -- 경로` 로 커밋한다(1차의 add -A 대신). 원격이 있으면 이어서 push, upstream 이 없으면 `push -u origin <브랜치>`.
 - 2차: 웹 타일 인스펙터는 WKWebView 내장 인스펙터를 타일 안에 넣을 공개 API 가 없어, 페이지에 JS 를 돌려 만든 Elements·Console 타일로 대신했다(1차의 _inspector 별도 창은 쓰지 않음). 표시 크기 프리셋은 pageZoom 으로 그 폭의 레이아웃을 타일에 줄여 보인다.
+- 3차: 앱이 직접 쓰는 설정(마지막 폴더·마지막 CLI·문서 소요 시간·창 위치)은 모두 상태 폴더의 prefs.json 에 둔다. macOS 열기 패널이 스스로 UserDefaults 에 남기는 값(NSNavPanel…, GoToSheet 위치)은 시스템 패널 몫이라 그대로 둔다. 새 상태 폴더에 노드가 하나도 없으면 홈 화면(Projects · Open folder)으로 시작하고, 고른 폴더는 처음 생긴 빈 작업공간에 붙인다.

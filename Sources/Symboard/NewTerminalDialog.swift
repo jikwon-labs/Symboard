@@ -5,8 +5,8 @@ import SymboardCore
 @MainActor
 enum NewTerminalDialog {
     static var lastCwd: String {
-        get { UserDefaults.standard.string(forKey: "lastCwd") ?? NSHomeDirectory() }
-        set { UserDefaults.standard.set(newValue, forKey: "lastCwd") }
+        get { Prefs.shared.string("lastCwd") ?? NSHomeDirectory() }
+        set { Prefs.shared.set(newValue, for: "lastCwd") }
     }
 
     static func run(profiles: [AccountProfile]) -> TerminalSpec? {

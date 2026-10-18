@@ -38,12 +38,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         window.titlebarAppearsTransparent = true
         window.appearance = NSAppearance(named: .darkAqua)
         window.backgroundColor = Theme.canvas
-        window.setFrameAutosaveName("SymboardMain")
         window.minSize = NSSize(width: 900, height: 560)
         super.init(window: window)
         Self.current = self
         window.delegate = self
-        if !window.setFrameUsingName("SymboardMain") { window.center() }
+        WindowFrames.track(window, key: "main")
         model.assignProjects(fallback: NewTerminalDialog.lastCwd)
         // 상태 틱(1초)은 콘솔이 없어도 돌아야 한다(사용량 알약·루프·미션 맵).
         _ = model.sessions
@@ -52,6 +51,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         observe()
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.model.usage.refresh() }
         showWorkspace(model.selectedWorkspace.id)
+        // 열 프로젝트가 없으면(새 상태 폴더) 홈 화면의 폴더 열기로 시작한다.
+        if model.selectedWorkspace.projectPath == nil, model.state.workspaces.allSatisfy({ $0.nodes.isEmpty }) { setHome(true) }
         refreshGit()
         gitTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshGit() }
@@ -403,6 +404,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func openProject(_ path: String) {
         NewTerminalDialog.lastCwd = path
         if let ws = model.state.workspaces.first(where: { $0.projectPath == path }) {
+            model.selectWorkspace(ws.id)
+        } else if let ws = model.state.workspaces.first(where: { $0.projectPath == nil && $0.nodes.isEmpty }) {
+            // 처음 실행 때 생긴 빈 작업공간을 이 프로젝트에 쓴다.
+            model.mutateWorkspace(ws.id) { $0.projectPath = path }
             model.selectWorkspace(ws.id)
         } else {
             let ws = model.addWorkspace(name: "Workspace 1")

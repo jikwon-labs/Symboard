@@ -641,10 +641,9 @@ final class StudioWindowController: NSWindowController {
         window.title = "Symboard Studio"
         window.appearance = NSAppearance(named: .darkAqua)
         window.contentView = NSHostingView(rootView: StudioView(model: studio))
-        window.setFrameAutosaveName("SymboardStudio")
         window.isReleasedWhenClosed = false
         super.init(window: window)
-        if !window.setFrameUsingName("SymboardStudio") { window.center() }
+        WindowFrames.track(window, key: "studio")
     }
 
     required init?(coder: NSCoder) { fatalError() }

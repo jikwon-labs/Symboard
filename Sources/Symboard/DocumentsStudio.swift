@@ -43,9 +43,9 @@ final class DocStudioState: ObservableObject {
         library = lib
     }
 
-    /// 깊이별 지난 소요 시간(UserDefaults).
+    /// 깊이별 지난 소요 시간(prefs.json).
     func timing(_ d: String) -> String {
-        let t = UserDefaults.standard.double(forKey: "docTiming.\(d)")
+        let t = Prefs.shared.double("docTiming.\(d)")
         return t > 0 ? String(format: "%d:%02d", Int(t) / 60, Int(t) % 60) : "not timed"
     }
 
@@ -75,7 +75,7 @@ final class DocStudioState: ObservableObject {
             guard ok, !text.isEmpty else { self.error = "The CLI did not return a document."; return }
             try? FileManager.default.createDirectory(at: self.folder, withIntermediateDirectories: true)
             try? text.write(to: self.url(for: docID), atomically: true, encoding: .utf8)
-            UserDefaults.standard.set(Date().timeIntervalSince(started), forKey: "docTiming.\(self.depth)")
+            Prefs.shared.set(Date().timeIntervalSince(started), for: "docTiming.\(self.depth)")
             self.request = ""
             self.reload()
         }

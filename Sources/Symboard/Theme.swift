@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SymboardCore
 
 /// 화면 전체에서 쓰는 색과 글꼴. 짙은 따뜻한 바탕에 주황빨강 강조색.
 enum Theme {
@@ -88,5 +89,24 @@ struct RailButtonStyle: ButtonStyle {
             .frame(width: 36, height: 36)
             .background(RoundedRectangle(cornerRadius: 10).fill(active ? Color.symAccent.opacity(0.14) : Color.clear))
             .contentShape(Rectangle())
+    }
+}
+
+/// 창 위치·크기를 prefs.json 에 두고 되살린다(UserDefaults 의 frame autosave 대신).
+@MainActor
+enum WindowFrames {
+    private static var observers: [NSObjectProtocol] = []
+
+    /// 저장된 위치가 있으면 그 자리로, 없으면 가운데. 이후 옮기거나 크기를 바꾸면 저장한다.
+    static func track(_ window: NSWindow, key: String) {
+        if let s = Prefs.shared.string("window.\(key)") { window.setFrame(from: s) } else { window.center() }
+        let save = { [weak window] (_: Notification) in
+            MainActor.assumeIsolated {
+                if let w = window { Prefs.shared.set(w.frameDescriptor, for: "window.\(key)") }
+            }
+        }
+        let nc = NotificationCenter.default
+        observers.append(nc.addObserver(forName: NSWindow.didMoveNotification, object: window, queue: .main, using: save))
+        observers.append(nc.addObserver(forName: NSWindow.didEndLiveResizeNotification, object: window, queue: .main, using: save))
     }
 }
