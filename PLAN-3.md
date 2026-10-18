@@ -44,7 +44,9 @@ STATUS: IN_PROGRESS
   - 재현: 노드 10개 보드에서 orca 접근성 트리에 이름 없는 `button` 86개.
   - 원인: 아이콘 단추에 이름이 없었고(.help 는 이름이 아님), 더해서 orca 는 SwiftUI 단추 이름을 아예 읽지 못했다(accessibilityLabel·Button("글자")·.borderless 모두 실험해 봄). 단추마다 `.tip("…")`(설명+이름) 또는 `.axName("…")`(글자 단추)을 달고, 그 안에서 이름 붙은 투명 AppKit 대역을 겹쳤다(DECISIONS.md). 대역은 클릭을 통과시키고 접근성 누르기를 실제 클릭으로 바꾼다.
   - 확인(실제 입력): 같은 보드 트리에서 이름 없는 단추 86 → 0(이름 있는 단추 144, `9-ax-tree.txt`). 칸반 카드 모달·컴포저 팝오버를 연 상태도 0. 대역 위 실제 클릭: 배율 −, 칸반 Add card, 체크리스트 토글, 별 메뉴 Shell 행 → 모두 동작. orca 의 접근성 누르기(element-index)로 "Zoom in" → 40%→50%. SwiftUI 팝오버 창(별 메뉴 등)은 orca 스냅샷에 들어오지 않아 그 안 이름은 트리로 확인하지 못했다(코드로만 달았음).
-- [ ] 10. 루프 템플릿 7개 이름·설명 다시 쓰기 (원본과 같은 "Commit checkpoint" 등)
+- [x] 10. 루프 템플릿 7개 이름·설명 다시 쓰기 (원본과 같은 "Commit checkpoint" 등)
+  - 고침: Pulse check · Nudge when quiet · Red-line fixer · Suite watchdog · Save point · Second look · Three-line hour 로 이름과 설명을 새로 썼다. 시작 조건·간격·지시문(역할)은 그대로. 이름 입력란 예시도 바꿨다.
+  - 확인(실제 클릭): 오른쪽 막대 루프 아이콘 → 시작 화면에 새 이름 7개, 설명이 잘리지 않음.
 - [ ] 11. 루프 시작 화면 모달 아래 절반이 빔 → 내용 높이에 맞춤
 - [ ] 12. "Try @all git status" 안내 알약이 팝오버 뒤로 비침
 - [ ] 13. 2차에서 자동 확인 못 한 것 실제 입력 확인: 칸반 카드 끌어 옮기기, 메모리 카드 Send, git 메시지 생성, 메모리 Rewrite, 에이전트 판단 루프 목표

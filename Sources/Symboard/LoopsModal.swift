@@ -12,19 +12,19 @@ struct LoopTemplate: Identifiable {
     var trigger: LoopTrigger
 
     static let all: [LoopTemplate] = [
-        LoopTemplate(icon: "text.bubble", name: "Status report", blurb: "Every 15 min each agent sums up what it finished, what is next and what blocks it.",
+        LoopTemplate(icon: "text.bubble", name: "Pulse check", blurb: "A quick pulse from every agent each quarter hour: finished, up next, stuck on.",
                      message: "Give a short status: what you finished, what you will do next, and anything blocking you.", trigger: .interval(seconds: 900)),
-        LoopTemplate(icon: "figure.walk", name: "Wake idle agents", blurb: "When an agent goes quiet it is asked to take the next task so nobody sits idle.",
+        LoopTemplate(icon: "figure.walk", name: "Nudge when quiet", blurb: "A console that has gone silent gets a nudge to pick up the next useful task.",
                      message: "If your current task is done, pick the next most useful task from the plan and continue.", trigger: .idle(seconds: 30)),
-        LoopTemplate(icon: "wrench.and.screwdriver", name: "Build repair", blurb: "As soon as a console prints FAILED, that agent stops and fixes the cause.",
+        LoopTemplate(icon: "wrench.and.screwdriver", name: "Red-line fixer", blurb: "The moment FAILED shows up in a console, that agent drops everything and repairs it.",
                      message: "The last command failed. Stop, read the error, fix the cause, then run it again.", trigger: .output(pattern: "FAILED")),
-        LoopTemplate(icon: "checkmark.shield", name: "Test guard", blurb: "Every 30 min the test suite runs and any failure is fixed at the root.",
+        LoopTemplate(icon: "checkmark.shield", name: "Suite watchdog", blurb: "Twice an hour the tests run, and a red result is traced to its real cause.",
                      message: "Run the test suite. If anything fails, fix the underlying cause rather than the test, then re-run.", trigger: .interval(seconds: 1800)),
-        LoopTemplate(icon: "arrow.triangle.branch", name: "Commit checkpoint", blurb: "Every 20 min working changes are committed with a clear message, never pushed.",
+        LoopTemplate(icon: "arrow.triangle.branch", name: "Save point", blurb: "Every 20 minutes work in progress becomes a local commit. Nothing is pushed.",
                      message: "If you have working changes, commit them with a clear message. Do not push.", trigger: .interval(seconds: 1200)),
-        LoopTemplate(icon: "magnifyingglass", name: "Review pass", blurb: "Every 30 min recent changes are read for bugs and dead code, and fixed.",
+        LoopTemplate(icon: "magnifyingglass", name: "Second look", blurb: "Every half hour an agent rereads what changed, hunting bugs and leftovers to tidy.",
                      message: "Review the changes made since the last review for bugs and dead code, and fix what you find.", trigger: .interval(seconds: 1800)),
-        LoopTemplate(icon: "clock", name: "Hourly stand-up", blurb: "Once an hour every agent writes three lines: done, doing, blocked.",
+        LoopTemplate(icon: "clock", name: "Three-line hour", blurb: "On the hour each agent writes exactly three lines: done, doing, blocked.",
                      message: "Write a three-line stand-up: done, doing, blocked.", trigger: .interval(seconds: 3600)),
     ]
 }
@@ -272,7 +272,7 @@ struct LoopsModal: View {
                         }
                     }
                     section("NAME") {
-                        TextField("", text: $draft.name, prompt: Text("e.g. Test guard").foregroundColor(Color.symDim)).modifier(FieldLook())
+                        TextField("", text: $draft.name, prompt: Text("e.g. Suite watchdog").foregroundColor(Color.symDim)).modifier(FieldLook())
                     }
                     section("INSTRUCTION") {
                         TextEditor(text: $draft.message)
