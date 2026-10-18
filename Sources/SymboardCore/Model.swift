@@ -335,8 +335,11 @@ public struct MemoryNote: Codable, Equatable, Sendable, Identifiable {
     public var body: String
     /// Architecture, Structure, Commands, Conventions, Gotchas, Context 중 하나(2차).
     public var category: String?
-    public init(id: UUID = UUID(), repoPath: String? = nil, title: String, body: String, category: String? = nil) {
-        self.id = id; self.repoPath = repoPath; self.title = title; self.body = body; self.category = category
+    /// true 면 목록에 남지만 메모리 카드가 보내지 않는다(목록 줄의 체크를 끈 것). nil 은 켜짐(6차 전 저장분).
+    public var disabled: Bool?
+    public var isEnabled: Bool { !(disabled ?? false) }
+    public init(id: UUID = UUID(), repoPath: String? = nil, title: String, body: String, category: String? = nil, disabled: Bool? = nil) {
+        self.id = id; self.repoPath = repoPath; self.title = title; self.body = body; self.category = category; self.disabled = disabled
     }
 }
 

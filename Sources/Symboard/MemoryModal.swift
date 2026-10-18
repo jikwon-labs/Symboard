@@ -50,6 +50,12 @@ final class MemoryHub: ObservableObject {
         page = "list"
     }
 
+    func toggleEnabled(_ id: UUID) {
+        model.mutateState { s in
+            if let i = s.memories.firstIndex(where: { $0.id == id }) { s.memories[i].disabled = s.memories[i].isEnabled ? true : nil }
+        }
+    }
+
     func delete(_ id: UUID) {
         model.mutateState { $0.memories.removeAll { $0.id == id } }
         page = "list"
@@ -86,7 +92,14 @@ final class MemoryHub: ObservableObject {
             for f in self.stream.finish() { self.proposals.append(Proposal(fact: f)) }
             self.phase = 3
             if self.proposals.isEmpty { self.scanError = ok ? "The agent did not return any facts." : "The scan did not finish. Check that the CLI is signed in." }
-            else { self.page = "review" }
+            else {
+                // 원본처럼 Wrap up 단계가 켜진 것을 잠깐 보인 뒤 검토로 넘어간다.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                    guard let self, self.page == "scan" else { return }
+                    self.phase = 4
+                    self.page = "review"
+                }
+            }
         }
         j.start()
     }
@@ -179,12 +192,14 @@ struct MemoryModalView: View {
         }
     }
 
-    func categoryTag(_ cat: String?) -> some View {
+    func categoryTag(_ cat: String?) -> some View { Self.tag(cat) }
+
+    static func tag(_ cat: String?) -> some View {
         HStack(spacing: 4) {
-            Circle().fill(Self.color(cat)).frame(width: 5, height: 5)
+            Circle().fill(color(cat)).frame(width: 5, height: 5)
             Text(cat ?? "Context").font(.system(size: 10))
         }
-        .foregroundStyle(Self.color(cat))
+        .foregroundStyle(color(cat))
     }
 
     var list: some View {
@@ -214,27 +229,15 @@ struct MemoryModalView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 6) {
-                        ForEach(notes) { n in
-                            HStack(alignment: .top, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    HStack(spacing: 8) {
-                                        categoryTag(n.category)
-                                        Text(n.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
-                                        if n.repoPath == nil { Text("all repos").font(.system(size: 10)).foregroundStyle(Color.symDim) }
-                                    }
-                                    Text(n.body).font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.75)).lineLimit(2)
-                                }
-                                Spacer()
-                                Button { hub.editing = n; hub.page = "edit" } label: { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Edit note")
-                            }
-                            .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
-                        }
+                        ForEach(notes) { n in MemoryListRow(note: n, hub: hub) }
                     }
                     .padding(.horizontal, 18)
                 }
             }
             HStack {
-                Text("Cards on the board send these to a console only when you press Send.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                let active = notes.filter(\.isEnabled).count
+                Label("\(active) active entr\(active == 1 ? "y" : "ies") · cards on the board send them only when you press Send.", systemImage: "info.circle")
+                    .font(.system(size: 11)).foregroundStyle(Color.symDim)
                 Spacer()
                 Button { hub.c?.placeMemoryCard() } label: { Label("Place card on board", systemImage: "rectangle.on.rectangle") }.buttonStyle(PillButtonStyle())
             }
@@ -276,15 +279,24 @@ struct MemoryModalView: View {
                     Text("Facts appear here as the agent writes them.").font(.system(size: 11)).foregroundStyle(Color.symDim)
                 }
                 Spacer()
+                if !hub.proposals.isEmpty {
+                    Text("\(hub.proposals.count) fact\(hub.proposals.count == 1 ? "" : "s")")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(Color.symAccent)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Capsule().fill(Color.symAccent.opacity(0.15)))
+                }
                 Button("Cancel") { hub.cancelScan() }.buttonStyle(PillButtonStyle()).axName("Cancel")
             }
-            HStack(spacing: 14) {
-                ForEach(Array(["Launch", "Read the repo", "Write facts"].enumerated()), id: \.offset) { i, s in
+            HStack(spacing: 8) {
+                ForEach(Array(["Launch", "Read the repo", "Write facts", "Wrap up"].enumerated()), id: \.offset) { i, s in
+                    if i > 0 { Rectangle().fill(Color.symBorder).frame(width: 18, height: 1) }
                     HStack(spacing: 5) {
-                        Image(systemName: hub.phase > i ? "checkmark.circle.fill" : (hub.phase == i ? "circle.dotted" : "circle"))
+                        Image(systemName: hub.phase > i ? "checkmark.circle.fill" : (hub.phase == i ? "circle.inset.filled" : "circle"))
                             .foregroundStyle(hub.phase >= i ? Color.symAccent : Color.symDim)
                         Text(s).font(.system(size: 11)).foregroundStyle(hub.phase >= i ? Color.symText : Color.symDim)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(s) \(hub.phase > i ? "done" : (hub.phase == i ? "now" : "waiting"))")
                 }
             }
             if let e = hub.scanError { Text(e).font(.system(size: 12)).foregroundStyle(Color.symAccent) }
@@ -412,7 +424,7 @@ struct MemoryCardView: View {
     @State private var enter = false
     @State private var sent = ""
 
-    var notes: [MemoryNote] { model.state.memories.filter { $0.repoPath == repo || $0.repoPath == nil } }
+    var notes: [MemoryNote] { model.state.memories.filter { ($0.repoPath == repo || $0.repoPath == nil) && $0.isEnabled } }
     var consoles: [BoardNode] { model.selectedWorkspace.nodes.filter { $0.kind == .terminal } }
 
     var body: some View {
@@ -456,5 +468,41 @@ struct MemoryCardView: View {
         let chosen = notes.filter { picked.isEmpty || picked.contains($0.id) }
         s.sendText(chosen.map(MemoryScope.text(for:)).joined(separator: "\n\n"), submit: enter)
         sent = "Sent \(chosen.count) to \(model.node(t)?.title ?? "console")"
+    }
+}
+
+/// 메모리 목록 한 줄. 오른쪽 체크로 켜고 끄며(끈 줄은 흐리게), 마우스를 올리면 고치기·휴지통이 나온다.
+struct MemoryListRow: View {
+    let note: MemoryNote
+    @ObservedObject var hub: MemoryHub
+    @State private var hover = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    MemoryModalView.tag(note.category)
+                    Text(note.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                    if note.repoPath == nil { Text("all repos").font(.system(size: 10)).foregroundStyle(Color.symDim) }
+                }
+                Text(note.body).font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.75)).lineLimit(2)
+            }
+            .opacity(note.isEnabled ? 1 : 0.45)
+            Spacer()
+            if hover {
+                Button { hub.editing = note; hub.page = "edit" } label: { Image(systemName: "pencil") }
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Edit note")
+                Button { hub.delete(note.id) } label: { Image(systemName: "trash") }
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip("Delete note")
+            }
+            Button { hub.toggleEnabled(note.id) } label: {
+                Image(systemName: note.isEnabled ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 15)).foregroundStyle(note.isEnabled ? Color.symAccent : Color.symDim)
+            }
+            .buttonStyle(.plainHit).axName(note.isEnabled ? "Turn off \(note.title)" : "Turn on \(note.title)")
+        }
+        .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
+        .contentShape(Rectangle())
+        .onHover { hover = $0 }
     }
 }

@@ -17,8 +17,9 @@ STATUS: IN_PROGRESS
 
 | # | 항목 | 대상 | 질문 |
 |---|------|------|------|
+| 1 | 5번 메모리 스캔 | Memory → Scan repo → Claude Code(/tmp/symsample) | (스캔 질문) |
 
-합계: 0
+합계: 1
 
 ## 고칠 것
 
@@ -41,7 +42,11 @@ STATUS: IN_PROGRESS
   - 원본 장면: `node-kanban.mp4` 6~9초(1장/초). NEW CARD 에서 Today/Tomorrow/Next week 칩 중 하나를 누르면 그 줄이 "02/09/2026" 날짜 칸과 ⊗ 지우기로 바뀐다. 20·31초 일정 창: 색 점 6개(호박·초록·파랑·보라·분홍·청록), 처음 고른 것은 첫 색(호박).
   - 바꾼 것: 칸반 카드 창의 날짜 줄이 날짜가 없으면 빠른 칩, 있으면 고칠 수 있는 날짜 칸(`DatePicker` field)과 지우기 단추가 된다. 테두리 상자로 묶었다. 캘린더 색을 원본 순서·색(영상에서 뽑은 값)으로 바꾸고 첫 색 호박이 기본.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-3): 오른쪽 막대 Insert → Board → 캔버스 클릭 → Backlog Add card → "Research market trends" 타이핑 → Today 클릭 → 줄이 "10/18/2026" 칸 + ⊗ 로 바뀜 → ⊗ → 칩으로 돌아옴 → Today → Add card → 카드에 "Today". Insert → Calendar → 캔버스 클릭(보드 아래로 밀려 놓임, 1번 확인) → New → "Coordinate" → 첫 점(호박)에 고리 → Add event → 18일 칸에 호박색 막대. 비교 그림 `compare/4-kanban-date.png`, `4-calendar-color.png`.
-- [ ] 5. node-memory: 목록 줄 켜짐 체크, 마우스 올리면 휴지통, 스캔 단계 Wrap up
+- [x] 5. node-memory: 목록 줄 켜짐 체크, 마우스 올리면 휴지통, 스캔 단계 Wrap up
+  - 원본 장면: `node-memory.mp4` 9초(스캔: "Launch — Read the repo — Write facts — Wrap up", 오른쪽 "10 facts"), 17초(목록: 줄마다 오른쪽 주황 체크, 바닥 "12 active entries — …").
+  - 바꾼 것: `MemoryNote.disabled`(없으면 켜짐, 예전 저장분 그대로) 와 `isEnabled`. 목록 줄을 `MemoryListRow` 로: 오른쪽 체크로 켜고 끔(끈 줄은 흐림), 마우스를 올리면 고치기·휴지통. 바닥 "N active entries · …". 메모리 카드는 켜진 것만 보낸다. 스캔 단계에 Wrap up 과 단계 사이 선, 머리에 "N facts" 알약. 끝나면 Wrap up 을 0.8초 보인 뒤 검토로. 단위 테스트 2개.
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-5, /tmp/symsample): Memory → Scan repo → Scan with Claude Code(질문 1) → 8초 "Launch now", 20초 "Launch done / Read the repo now"(`compare/5-memory-scan.png`) → 35초 REVIEW 9 of 9 → Add 9 to memory → 목록 9줄 모두 체크, "9 active entries" → 둘째 줄 체크 클릭 → 흐려지고 체크 빈 원, "8 active entries", 그 줄에 고치기·휴지통(`compare/5-memory-list.png`) → 휴지통 클릭 → 그 줄이 사라짐.
+  - 못 본 것: Write facts·Wrap up 단계는 13초 간격 확인 사이에 지나가 화면으로 보지 못했다(접근성 상태로만 단계 이름 4개 확인). 마지막 점검에서 다시 스캔하지는 않는다(질문 한도).
 - [ ] 6. node-loops: 목표 기본값을 원본과 같은 종류로
 - [ ] 7. node-webtiles: 지구 도구 고른 뒤 끌어서 타일 크기
 - [ ] 8. node-accounts: 팝오버 머리 CLI 아이콘, 없는 CLI 는 흐리게 + "설치되지 않음"

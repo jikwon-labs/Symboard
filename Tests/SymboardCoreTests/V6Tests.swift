@@ -42,3 +42,18 @@ import Testing
         #expect(obs.contains(Rect(x: 86, y: 56, w: 448, h: 158)))
     }
 }
+
+@Suite struct MemoryEnabledTests {
+    @Test func oldSavesWithoutFlagAreOn() throws {
+        let json = #"{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","title":"t","body":"b"}"#
+        let n = try JSONDecoder().decode(MemoryNote.self, from: Data(json.utf8))
+        #expect(n.isEnabled)
+    }
+
+    @Test func turnedOffSurvivesRoundTrip() throws {
+        var n = MemoryNote(title: "t", body: "b")
+        n.disabled = true
+        let back = try JSONDecoder().decode(MemoryNote.self, from: JSONEncoder().encode(n))
+        #expect(!back.isEnabled)
+    }
+}
