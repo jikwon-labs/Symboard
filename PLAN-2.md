@@ -1,4 +1,4 @@
-STATUS: IN_PROGRESS
+STATUS: DONE
 
 # Symboard 2차 진행표
 
@@ -93,7 +93,7 @@ STATUS: IN_PROGRESS
 
 ## 마무리
 
-- [ ] Z1. 1차 완료 기준 재확인(터미널 3 → vim → claude → 종료 → 재실행, 토스트 거쳐), release 빌드, README·REPORT-2
+- [x] Z1. 1차 완료 기준 재확인(터미널 3 → vim → claude → 종료 → 재실행, 토스트 거쳐), release 빌드, README·REPORT-2
 
 ## 메모
 
@@ -153,4 +153,7 @@ STATUS: IN_PROGRESS
   - 확인: "Work account" Connect → 빈 설정 폴더로 claude 가 첫 실행 화면(테마 고르기)을 보임 = 기본 계정과 분리됨. 로그인은 하지 않았다. Use 로 ACTIVE 바뀜, state.json 에 저장.
   - 남은 차이: 원본 CLI 탭에는 CLI 가 더 많다(여기는 설정 폴더 환경 변수를 확인한 claude·codex 만).
 
+- Z1: `swift build -c release` 성공, `swift test` 72개 통과(1차 37개), `scripts/bundle.sh` 로 build/Symboard.app 생성·실행. 새 상태 폴더(/tmp/symfinal)로 프로젝트 /tmp/symclaude 를 열고 콘솔 3개(셸 2, claude 1) → 셸에서 vim 열고 Esc :q! 로 닫음 → 다른 셸 sleep 100 에 Ctrl-C → claude 에 한 줄 질문·답 → 디버그 quit(앱 종료 처리로 저장) → 다시 실행: 세 노드가 같은 frame 으로 복원, 오른쪽 위 "Resume all conversations? 1 console" 토스트와 Maya 말풍선 → Yes → claude --resume 으로 같은 대화(질문과 답이 화면에 다시 보임). 스크린샷 `v2/Z1-final-1-vim-open.png`, `Z1-final-2-before-quit.png`, `Z1-final-3-resume-toast.png`, `Z1-final-4-resumed.png`. 같이 고친 것: 대기 중 콘솔의 상태 점을 흐린 색으로. README.md 를 2차 화면·기능으로 다시 쓰고 REPORT-2.md 작성. 남은 차이는 각 항목 줄과 REPORT-2 의 "아직 다른 것".
+
 ## 막힌 것
+- 막힌 것 없음. 모든 항목을 첫 시도 또는 같은 회차 안의 수정으로 끝냈다(고친 내용은 각 항목 메모에).

@@ -394,7 +394,7 @@ final class NodeHeaderView: NSView {
         let wasHidden = statusPill.isHidden
         statusDot.isHidden = false
         statusPill.isHidden = false
-        statusDot.layer?.backgroundColor = status.color.cgColor
+        statusDot.layer?.backgroundColor = ((paused || onHold) ? Theme.textDim : status.color).cgColor
         let text = onHold ? "ON HOLD" : (paused ? "PAUSED" : status.pillText)
         if statusPill.text != text || wasHidden {
             statusPill.set(text: text, color: (paused || onHold) ? Theme.textDim : status.color, filled: false)
