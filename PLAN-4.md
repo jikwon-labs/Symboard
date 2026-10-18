@@ -14,8 +14,10 @@ STATUS: IN_PROGRESS
 | 2 | 3번 Done | Ada | count from 1 to 80, one number per line, no tools |
 | 3 | 4번 작업 중 | Ada | write a 200-word paragraph about ocean tides, no tools (5초 안에 끝나 미션 맵을 못 봄) |
 | 4 | 4번 작업 중 | Ada | write about 600 words on the history of mechanical clocks, no tools |
+| 5 | R 문서 생성 | 문서 스튜디오(/tmp/symsample) | a 5-line README for this repo (실시간 안 그려짐 재현) |
+| 6 | R 문서 생성 | 문서 스튜디오(/tmp/symsample) | a 5-line README for this repo (고친 뒤 확인) |
 
-합계: 4
+합계: 6
 
 ## 고칠 것
 
@@ -97,7 +99,12 @@ STATUS: IN_PROGRESS
   - 차이(쓰는 데 지장): 읽기 화면에서 `[notes](notes.md)` 링크를 눌러도 아무 일이 없었다(웹뷰가 이동만 시도).
   - 고침: 읽기 웹뷰가 링크 누르기를 가로챈다(`HTMLPreview.onLink`). 같은 컴퓨터의 마크다운 파일이면(.md 를 빼먹은 링크도) 스튜디오에서 읽기로 열고, http(s) 는 보드에 웹 타일로 연다(다른 앱을 띄우지 않음). 문서 안 #앵커는 그대로.
   - 확인한 실제 입력: 오른쪽 막대 마크다운 아이콘 → README 가 읽기로 열림 → 본문 "notes" 링크 클릭 → notes.md 로 이동, 나무 선택도 notes(`Q-link-followed.png`) → Source(`Q-source.png`) → Graph: README—notes 선, 2 notes(`Q-graph.png`) → 그래프 마디 클릭 → 그 노트가 읽기로 열림. 그래프는 힘 배치라 마디가 움직여, README 를 겨눈 클릭이 notes 마디에 맞았다.
-- [ ] 8. R 문서 생성: 실제 질문 1회, 실시간으로 그려지는지
+- [x] 8. R 문서 생성: 실제 질문 1회, 실시간으로 그려지는지
+  - 원본(`studio-documents.jpg`, `agent3/doc-gen.png`): 생성되는 동안 흰 종이에 글이 줄줄이 그려진다.
+  - 재현(질문 5): 문서 스튜디오 → 요청 칸 "a 5-line README for this repo" → Return. 1초 캡처에서 "Writing with Claude Code · 8s…21s" 동안 종이에 자리표시 막대만 있다가, 끝난 뒤 한 번에 전체 글이 나왔다(`R-before-skeleton-only.png`).
+  - 원인: 종이 웹뷰가 "0.25초 뒤에 그리기" 예약을 조각이 올 때마다 취소하고 다시 걸었다(디바운스). 조각이 0.25초보다 자주 오니 끝날 때까지 한 번도 그려지지 않았다.
+  - 고침: 예약이 걸려 있으면 그릴 내용만 바꾸고 예약은 그대로 둔다(0.25초마다 마지막 내용을 그림).
+  - 확인(질문 6): 같은 입력 → 0.7초 간격 캡처에서 21s·22s·23s·24s·25s 마다 표·제목·코드 블록이 차례로 늘고 아래로 따라 내려감(`R-live-streaming.png`). 끝나면 문서 목록에 저장(`/tmp/symv4n/docs/…/custom-….md`).
 - [ ] 9. S 다이어그램 생성: 실제 질문 1회, 손그림 스타일, 노드 옮기면 선이 따라옴
 
 ## 하루 쓰기 흐름 (새 SYMBOARD_HOME, /tmp/symday)

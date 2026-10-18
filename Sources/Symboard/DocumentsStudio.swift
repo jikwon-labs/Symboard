@@ -266,7 +266,13 @@ struct PaperView: NSViewRepresentable {
     var markdown: String
     var streaming: Bool
 
-    final class Coordinator { var loaded = false; var last = ""; var pending: DispatchWorkItem? }
+    final class Coordinator {
+        var loaded = false
+        var last = ""
+        /// 다음에 그릴 스크립트. 예약이 이미 걸려 있으면 이것만 바꾼다.
+        var latestJS = ""
+        var scheduled = false
+    }
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     static let shell = """
@@ -303,7 +309,6 @@ struct PaperView: NSViewRepresentable {
         let key = markdown + (streaming ? "|s" : "")
         guard co.last != key else { return }
         co.last = key
-        co.pending?.cancel()
         let body: String
         if markdown.isEmpty {
             body = "<div class='skel' style='width:55%;height:26px'></div>" + (0..<6).map { i in "<div class='skel' style='width:\([92, 85, 96, 70, 88, 60][i])%'></div>" }.joined()
@@ -311,10 +316,15 @@ struct PaperView: NSViewRepresentable {
             body = Markdown.bodyHTML(markdown) + (streaming ? "<span class='caret'></span>" : "")
         }
         let js = "document.getElementById('c').innerHTML = \(InspectorModel.jsString(body));" + (streaming ? "window.scrollTo(0, document.body.scrollHeight);" : "")
-        // 조각이 잦으면 0.25초에 한 번만 바꾼다.
-        let work = DispatchWorkItem { w.evaluateJavaScript(js) }
-        co.pending = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + (co.loaded ? 0.25 : 0.6), execute: work)
+        // 조각이 잦으면 0.25초에 한 번, 그때의 마지막 내용을 그린다.
+        // (예약을 매번 취소하고 다시 걸면 조각이 계속 오는 동안 한 번도 그려지지 않는다.)
+        co.latestJS = js
+        guard !co.scheduled else { return }
+        co.scheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + (co.loaded ? 0.25 : 0.6)) { [weak w] in
+            co.scheduled = false
+            w?.evaluateJavaScript(co.latestJS)
+        }
         co.loaded = true
     }
 }
