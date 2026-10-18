@@ -227,12 +227,12 @@ struct ChecklistView: View {
                                 Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(item.done ? Color.symAccent : Color.symDim)
                             }
-                            .buttonStyle(.plainHit)
+                            .buttonStyle(.plainHit).tip(item.done ? "Mark not done" : "Mark done")
                             Text(item.text).strikethrough(item.done).foregroundStyle(item.done ? Color.symDim : Color.symText)
                             Spacer()
                             Button {
                                 box.update { $0.checklist?.removeAll { $0.id == item.id } }
-                            } label: { Image(systemName: "xmark").font(.system(size: 9)) }
+                            } label: { Image(systemName: "xmark").font(.system(size: 9)) }.tip("Delete objective")
                                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                         }
                         .font(.system(size: 13))
@@ -258,7 +258,7 @@ struct ChecklistView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                 }
-                .buttonStyle(.plainHit).padding(8)
+                .buttonStyle(.plainHit).axName("Add an objective").padding(8)
             }
         }
         .background(Color.symSurface)
@@ -300,7 +300,7 @@ struct KanbanView: View {
                         .foregroundStyle(Color.symDim)
                         .frame(width: 90, height: 90)
                     }
-                    .buttonStyle(.plainHit)
+                    .buttonStyle(.plainHit).tip("Add column")
                 }
                 .padding(10)
             }
@@ -337,7 +337,7 @@ struct KanbanView: View {
                         if let t = Prompt.text(title: "Rename column", value: col.title), !t.isEmpty { box.update { $0.kanban?[ci].title = t } }
                     }
                     Button("Delete column", role: .destructive) { box.update { $0.kanban?.remove(at: ci) } }
-                } label: { Image(systemName: "ellipsis") }
+                } label: { Image(systemName: "ellipsis") }.tip("Column actions")
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 20).foregroundStyle(Color.symDim)
             }
             ScrollView {
@@ -371,7 +371,7 @@ struct KanbanView: View {
                     .padding(.horizontal, 8).padding(.vertical, 6)
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
             }
-            .buttonStyle(.plainHit)
+            .buttonStyle(.plainHit).axName("Add card to \(col.title)")
         }
         .padding(10)
         .frame(width: 200)
@@ -449,7 +449,7 @@ struct CardView: View {
                 Image(systemName: card.done ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(card.done ? Color(hex: "#6FCF97") : Color.symDim)
             }
-            .buttonStyle(.plainHit)
+            .buttonStyle(.plainHit).tip(card.done ? "Mark not done" : "Mark done")
             VStack(alignment: .leading, spacing: 6) {
                 Text(card.title).font(.system(size: 12, weight: .medium)).foregroundStyle(card.done ? Color.symDim : Color.symText)
                     .strikethrough(card.done).fixedSize(horizontal: false, vertical: true)
@@ -505,7 +505,7 @@ struct CardEditor: View {
             HStack {
                 Text(editing == nil ? "NEW CARD" : "EDIT CARD").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Color.symDim)
                 Spacer()
-                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close")
             }
             HStack(spacing: 8) {
                 Circle().fill(Priority.color(priority)).frame(width: 7, height: 7)
@@ -520,12 +520,12 @@ struct CardEditor: View {
                 Image(systemName: "calendar").foregroundStyle(Color.symDim)
                 ForEach([("Today", 0), ("Tomorrow", 1), ("Next week", 7)], id: \.1) { item in
                     let d = Calendar.current.startOfDay(for: Date().addingTimeInterval(Double(item.1) * 86400))
-                    Button(item.0) { due = d }.buttonStyle(ChipStyle(on: due.map { Calendar.current.isDate($0, inSameDayAs: d) } ?? false))
+                    Button(item.0) { due = d }.buttonStyle(ChipStyle(on: due.map { Calendar.current.isDate($0, inSameDayAs: d) } ?? false)).axName("Due \(item.0)")
                 }
                 Spacer()
                 if let d = due {
                     Text(d, format: .dateTime.month(.twoDigits).day(.twoDigits).year()).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
-                    Button { due = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                    Button { due = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Clear due date")
                 }
             }
             HStack(spacing: 6) {
@@ -537,22 +537,22 @@ struct CardEditor: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(ChipStyle(on: priority == p))
+                    .buttonStyle(ChipStyle(on: priority == p)).axName("Priority \(Priority.label(p))")
                 }
             }
             HStack {
                 if editing != nil {
-                    Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent)
+                    Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip("Delete card")
                 }
                 Spacer()
-                Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
                 Button(editing == nil ? "Add card" : "Save") {
                     var c = editing ?? KanbanCard(title: "")
                     c.title = title.trimmingCharacters(in: .whitespaces)
                     c.notes = notes; c.due = due; c.priority = priority
                     save(c)
                 }
-                .buttonStyle(PillButtonStyle(prominent: true))
+                .buttonStyle(PillButtonStyle(prominent: true)).axName(editing == nil ? "Add card" : "Save")
                 .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }

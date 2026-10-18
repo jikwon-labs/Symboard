@@ -138,12 +138,12 @@ struct UsagePopover: View {
     var header: some View {
         HStack(spacing: 8) {
             if page == "tokens" {
-                Button { page = "overview" } label: { Image(systemName: "chevron.left") }.buttonStyle(.plainHit)
+                Button { page = "overview" } label: { Image(systemName: "chevron.left") }.buttonStyle(.plainHit).tip("Back to overview")
                 Text("tokens").font(.system(size: 15, weight: .semibold))
             } else {
                 Text("usage").font(.system(size: 15, weight: .semibold))
                 ForEach([AgentKind.claude, .codex], id: \.self) { a in
-                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }
+                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }.tip("Show \(a.rawValue) usage")
                         .buttonStyle(.plainHit)
                         .opacity(agent == a ? 1 : 0.45)
                         .overlay(alignment: .bottom) { if agent == a { Circle().fill(Color.symAccent).frame(width: 4, height: 4).offset(y: 6) } }
@@ -151,8 +151,8 @@ struct UsagePopover: View {
             }
             Spacer()
             Button { page = page == "tokens" ? "overview" : "tokens" } label: { Image(systemName: "chart.bar.fill") }
-                .buttonStyle(.plainHit).help("Token details")
-            Button { store.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).help("Rescan logs")
+                .buttonStyle(.plainHit).tip("Token details")
+            Button { store.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).tip("Rescan logs")
             Button(action: close) { Image(systemName: "xmark") }.buttonStyle(.plainHit)
         }
         .foregroundStyle(Color.symText)
@@ -186,7 +186,7 @@ struct UsagePopover: View {
                         }
                     }
                     .frame(width: 62, height: 62)
-                    .help("Plan limits are not written to local logs, so the percentage is unknown.")
+                    .hint("Plan limits are not written to local logs, so the percentage is unknown.")
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Current session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                         if let end = stats.blockEnd {
@@ -324,8 +324,8 @@ struct UsagePopover: View {
                 HStack {
                     label("BY AGENT")
                     Spacer()
-                    Button("Last 30 days") { allTime = false }.buttonStyle(ChipStyle(on: !allTime))
-                    Button("All time") { allTime = true }.buttonStyle(ChipStyle(on: allTime))
+                    Button("Last 30 days") { allTime = false }.buttonStyle(ChipStyle(on: !allTime)).axName("Last 30 days")
+                    Button("All time") { allTime = true }.buttonStyle(ChipStyle(on: allTime)).axName("All time")
                 }
                 ForEach(perAgent, id: \.0) { a, v in
                     let c = AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/"))

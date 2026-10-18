@@ -90,7 +90,7 @@ struct MissionMapView: View {
                 Text(subtitle).font(.system(size: 12)).foregroundStyle(Color.symDim)
             }
             Spacer()
-            Button { chrome.missionOpen = false } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }
+            Button { chrome.missionOpen = false } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }.tip("Close mission map")
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
         }
         .padding(18)

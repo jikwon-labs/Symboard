@@ -69,7 +69,7 @@ struct MemoryPanelView: View {
                     ForEach(memory.repos, id: \.self) { r in Text((r as NSString).lastPathComponent).tag(String?.some(r)) }
                 }
                 .labelsHidden()
-                Button("New") { memory.add() }.controlSize(.small)
+                Button("New") { memory.add() }.controlSize(.small).axName("New")
             }
             Toggle("Press Enter after sending", isOn: $memory.pressEnter).font(.system(size: 10)).controlSize(.mini)
             Text(selectedText).font(.system(size: 10)).foregroundStyle(.secondary)
@@ -88,12 +88,12 @@ struct MemoryPanelView: View {
                                 Text(n.body).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(4)
                             }
                             HStack {
-                                Button("Send to Node") { memory.send(n, to: panel.selectedNodeID) }
+                                Button("Send to Node") { memory.send(n, to: panel.selectedNodeID) }.axName("Send to Node")
                                 Button(memory.editingID == n.id ? "Done" : "Edit") {
                                     memory.editingID = memory.editingID == n.id ? nil : n.id
                                 }
                                 Spacer()
-                                Button { memory.remove(n.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit)
+                                Button { memory.remove(n.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit).tip("Delete note")
                             }
                             .controlSize(.small)
                         }

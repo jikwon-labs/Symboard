@@ -96,7 +96,7 @@ struct ProfilesPanelView: View {
             HStack {
                 Text("Account Profiles").font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Button("Add") { profiles.addWithDialog() }.controlSize(.small)
+                Button("Add") { profiles.addWithDialog() }.controlSize(.small).axName("Add")
             }
             Text("Each profile gives a CLI its own settings folder (Claude Code: CLAUDE_CONFIG_DIR, Codex: CODEX_HOME). Pick a profile in the New Terminal dialog.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
@@ -107,8 +107,8 @@ struct ProfilesPanelView: View {
                         Text(p.configDir).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     }
                     Spacer()
-                    Button("Launch") { launch(p) }.controlSize(.small)
-                    Button { profiles.remove(p.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit)
+                    Button("Launch") { launch(p) }.controlSize(.small).axName("Launch")
+                    Button { profiles.remove(p.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit).tip("Delete profile")
                 }
             }
             .listStyle(.plain)

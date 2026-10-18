@@ -40,7 +40,7 @@ struct SelectionPanel: View {
                             }
                             Divider().frame(height: 18)
                             ForEach([("left", "text.alignleft"), ("center", "text.aligncenter"), ("right", "text.alignright")], id: \.0) { a in
-                                Button { style(n.id) { $0.align = a.0 } } label: { Image(systemName: a.1) }
+                                Button { style(n.id) { $0.align = a.0 } } label: { Image(systemName: a.1) }.tip("Align \(a.0)")
                                     .buttonStyle(ChipStyle(on: (st.align ?? "left") == a.0))
                             }
                         }
@@ -72,7 +72,7 @@ struct SelectionPanel: View {
                             }
                             Divider().frame(height: 18)
                             ForEach([("solid", "line.diagonal"), ("dashed", "line.3.horizontal"), ("dotted", "ellipsis")], id: \.0) { d in
-                                Button { shape(n.id) { $0.dash = d.0 } } label: { Image(systemName: d.1) }.buttonStyle(ChipStyle(on: sp.dash == d.0)).help(d.0)
+                                Button { shape(n.id) { $0.dash = d.0 } } label: { Image(systemName: d.1) }.buttonStyle(ChipStyle(on: sp.dash == d.0)).tip(d.0)
                             }
                         }
                     }
@@ -83,8 +83,8 @@ struct SelectionPanel: View {
                             }
                             if sp.kind == "rect" {
                                 Divider().frame(height: 18)
-                                Button { shape(n.id) { $0.cornerRadius = 0 } } label: { Image(systemName: "square") }.buttonStyle(ChipStyle(on: sp.cornerRadius == 0))
-                                Button { shape(n.id) { $0.cornerRadius = 14 } } label: { Image(systemName: "app") }.buttonStyle(ChipStyle(on: sp.cornerRadius > 0))
+                                Button { shape(n.id) { $0.cornerRadius = 0 } } label: { Image(systemName: "square") }.buttonStyle(ChipStyle(on: sp.cornerRadius == 0)).tip("Square corners")
+                                Button { shape(n.id) { $0.cornerRadius = 14 } } label: { Image(systemName: "app") }.buttonStyle(ChipStyle(on: sp.cornerRadius > 0)).tip("Rounded corners")
                             }
                         }
                     }
@@ -163,7 +163,7 @@ struct SelectionPanel: View {
                     .background(Circle().fill(Color(hex: current ?? colors[0])))
             }
             .buttonStyle(.plainHit)
-            .help("Custom color")
+            .tip("Custom color")
         }
     }
 
@@ -174,7 +174,52 @@ struct SelectionPanel: View {
     func action(_ symbol: String, _ tip: String, run: @escaping () -> Void) -> some View {
         Button(action: run) { Image(systemName: symbol).frame(width: 34, height: 28) }
             .buttonStyle(ChipStyle(on: false))
-            .help(tip)
+            .tip(tip)
+    }
+}
+
+extension View {
+    /// 단추용: 마우스를 올리면 보이는 설명 + 접근성 이름. SwiftUI 단추 이름은 접근성 도구에 따라 안 읽히는 일이 있어,
+    /// 같은 자리에 이름 붙은 AppKit 단추 대역(AccessibilityPressProxy)을 겹치고 원래 단추는 접근성에서 숨긴다.
+    func tip(_ text: String) -> some View {
+        help(text).accessibilityHidden(true).overlay(AccessibilityPressProxy(label: text))
+    }
+
+    /// 글자 단추용: 설명 없이 접근성 이름만(보이는 글자와 같은 이름).
+    func axName(_ text: String) -> some View {
+        accessibilityHidden(true).overlay(AccessibilityPressProxy(label: text))
+    }
+
+    /// 단추가 아닌 것(메뉴·글자)용: 설명 + 접근성 이름.
+    func hint(_ text: String) -> some View { help(text).accessibilityLabel(text) }
+}
+
+/// 눌림을 받지 않는(hitTest nil) 투명 AppKit 뷰. 접근성에는 이름 있는 단추로 보이고,
+/// 접근성 "누르기" 가 오면 자기 가운데를 실제 클릭처럼 눌러 밑의 SwiftUI 단추가 받게 한다.
+struct AccessibilityPressProxy: NSViewRepresentable {
+    var label: String
+    func makeNSView(context: Context) -> ProxyView { ProxyView() }
+    func updateNSView(_ v: ProxyView, context: Context) { v.label = label }
+
+    final class ProxyView: NSView {
+        var label = ""
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        // 마우스는 통과시키지만 접근성 위치 찾기에서는 자기 자신이 잡혀야 한다(안 그러면 그 자리에 창이 없는 것처럼 보인다).
+        override func accessibilityHitTest(_ point: NSPoint) -> Any? { self }
+        override func isAccessibilityElement() -> Bool { true }
+        override func accessibilityRole() -> NSAccessibility.Role? { .button }
+        override func accessibilityLabel() -> String? { label }
+        override func accessibilityPerformPress() -> Bool {
+            guard let w = window else { return false }
+            let p = convert(NSPoint(x: bounds.midX, y: bounds.midY), to: nil)
+            for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                if let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                              windowNumber: w.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                    NSApp.postEvent(e, atStart: false)
+                }
+            }
+            return true
+        }
     }
 }
 

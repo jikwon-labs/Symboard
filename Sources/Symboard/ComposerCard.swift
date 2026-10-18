@@ -88,7 +88,7 @@ struct ComposerCard: View {
                     .background(Capsule().fill(state.role == r ? Color.white.opacity(0.08) : .clear))
                     .overlay(Capsule().stroke(state.role == r ? Color.symBorder : .clear))
                 }
-                .buttonStyle(.plainHit)
+                .buttonStyle(.plainHit).axName("Role \(r.name)")
             }
 
             Divider().overlay(Color.symBorder)
@@ -107,7 +107,7 @@ struct ComposerCard: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: choice.colorHex).opacity(0.35)))
                     }
                     .buttonStyle(.plainHit)
-                    .help("Click to switch this one to another CLI")
+                    .tip("Agent \(i + 1): \(choice.name). Click to switch this one to another CLI")
                     .transition(.scale.combined(with: .opacity))
                 }
             }
@@ -119,7 +119,7 @@ struct ComposerCard: View {
                     Button { state.fillAll(c.id) } label: { AgentBadge(choice: c, size: 24) }
                         .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(state.tiles.allSatisfy { $0 == c.id } ? Color.symAccent : .clear, lineWidth: 1.5).padding(-3))
-                        .help(c.name)
+                        .tip("Fill all with \(c.name)")
                 }
             }
 
@@ -127,15 +127,15 @@ struct ComposerCard: View {
 
             HStack {
                 HStack(spacing: 10) {
-                    Button { state.setCount(state.count - 1) } label: { Image(systemName: "minus").frame(width: 22, height: 22) }
+                    Button { state.setCount(state.count - 1) } label: { Image(systemName: "minus").frame(width: 22, height: 22) }.tip("Fewer agents")
                     Text("\(state.count)").font(.system(size: 14, weight: .semibold, design: .monospaced)).frame(minWidth: 22)
-                    Button { state.setCount(state.count + 1) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }
+                    Button { state.setCount(state.count + 1) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }.tip("More agents")
                 }
                 .buttonStyle(.plainHit)
                 .foregroundStyle(Color.symText)
                 Spacer()
                 Button("Spawn \(state.count)", action: spawn)
-                    .buttonStyle(SpawnButtonStyle(color: roleColor))
+                    .buttonStyle(SpawnButtonStyle(color: roleColor)).axName("Spawn \(state.count)")
                     .keyboardShortcut(.defaultAction)
             }
         }

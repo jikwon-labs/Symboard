@@ -168,7 +168,7 @@ struct LoopsModal: View {
                 Button { draft.reset(); chrome.loopsPage = "gallery" } label: { Label("New loop", systemImage: "plus") }
                     .buttonStyle(PillButtonStyle(prominent: true))
             }
-            Button { chrome.loopsPage = nil } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }
+            Button { chrome.loopsPage = nil } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }.tip("Close loops")
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim).padding(.top, 4)
         }
         .padding(18)
@@ -201,7 +201,7 @@ struct LoopsModal: View {
                 }
                 HStack {
                     Spacer()
-                    Button("Start from scratch") { draft.reset(); chrome.loopsPage = "form" }.buttonStyle(PillButtonStyle())
+                    Button("Start from scratch") { draft.reset(); chrome.loopsPage = "form" }.buttonStyle(PillButtonStyle()).axName("Start from scratch")
                     Spacer()
                 }
                 .padding(.top, 8)
@@ -240,13 +240,13 @@ struct LoopsModal: View {
                             Image(systemName: "play.fill").font(.system(size: 10)).frame(width: 26, height: 26)
                                 .background(Circle().fill(Color.symRaised))
                         }
-                        .buttonStyle(.plainHit).foregroundStyle(Color.symText).help("Run now")
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symText).tip("Run now")
                         Toggle("", isOn: Binding(get: { row.enabled }, set: { runner.setEnabled(row.id, $0) }))
                             .toggleStyle(.switch).labelsHidden().tint(Color.symAccent).controlSize(.small)
                         Menu {
                             Button("Edit") { if let r = runner.rule(row.id) { draft.load(r); chrome.loopsPage = "form" } }
                             Button("Delete", role: .destructive) { runner.remove(row.id) }
-                        } label: { Image(systemName: "ellipsis") }
+                        } label: { Image(systemName: "ellipsis") }.tip("Loop actions")
                             .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 24)
                     }
                     .padding(12)
@@ -386,7 +386,7 @@ struct LoopsModal: View {
                 }
             }
             Spacer()
-            Button("Cancel") { chrome.loopsPage = runner.rows.isEmpty ? nil : "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+            Button("Cancel") { chrome.loopsPage = runner.rows.isEmpty ? nil : "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
             Button(draft.editing == nil ? "Create loop" : "Save loop") { c.saveLoop() }
                 .buttonStyle(PillButtonStyle(prominent: true)).disabled(!draft.isValid).opacity(draft.isValid ? 1 : 0.5)
         }

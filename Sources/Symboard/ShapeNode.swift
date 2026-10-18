@@ -159,7 +159,7 @@ struct ShapePicker: View {
             ForEach([("rect", "rectangle"), ("ellipse", "circle"), ("diamond", "diamond"), ("arrow", "arrow.right")], id: \.0) { k in
                 Button { pick(k.0) } label: { Image(systemName: k.1).font(.system(size: 16)).frame(width: 40, height: 36) }
                     .buttonStyle(ChipStyle(on: false))
-                    .help(k.0.capitalized)
+                    .tip(k.0.capitalized)
             }
         }
         .padding(8)

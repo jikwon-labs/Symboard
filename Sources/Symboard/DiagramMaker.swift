@@ -180,7 +180,7 @@ struct DiagramPopover: View {
                     Button { maker.agent = a } label: { AgentBadge(choice: AgentCatalog.choice(id: a)!, size: 26) }
                         .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(maker.agent == a ? Color.symAccent : .clear, lineWidth: 1.5).padding(-4))
-                        .help(AgentCatalog.choice(id: a)!.name)
+                        .tip(AgentCatalog.choice(id: a)!.name)
                 }
             }
             HStack {
@@ -204,7 +204,7 @@ struct DiagramPopover: View {
                 TextField("", text: $maker.describe, prompt: Text("Describe a diagram...").foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
                     .onSubmit { if !maker.describe.isEmpty { maker.generate(kind: nil) } }
-                Button("Generate") { maker.generate(kind: nil) }.buttonStyle(PillButtonStyle(prominent: !maker.describe.isEmpty))
+                Button("Generate") { maker.generate(kind: nil) }.buttonStyle(PillButtonStyle(prominent: !maker.describe.isEmpty)).axName("Generate")
                     .disabled(maker.describe.isEmpty)
             }
             .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised.opacity(0.6)))
@@ -238,7 +238,7 @@ struct DrawingChip: View {
             HStack(spacing: 8) {
                 Circle().fill(Color.symAccent).frame(width: 6, height: 6)
                 Text("\(who) is drawing").font(.system(size: 12)).foregroundStyle(Color.symText)
-                Button { maker.cancel() } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button { maker.cancel() } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Cancel diagram")
             }
             .padding(.horizontal, 12).padding(.vertical, 6)
             .floatingCapsule(radius: 12)

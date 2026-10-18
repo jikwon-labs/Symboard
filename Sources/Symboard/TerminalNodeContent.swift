@@ -71,8 +71,8 @@ struct ResumeBubble: View {
         HStack(spacing: 8) {
             Image(systemName: "clock.arrow.circlepath").foregroundStyle(Color.symAccent)
             Text("Resume last conversation?").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
-            Button("Yes") { answer(true) }.buttonStyle(PillButtonStyle(prominent: true))
-            Button("No") { answer(false) }.buttonStyle(PillButtonStyle())
+            Button("Yes") { answer(true) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Yes")
+            Button("No") { answer(false) }.buttonStyle(PillButtonStyle()).axName("No")
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
         .floatingCapsule(radius: 12)

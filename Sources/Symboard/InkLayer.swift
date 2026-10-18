@@ -100,7 +100,7 @@ struct PenPanel: View {
                         Image(systemName: "eyedropper").font(.system(size: 10, weight: .semibold)).foregroundStyle(Color.black.opacity(0.7))
                             .frame(width: 18, height: 18).background(Circle().fill(Color(hex: chrome.penColor)))
                     }
-                    .buttonStyle(.plainHit).help("Custom color")
+                    .buttonStyle(.plainHit).tip("Custom color")
                 }
                 Text("WIDTH").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
                 HStack(spacing: 6) {

@@ -56,13 +56,13 @@ struct OrchestratorView: View {
                 Spacer()
                 Text("\(targets.filter { status($0) == .idle }.count)/\(targets.count)")
                     .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(Color.symDim)
-                    .help("Ready / wired")
+                    .hint("Ready / wired")
                 Button { spawnWired() } label: { Image(systemName: "plus") }
-                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Spawn an agent and wire it")
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Spawn an agent and wire it")
                 Button { c?.toggleConnect(nodeID) } label: {
                     Label(connecting ? "Done" : "Connect", systemImage: connecting ? "checkmark" : "link")
                 }
-                .buttonStyle(PillButtonStyle(prominent: true))
+                .buttonStyle(PillButtonStyle(prominent: true)).axName(connecting ? "Done" : "Connect")
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
 
@@ -89,7 +89,7 @@ struct OrchestratorView: View {
             Text("Spawn a new one here, or tap Connect and pick\nconsoles or groups on the board.")
                 .multilineTextAlignment(.center).font(.system(size: 12)).foregroundStyle(Color.symDim)
             Button { spawnWired() } label: { Label("Spawn agent", systemImage: "plus") }
-                .buttonStyle(PillButtonStyle(active: true))
+                .buttonStyle(PillButtonStyle(active: true)).axName("Spawn agent")
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -172,11 +172,11 @@ struct OrchestratorView: View {
             Spacer()
             if hoverRow == n.id {
                 Button { c?.focus(nodeID: n.id) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                    .buttonStyle(.plainHit).help("Show on board")
+                    .buttonStyle(.plainHit).tip("Show on board")
                 Button { _ = model.sessions.session(for: n.id)?.signal(paused ? SIGCONT : SIGSTOP) } label: {
                     Image(systemName: paused ? "play.fill" : "pause.fill")
                 }
-                .buttonStyle(.plainHit).help(paused ? "Resume" : "Pause")
+                .buttonStyle(.plainHit).tip(paused ? "Resume" : "Pause")
             }
             StatusPill(text: paused ? "paused" : st.pillText.lowercased(), color: paused ? Theme.textDim : st.color)
         }
@@ -197,7 +197,7 @@ struct OrchestratorView: View {
                     .frame(width: 22, height: 22)
                     .background(Circle().fill(command.isEmpty ? Color.symRaised : Color.symAccent))
             }
-            .buttonStyle(.plainHit)
+            .buttonStyle(.plainHit).tip("Send to wired agents")
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised))

@@ -124,11 +124,11 @@ struct DocumentsStudio: View {
             }
             HStack(spacing: 6) {
                 ForEach(["claude", "codex"], id: \.self) { a in
-                    Button { docs.agent = a } label: { AgentBadge(choice: AgentCatalog.choice(id: a)!, size: 28) }
+                    Button { docs.agent = a } label: { AgentBadge(choice: AgentCatalog.choice(id: a)!, size: 28) }.tip("Write with \(a)")
                         .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(docs.agent == a ? Color.symAccent : .clear, lineWidth: 1.5).padding(-4))
                         .opacity(AgentCatalog.shared.installed.contains(a) ? 1 : 0.35)
-                        .help(AgentCatalog.choice(id: a)!.name)
+                        .tip(AgentCatalog.choice(id: a)!.name)
                 }
             }
             HStack(spacing: 6) {
@@ -219,16 +219,16 @@ struct DocumentsStudio: View {
                     .foregroundStyle(Color(hex: "#E8564A"))
             } else if !docs.currentText.isEmpty {
                 HStack(spacing: 2) {
-                    Button { docs.view = "paper" } label: { Image(systemName: "text.alignleft") }.buttonStyle(ChipStyle(on: docs.view == "paper"))
+                    Button { docs.view = "paper" } label: { Image(systemName: "text.alignleft") }.buttonStyle(ChipStyle(on: docs.view == "paper")).tip("Paper view")
                     Button { docs.view = "source" } label: { Image(systemName: "doc.plaintext") }.buttonStyle(ChipStyle(on: docs.view == "source"))
                 }
                 Button { docs.generate(kind: docs.selected.hasPrefix("custom-") ? nil : docs.selected) } label: { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(ChipStyle(on: false)).help("Regenerate")
+                    .buttonStyle(ChipStyle(on: false)).tip("Regenerate")
                 Button { c.placeDocumentCard(docs.selected) } label: { Image(systemName: "rectangle.on.rectangle") }
-                    .buttonStyle(ChipStyle(on: false)).help("Send to board")
+                    .buttonStyle(ChipStyle(on: false)).tip("Send to board")
                 Button { c.studioExportDocPDF(docs.selected) } label: { Label("Export PDF", systemImage: "arrow.down.doc") }.buttonStyle(PillButtonStyle(prominent: true))
             }
-            Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }
+            Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }.tip("Close studio")
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
         }
         .padding(.horizontal, 14).padding(.vertical, 10)

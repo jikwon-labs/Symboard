@@ -107,10 +107,10 @@ struct InspectorView: View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
                 ForEach(["Elements", "Console"], id: \.self) { t in
-                    Button(t) { model.tab = t }.buttonStyle(ChipStyle(on: model.tab == t))
+                    Button(t) { model.tab = t }.buttonStyle(ChipStyle(on: model.tab == t)).axName(t)
                 }
                 Spacer()
-                Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Refresh inspector")
             }
             .padding(8)
             Divider().overlay(Color.symBorder)

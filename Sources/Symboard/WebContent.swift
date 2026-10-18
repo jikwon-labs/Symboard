@@ -238,7 +238,7 @@ struct WebTileBar: View {
                         Image(systemName: "globe").font(.system(size: 9))
                         Text(tabTitle(i)).font(.system(size: 11)).lineLimit(1)
                         if state.tabs.count > 1 {
-                            Button { web.closeTab(i) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.buttonStyle(.plainHit)
+                            Button { web.closeTab(i) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.buttonStyle(.plainHit).tip("Close tab")
                         }
                     }
                     .foregroundStyle(i == state.active ? Color.symText : Color.symDim)
@@ -247,7 +247,7 @@ struct WebTileBar: View {
                     .background(RoundedRectangle(cornerRadius: 7).fill(i == state.active ? Color.symRaised : Color.clear))
                     .onTapGesture { web.select(i) }
                 }
-                Button { web.newTab() } label: { Image(systemName: "plus").font(.system(size: 10)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button { web.newTab() } label: { Image(systemName: "plus").font(.system(size: 10)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("New tab")
                 Spacer()
                 if let d = DevicePreset.find(state.device) {
                     Text("\(d.name)  " + String(Int(d.width)) + " × " + String(Int(d.height))).font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -257,9 +257,9 @@ struct WebTileBar: View {
                 }
             }
             HStack(spacing: 8) {
-                Button(action: web.back) { Image(systemName: "chevron.left") }.disabled(!state.canBack)
-                Button(action: web.forward) { Image(systemName: "chevron.right") }.disabled(!state.canForward)
-                Button(action: web.reload) { Image(systemName: state.loading ? "xmark" : "arrow.clockwise") }
+                Button(action: web.back) { Image(systemName: "chevron.left") }.disabled(!state.canBack).tip("Back")
+                Button(action: web.forward) { Image(systemName: "chevron.right") }.disabled(!state.canForward).tip("Forward")
+                Button(action: web.reload) { Image(systemName: state.loading ? "xmark" : "arrow.clockwise") }.tip(state.loading ? "Stop" : "Reload")
                 HStack(spacing: 6) {
                     Image(systemName: "globe").font(.system(size: 10)).foregroundStyle(Color.symDim)
                     TextField("", text: $state.address, prompt: Text("Address or :port").foregroundColor(Color.symDim))
@@ -278,8 +278,8 @@ struct WebTileBar: View {
                         }
                     }
                 } label: { Image(systemName: "display") }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).help("Display size")
-                Button(action: web.openInspector) { Image(systemName: "ladybug") }.help("Open inspector tile")
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).hint("Display size")
+                Button(action: web.openInspector) { Image(systemName: "ladybug") }.tip("Open inspector tile")
             }
             .buttonStyle(.plainHit)
             .foregroundStyle(Color.symText.opacity(0.85))
@@ -331,7 +331,7 @@ struct WebStartPage: View {
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(Capsule().fill(Color.symRaised))
                     }
-                    .buttonStyle(.plainHit)
+                    .buttonStyle(.plainHit).axName("Open port \(p)")
                 }
             }
             Text("QUICK OPEN").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim).padding(.top, 4)
@@ -348,7 +348,7 @@ struct WebStartPage: View {
                     }
                     .padding(8).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                 }
-                .buttonStyle(.plainHit)
+                .buttonStyle(.plainHit).axName("Open \(q.0)")
             }
             Text("or type any address above").font(.system(size: 11)).foregroundStyle(Color.symDim)
         }

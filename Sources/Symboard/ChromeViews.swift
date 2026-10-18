@@ -17,7 +17,7 @@ struct TopLeftBar: View {
                 HStack(spacing: 6) { Image(systemName: "arrow.left"); Text("Home") }
             }
             .buttonStyle(PillButtonStyle(active: chrome.showingHome))
-            .help("Back to projects")
+            .tip("Back to projects")
 
             if !chrome.showingHome {
                 HStack(spacing: 4) {
@@ -38,7 +38,7 @@ struct TopLeftBar: View {
                     .menuIndicator(.visible)
                     .fixedSize()
                     .padding(.horizontal, 8)
-                    .help(project ?? "")
+                    .hint(project ?? "")
 
                     Rectangle().fill(Color.symBorder).frame(width: 1, height: 18)
 
@@ -48,7 +48,7 @@ struct TopLeftBar: View {
                     Button { c.newWorkspace(nil) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }
                         .buttonStyle(.plainHit)
                         .foregroundStyle(Color.symDim)
-                        .help("New workspace")
+                        .tip("New workspace")
                 }
                 .padding(4)
                 .floatingCapsule(radius: 12)
@@ -57,7 +57,7 @@ struct TopLeftBar: View {
                     HStack(spacing: 6) { Image(systemName: "xmark"); Text("Close") }
                 }
                 .buttonStyle(PillButtonStyle())
-                .help("Close this project and return home")
+                .tip("Close this project and return home")
             }
         }
         .foregroundStyle(Color.symText)
@@ -83,7 +83,7 @@ struct WorkspaceTab: View {
                 Button { c.closeWorkspace(ws.id) } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
                     .buttonStyle(.plainHit)
                     .foregroundStyle(Color.symDim)
-                    .help("Close workspace")
+                    .tip("Close workspace")
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 5)
@@ -111,7 +111,7 @@ struct TopRightBar: View {
             }
             .padding(.horizontal, 11).padding(.vertical, 6)
             .floatingCapsule(radius: 10)
-            .help("Running consoles")
+            .hint("Running consoles")
 
             Button { chrome.usageOpen.toggle() } label: {
                 HStack(spacing: 6) {
@@ -120,7 +120,7 @@ struct TopRightBar: View {
                 }
             }
             .buttonStyle(PillButtonStyle(active: chrome.usageOpen))
-            .help("Usage")
+            .tip("Usage")
             .popover(isPresented: $chrome.usageOpen, arrowEdge: .bottom) {
                 UsagePopover(store: c.model.usage) { chrome.usageOpen = false }
             }
@@ -144,7 +144,7 @@ struct TopRightBar: View {
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .frame(width: 30, height: 28)
-                .help("Tools")
+                .hint("Tools")
             }
             .padding(.horizontal, 4).padding(.vertical, 2)
             .floatingCapsule(radius: 10)
@@ -156,7 +156,7 @@ struct TopRightBar: View {
     func iconButton(_ symbol: String, _ tip: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: symbol).font(.system(size: 14)).frame(width: 30, height: 28) }
             .buttonStyle(.plainHit)
-            .help(tip)
+            .tip(tip)
     }
 }
 
@@ -176,7 +176,7 @@ struct LeftRail: View {
                 Image(systemName: "sparkle").font(.system(size: 16, weight: .semibold))
             }
             .buttonStyle(RailToolStyle(active: isPlacingAgent, tint: .symAccent))
-            .help("Spawn agent")
+            .tip("Spawn agent")
             .popover(isPresented: $chrome.spawnMenuOpen, arrowEdge: .trailing) {
                 SpawnAgentMenu(catalog: catalog) { choice in
                     chrome.spawnMenuOpen = false
@@ -187,13 +187,13 @@ struct LeftRail: View {
             toolButton("plus.square.on.square", "Duplicate selection", active: false) { c.duplicateSelection() }
             Button { c.setTool(.place(.text)) } label: { Text("Aa").font(.system(size: 14, weight: .medium)) }
                 .buttonStyle(RailToolStyle(active: chrome.tool == .place(.text)))
-                .help("Text")
+                .tip("Text")
             toolButton("pencil.tip", "Pen", active: chrome.tool == .pen) { c.setTool(chrome.tool == .pen ? .select : .pen) }
             toolButton("eraser", "Eraser", active: chrome.tool == .eraser) { c.setTool(chrome.tool == .eraser ? .select : .eraser) }
             Divider().frame(width: 24).overlay(Color.symBorder)
             Button { chrome.shapeOpen.toggle() } label: { Image(systemName: "square.on.circle") }
                 .buttonStyle(RailToolStyle(active: { if case .place(.shape) = chrome.tool { return true } else { return false } }()))
-                .help("Shapes")
+                .tip("Shapes")
                 .popover(isPresented: $chrome.shapeOpen, arrowEdge: .trailing) {
                     ShapePicker { k in chrome.shapeOpen = false; c.setTool(.place(.shape(k))) }
                 }
@@ -212,7 +212,7 @@ struct LeftRail: View {
     func toolButton(_ symbol: String, _ tip: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: symbol) }
             .buttonStyle(RailToolStyle(active: active))
-            .help(tip)
+            .tip(tip)
     }
 }
 
@@ -262,7 +262,7 @@ struct SpawnAgentMenu: View {
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(HoverRowStyle())
+                .buttonStyle(HoverRowStyle()).axName("Spawn \(choice.name)")
             }
             Button { showAll.toggle() } label: {
                 HStack {
@@ -276,7 +276,7 @@ struct SpawnAgentMenu: View {
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(HoverRowStyle())
+            .buttonStyle(HoverRowStyle()).axName(showAll ? "Fewer agents" : "All agents")
             Text("then click the canvas to drop it")
                 .font(.system(size: 11)).foregroundStyle(Color.symDim)
                 .padding(.horizontal, 12).padding(.bottom, 10)
@@ -311,22 +311,22 @@ struct RightRail: View {
     var body: some View {
         VStack(spacing: 4) {
             Button { layersOpen.toggle() } label: { Image(systemName: "square.3.layers.3d") }
-                .buttonStyle(RailButtonStyle()).help("Layers")
+                .buttonStyle(RailButtonStyle()).tip("Layers")
                 .popover(isPresented: $layersOpen, arrowEdge: .leading) { LayersList(model: c.model, c: c) }
             Button { chrome.insertOpen.toggle() } label: { Image(systemName: "checklist") }
-                .buttonStyle(RailButtonStyle()).help("Insert checklist, board, note")
+                .buttonStyle(RailButtonStyle()).tip("Insert checklist, board, note")
                 .popover(isPresented: $chrome.insertOpen, arrowEdge: .leading) {
                     InsertMenu { p in chrome.insertOpen = false; c.setTool(.place(p)) }
                 }
             Button { c.openSettings() } label: { Image(systemName: "slider.horizontal.3") }
-                .buttonStyle(RailButtonStyle()).help("Settings")
+                .buttonStyle(RailButtonStyle()).tip("Settings")
             Divider().frame(width: 22).overlay(Color.symBorder)
             Button { c.openStudio(tab: "Code") } label: { Image(systemName: "chevron.left.forwardslash.chevron.right") }
-                .buttonStyle(RailButtonStyle()).help("Code studio")
+                .buttonStyle(RailButtonStyle()).tip("Code studio")
             Button { c.openStudio(tab: "Markdown") } label: { Image(systemName: "doc.text") }
-                .buttonStyle(RailButtonStyle()).help("Markdown studio")
+                .buttonStyle(RailButtonStyle()).tip("Markdown studio")
             Button { c.openStudio(tab: "Docs") } label: { Image(systemName: "doc.richtext") }
-                .buttonStyle(RailButtonStyle()).help("Document studio")
+                .buttonStyle(RailButtonStyle()).tip("Document studio")
             Divider().frame(width: 22).overlay(Color.symBorder)
             Button { c.openLoops() } label: {
                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -341,7 +341,7 @@ struct RightRail: View {
                         }
                     }
             }
-            .buttonStyle(RailButtonStyle()).help("Loops")
+            .buttonStyle(RailButtonStyle()).tip("Loops")
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .floatingCapsule(radius: 20)
@@ -379,7 +379,7 @@ struct InsertMenu: View {
             .padding(6)
             .contentShape(Rectangle())
         }
-        .buttonStyle(HoverRowStyle())
+        .buttonStyle(HoverRowStyle()).axName(title)
     }
 }
 
@@ -451,7 +451,7 @@ struct BottomBar: View {
                     Text(cf.message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
                     Button(cf.button) { chrome.confirm = nil; cf.action() }
                         .buttonStyle(PillButtonStyle(prominent: true))
-                    Button("Cancel") { chrome.confirm = nil }
+                    Button("Cancel") { chrome.confirm = nil }.axName("Cancel")
                         .buttonStyle(PillButtonStyle())
                 }
                 .padding(.horizontal, 14).padding(.vertical, 8)
@@ -459,8 +459,8 @@ struct BottomBar: View {
             } else if let s = chrome.suggestion {
                 HStack(spacing: 6) {
                     Button(s) { chrome.command = "@all git status"; focused = true }
-                        .buttonStyle(.plainHit)
-                    Button { chrome.suggestion = nil } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }
+                        .buttonStyle(.plainHit).axName(s)
+                    Button { chrome.suggestion = nil } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.tip("Dismiss hint")
                         .buttonStyle(.plainHit)
                 }
                 .font(.system(size: 11))
@@ -469,18 +469,18 @@ struct BottomBar: View {
                 .floatingCapsule(radius: 10)
             }
             HStack(spacing: 6) {
-                Button("New console") { c.spawnQuick(count: 1) }
-                Button("Spawn 4") { c.spawnQuick(count: 4) }
-                Button("Group") { c.openComposer(nil) }
+                Button("New console") { c.spawnQuick(count: 1) }.axName("New console")
+                Button("Spawn 4") { c.spawnQuick(count: 4) }.axName("Spawn 4")
+                Button("Group") { c.openComposer(nil) }.axName("Group")
                     .background(PopoverAnchor { c.composerAnchor = $0 })
                 Menu("Presets") {
                     ForEach(ComposerPreset.all) { p in Button(p.name) { c.spawnPreset(p) } }
                 }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .modifier(PillLook())
-                Button("Pause all") { c.pauseAll(true) }
-                Button("Resume all") { c.pauseAll(false) }
-                Button("Memory") { c.openMemory() }
+                Button("Pause all") { c.pauseAll(true) }.axName("Pause all")
+                Button("Resume all") { c.pauseAll(false) }.axName("Resume all")
+                Button("Memory") { c.openMemory() }.axName("Memory")
             }
             .buttonStyle(PillButtonStyle())
             HStack(spacing: 10) {
@@ -500,7 +500,7 @@ struct BottomBar: View {
                         .background(Circle().fill(chrome.command.isEmpty ? Color.symRaised : Color.symAccent))
                 }
                 .buttonStyle(.plainHit)
-                .help("Send")
+                .tip("Send")
             }
             .padding(.leading, 8).padding(.trailing, 8).padding(.vertical, 7)
             .frame(width: 520)
@@ -537,6 +537,7 @@ struct BranchChip: View {
         if let b = chrome.branch {
             Button { chrome.gitOpen.toggle() } label: { chip(b) }
                 .buttonStyle(.plainHit)
+                .tip("Branch and changes: click to commit")
                 .popover(isPresented: $chrome.gitOpen, arrowEdge: .top) {
                     if let card = chrome.gitCard {
                         GitCardView(card: card) { chrome.gitOpen = false }
@@ -563,7 +564,6 @@ struct BranchChip: View {
             .foregroundStyle(Color.symText)
             .padding(.horizontal, 10).padding(.vertical, 6)
             .floatingCapsule(radius: 10)
-            .help("Branch and changes: click to commit")
             .fixedSize()
     }
 }
@@ -573,12 +573,12 @@ struct ZoomControl: View {
     let c: MainWindowController
     var body: some View {
         HStack(spacing: 2) {
-            Button { c.zoomOut(nil) } label: { Image(systemName: "minus").frame(width: 24, height: 24) }
+            Button { c.zoomOut(nil) } label: { Image(systemName: "minus").frame(width: 24, height: 24) }.tip("Zoom out")
             Button { c.zoomReset(nil) } label: {
                 Text("\(chrome.zoomPercent)%").font(.system(size: 12, weight: .medium, design: .monospaced)).frame(minWidth: 44)
             }
-            .help("Reset to 100%")
-            Button { c.zoomIn(nil) } label: { Image(systemName: "plus").frame(width: 24, height: 24) }
+            .tip("Reset to 100%")
+            Button { c.zoomIn(nil) } label: { Image(systemName: "plus").frame(width: 24, height: 24) }.tip("Zoom in")
         }
         .buttonStyle(.plainHit)
         .foregroundStyle(Color.symText)
@@ -609,11 +609,11 @@ struct ResumeToast: View {
                     Text("\(chrome.resumeCount) console\(chrome.resumeCount == 1 ? "" : "s") can pick up their last chat")
                         .font(.system(size: 11)).foregroundStyle(Color.symDim)
                 }
-                Button("Yes") { c.answerResumeAll(true) }.buttonStyle(PillButtonStyle(prominent: true))
-                Button("No") { c.answerResumeAll(false) }.buttonStyle(PillButtonStyle())
+                Button("Yes") { c.answerResumeAll(true) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Yes")
+                Button("No") { c.answerResumeAll(false) }.buttonStyle(PillButtonStyle()).axName("No")
                 Button { chrome.resumeDismissed = true } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
                     .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
-                    .help("Decide per console")
+                    .tip("Decide per console")
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
             .floatingCapsule(radius: 14)
@@ -700,7 +700,7 @@ struct DiagramRailButton: View {
     var body: some View {
         Button { maker.open.toggle() } label: { Image(systemName: "point.3.connected.trianglepath.dotted") }
             .buttonStyle(RailToolStyle(active: maker.open || maker.drawing != nil))
-            .help("Diagram")
+            .tip("Diagram")
             .popover(isPresented: $maker.open, arrowEdge: .trailing) { DiagramPopover(maker: maker) }
     }
 }

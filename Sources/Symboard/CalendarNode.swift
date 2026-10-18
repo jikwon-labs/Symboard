@@ -21,10 +21,10 @@ struct CalendarNodeView: View {
                     Text(month, format: .dateTime.month(.wide).year()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                     Spacer()
                     Button { editing = (cal.startOfDay(for: Date()), nil) } label: { Label("New", systemImage: "plus") }
-                        .buttonStyle(.plainHit).foregroundStyle(Color.symAccent).font(.system(size: 12, weight: .medium))
-                    Button("Today") { month = Date() }.buttonStyle(ChipStyle(on: false))
-                    Button { month = cal.date(byAdding: .month, value: -1, to: month)! } label: { Image(systemName: "chevron.up") }.buttonStyle(.plainHit)
-                    Button { month = cal.date(byAdding: .month, value: 1, to: month)! } label: { Image(systemName: "chevron.down") }.buttonStyle(.plainHit)
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symAccent).font(.system(size: 12, weight: .medium)).axName("New event")
+                    Button("Today") { month = Date() }.buttonStyle(ChipStyle(on: false)).axName("Today")
+                    Button { month = cal.date(byAdding: .month, value: -1, to: month)! } label: { Image(systemName: "chevron.up") }.buttonStyle(.plainHit).tip("Previous month")
+                    Button { month = cal.date(byAdding: .month, value: 1, to: month)! } label: { Image(systemName: "chevron.down") }.buttonStyle(.plainHit).tip("Next month")
                 }
                 .foregroundStyle(Color.symDim)
                 HStack(spacing: 0) {
@@ -125,7 +125,7 @@ struct EventEditor: View {
             HStack {
                 TextField("", text: $title, prompt: Text("Event title").foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
-                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close")
             }
             HStack(spacing: 6) {
                 Image(systemName: "calendar").foregroundStyle(Color.symDim)
@@ -144,22 +144,22 @@ struct EventEditor: View {
                         Circle().fill(Color(hex: hex)).frame(width: 14, height: 14)
                             .overlay(Circle().stroke(Color.white.opacity(color == hex ? 0.9 : 0), lineWidth: 2).padding(-3))
                     }
-                    .buttonStyle(.plainHit)
+                    .buttonStyle(.plainHit).axName("Color \(hex)")
                 }
             }
             TextField("", text: $notes, prompt: Text("Notes").foregroundColor(Color.symDim))
                 .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
             HStack {
-                if event != nil { Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent) }
+                if event != nil { Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip("Delete event") }
                 Spacer()
-                Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
                 Button(event == nil ? "Add event" : "Save") {
                     var e = event ?? CalendarEvent(title: "", day: day)
                     e.title = title.trimmingCharacters(in: .whitespaces)
                     e.day = Calendar.current.startOfDay(for: day); e.allDay = allDay; e.colorHex = color; e.notes = notes
                     save(e)
                 }
-                .buttonStyle(PillButtonStyle(prominent: true)).disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                .buttonStyle(PillButtonStyle(prominent: true)).axName(event == nil ? "Add event" : "Save").disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .font(.system(size: 12))

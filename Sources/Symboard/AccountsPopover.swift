@@ -21,7 +21,7 @@ struct AccountsPopover: View {
             HStack(spacing: 8) {
                 Text("accounts").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                 ForEach([AgentKind.claude, .codex], id: \.self) { a in
-                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }
+                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }.tip("Show \(a.rawValue) accounts")
                         .buttonStyle(.plainHit).opacity(agent == a ? 1 : 0.4)
                 }
                 Spacer()
@@ -38,7 +38,7 @@ struct AccountsPopover: View {
                 if renaming == p.id {
                     HStack {
                         TextField("", text: $renameText).modifier(FieldLook()).onSubmit { profiles.rename(p.id, to: renameText); renaming = nil }
-                        Button("Save") { profiles.rename(p.id, to: renameText); renaming = nil }.buttonStyle(PillButtonStyle(prominent: true))
+                        Button("Save") { profiles.rename(p.id, to: renameText); renaming = nil }.buttonStyle(PillButtonStyle(prominent: true)).axName("Save")
                     }
                 } else {
                     row(initials: Self.initials(p.name), name: p.name, sub: activeID == p.id ? "Used by new \(cli) consoles" : "Ready when you need it", active: activeID == p.id,
@@ -99,9 +99,9 @@ struct AccountsPopover: View {
             } else {
                 Button("Use", action: use).buttonStyle(PillButtonStyle(prominent: true))
             }
-            Button(action: open) { Image(systemName: "terminal") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Open a console with this account")
-            if let edit { Button(action: edit) { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Rename") }
-            if let delete { Button(action: delete) { Image(systemName: "xmark") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Remove profile") }
+            Button(action: open) { Image(systemName: "terminal") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Open a console with this account")
+            if let edit { Button(action: edit) { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Rename") }
+            if let delete { Button(action: delete) { Image(systemName: "xmark") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Remove profile") }
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(active ? Color.symAccent.opacity(0.06) : Color.symRaised))

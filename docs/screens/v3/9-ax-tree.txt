@@ -1,0 +1,389 @@
+screenshot /tmp/symui/last.png scale 0.9142857142857143
+App=local.symboard.app (pid 67141)
+Window: "Symboard", App: Symboard.
+
+0 standard window Symboard
+	1 scroll area, Secondary Actions: scroll up, scroll down
+		2 text 3 of 3 done
+		3 text 0
+		4 text All clear
+		5 scroll area, Secondary Actions: scroll up, scroll down
+			6 button Mark not done
+			7 text one
+			8 button Delete objective
+			9 button Mark not done
+			10 text two
+			11 button Delete objective
+			12 button Mark not done
+			13 text three
+			14 button Delete objective
+		15 button Add an objective
+		16 text Checklist
+		17 text
+		18 button Close
+		19 button More
+		20 image Checklist with checkmarks
+		21 text October 2026
+		22 button New event
+		23 button Today
+		24 button Previous month
+		25 button Next month
+		26 text Mon
+		27 text Tue
+		28 text Wed
+		29 text Thu
+		30 text Fri
+		31 text Sat
+		32 text Sun
+		33 text 28
+		34 text 29
+		35 text 30
+		36 text 1
+		37 text 2
+		38 text 3
+		39 text 4
+		40 text 5
+		41 text 6
+		42 text 7
+		43 text 8
+		44 text 9
+		45 text 10
+		46 text 11
+		47 text 12
+		48 text 13
+		49 text 14
+		50 text 15
+		51 text 16
+		52 text 17
+		53 text 18
+		54 text Standup
+		55 text 19
+		56 text 20
+		57 text 21
+		58 text 22
+		59 text 23
+		60 text 24
+		61 text 25
+		62 text 26
+		63 text 27
+		64 text 28
+		65 text 29
+		66 text 30
+		67 text 31
+		68 text 1
+		69 text 2
+		70 text 3
+		71 text 4
+		72 text 5
+		73 text 6
+		74 text 7
+		75 text 8
+		76 text Calendar
+		77 text
+		78 button Close
+		79 button More
+		80 image calendar
+		81 scroll area, Secondary Actions: scroll up, scroll down
+			82 text entry area (settable) sticky note
+		83 scroll area, Secondary Actions: scroll up, scroll down
+			84 text entry area (settable) rect
+		85 image
+		86 text symsample
+		87 image
+		88 text main
+		89 text synced
+		90 button History
+		91 button Open in Finder
+		92 button Refresh
+		93 text CHANGES
+		94 text 7/7
+		95 text +25
+		96 text −3
+		97 button Select none
+		98 scroll area, Secondary Actions: scroll up, scroll down
+			99 button (selected)
+			100 button (selected)
+			101 button (selected)
+			102 button (selected)
+			103 button (selected)
+			104 button (selected)
+			105 button (selected)
+			106 scroll bar 0
+				107 value indicator 0
+				108 increment arrow button
+				109 decrement arrow button
+				110 increment page button
+				111 decrement page button
+		112 text field (settable) Placeholder: Add 5 files, update 2 files
+		113 button Write the message with Claude (uses your plan)
+		114 button Commit & Push 7 files
+		115 text RECENT
+		116 text Add hello and util scripts
+		117 text 1 hour ago
+		118 text init
+		119 text 2 hours ago
+		120 text Git
+		121 text
+		122 button Close
+		123 button More
+		124 image Triangle-headed arrow branching into two paths
+		125 scroll area, Secondary Actions: scroll up, scroll down
+			126 text Open a page
+			127 text LOCALHOST
+			128 image
+			129 text http://localhost:
+			130 text field (settable) Placeholder: 3000
+			131 button Open port 3000
+			132 button Open port 3001
+			133 button Open port 4200
+			134 button Open port 5173
+			135 button Open port 8000
+			136 button Open port 8080
+			137 text QUICK OPEN
+			138 button Open GitHub
+			139 button Open MDN Web Docs
+			140 button Open npm
+			141 text or type any address above
+			142 scroll bar 0
+				143 value indicator 0
+				144 increment arrow button
+				145 decrement arrow button
+				146 increment page button
+				147 decrement page button
+		148 image
+		149 text New tab
+		150 button Close tab
+		151 image
+		152 text localhost:3000
+		153 button Close tab
+		154 image
+		155 text New tab
+		156 button Close tab
+		157 button New tab
+		158 button Back
+		159 button Forward
+		160 button Reload
+		161 image
+		162 text field (settable) Placeholder: Address or :port
+		163 menu button Mac
+		164 button Open inspector tile
+		165 text Web
+		166 text
+		167 button Close
+		168 button More
+		169 image Globe
+		170 text PY
+		171 text src/hello.py
+		172 text 8 lines
+		173 button Open in studio
+		174 scroll area, Secondary Actions: scroll up, scroll down
+			175 text entry area import sys  # Say hello to the board. def greet(name: str) -> str:     return f"hello, {name}"  if __name__ == "__main__":     print(greet(sys.argv[1] if len(sys.argv) > 1 else "world"))
+			176 scroll bar (disabled) 0
+			177 ruler
+		178 text hello.py
+		179 text
+		180 button Close
+		181 button More
+		182 image Document page
+		183 text DOCUMENT
+		184 text C
+		185 text Architecture
+		186 text 19 words
+		187 scroll area
+			188 HTML content
+				189 heading Architecture
+				190 text The app has a web front end and a small API. Read setup first, then glossary.
+				191 text print("hello")
+			192 scroll bar 0
+		193 text Doc
+		194 text
+		195 button Close
+		196 button More
+		197 image Rich text page
+		198 text 0 agents · 0 groups
+		199 text Ready / wired
+		200 button Spawn an agent and wire it
+		201 button Connect
+		202 image
+		203 text No agents wired
+		204 text Spawn a new one here, or tap Connect and pick consoles or groups on the board.
+		205 button Spawn agent
+		206 text field (settable) Placeholder: Command 0 agents · @ to direct
+		207 button Send to wired agents
+		208 text Orchestrator
+		209 text
+		210 button Close
+		211 button More
+		212 image Three connected points with a dotted triangular path
+		213 button Elements
+		214 button Console
+		215 button Refresh inspector
+		216 scroll area, Secondary Actions: scroll up, scroll down
+			217 image
+			218 text <html>
+			219 image
+			220 text <head>
+			221 image
+			222 text <body>
+		223 text Inspector
+		224 text
+		225 button Close
+		226 button More
+		227 image Ladybug
+		228 scroll bar (disabled) 0
+		229 button Menu
+		230 text Ada
+		231 text
+		232 button Restart
+		233 button Duplicate
+		234 button Close
+		235 scroll bar (disabled) 0
+		236 button Menu
+		237 text Maya
+		238 text
+		239 button Restart
+		240 button Duplicate
+		241 button Close
+		242 scroll area, Secondary Actions: scroll up, scroll down
+			243 text BACKLOG
+			244 text 0
+			245 button Column actions
+			246 scroll area, Secondary Actions: scroll up, scroll down
+				247 image
+				248 text No cards
+			249 button Add card to Backlog
+			250 text TO DO
+			251 text 0
+			252 button Column actions
+			253 scroll area, Secondary Actions: scroll up, scroll down
+				254 image
+				255 text No cards
+			256 button Add card to To Do
+			257 text IN PROGRESS
+			258 text 0
+			259 button Column actions
+			260 scroll area, Secondary Actions: scroll up, scroll down
+				261 image
+				262 text No cards
+			263 button Add card to In Progress
+			264 text DONE
+			265 text 0
+			266 button Column actions
+			267 scroll area, Secondary Actions: scroll up, scroll down
+				268 image
+				269 text No cards
+			270 button Add card to Done
+			271 button Add column
+		272 text Board
+		273 text
+		274 button Close
+		275 button More
+		276 image column view
+		277 scroll bar (disabled) 0
+		278 button Menu
+		279 text Iris
+		280 text
+		281 button Restart
+		282 button Duplicate
+		283 button Close
+		284 text NEW CARD
+		285 button Close
+		286 text field (settable) Placeholder: Card title
+		287 text field (settable) Placeholder: Notes (optional)
+		288 image
+		289 button Due Today
+		290 button Due Tomorrow
+		291 button Due Next week
+		292 button Priority None
+		293 button Priority Low
+		294 button Priority Med
+		295 button Priority High
+		296 button Cancel
+		297 button Add card
+		298 scroll area, Secondary Actions: scroll up, scroll down
+			299 text TODO
+			300 text 1
+			301 button Column actions
+			302 scroll area, Secondary Actions: scroll up, scroll down
+				303 button Mark not done
+				304 text Card A
+			305 button Add card to Todo
+			306 text DOING
+			307 text 1
+			308 button Column actions
+			309 scroll area, Secondary Actions: scroll up, scroll down
+				310 button Mark done
+				311 text Write tests
+			312 button Add card to Doing
+			313 text DONE
+			314 text 0
+			315 button Column actions
+			316 scroll area, Secondary Actions: scroll up, scroll down
+				317 image
+				318 text No cards
+			319 button Add card to Done
+			320 button Add column
+		321 text Board
+		322 text
+		323 button Close
+		324 button More
+		325 image column view
+		326 scroll bar (disabled) 0
+		327 button Menu
+		328 text Pip
+		329 text
+		330 button Restart
+		331 button Duplicate
+		332 button Close
+	333 button Back to projects
+	334 menu button move
+	335 text Main
+	336 text 16
+	337 button Close workspace
+	338 button New workspace
+	339 button Close this project and return home
+	340 text Running consoles
+	341 text Running consoles
+	342 button Usage
+	343 button Accounts
+	344 button Settings
+	345 menu button Grid view
+	346 button Select (V)
+	347 button Spawn agent
+	348 button Duplicate selection
+	349 button Text
+	350 button Pen
+	351 button Eraser
+	352 button Shapes
+	353 button Diagram
+	354 button Web tile
+	355 button Image
+	356 button Zoom to fit
+	357 button Layers
+	358 button Insert checklist, board, note
+	359 button Settings
+	360 button Code studio
+	361 button Markdown studio
+	362 button Document studio
+	363 button Loops
+	364 button Try "@all git status"
+	365 button Dismiss hint
+	366 button New console
+	367 button Spawn 4
+	368 button Group
+	369 menu button Presets
+	370 button Pause all
+	371 button Resume all
+	372 button Memory
+	373 image
+	374 text field (settable) Placeholder: Message Pip · @ to direct
+	375 button Send
+	376 button Branch and changes: click to commit
+	377 button Zoom out
+	378 button Reset to 100%
+	379 button Zoom in
+	380 close button
+	381 full screen button, Secondary Actions: zoom the window
+	382 minimize button
+
+The focused UI element is 1 scroll area, Secondary Actions: scroll up, scroll down.

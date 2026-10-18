@@ -174,7 +174,7 @@ struct FileCardView: View {
                 Spacer()
                 Text("\(text.split(separator: "\n", omittingEmptySubsequences: false).count - (text.hasSuffix("\n") ? 1 : 0)) lines").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
                 Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Open in studio")
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Open in studio")
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
             if url.pathExtension.lowercased() == "md" {
@@ -346,7 +346,7 @@ struct StudioView: View {
                 .frame(width: 360)
                 Spacer()
                 Text(model.root.path).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
-                Button("Folder...") { model.chooseRoot() }
+                Button("Folder...") { model.chooseRoot() }.axName("Folder...")
             }
             .padding(8)
             Divider()
@@ -378,7 +378,7 @@ struct CodeTab: View {
                     HStack {
                         Text(u.lastPathComponent).font(.system(size: 12, weight: .semibold))
                         Spacer()
-                        Button("Pin to Board") { model.pinToBoard?(u) }
+                        Button("Pin to Board") { model.pinToBoard?(u) }.axName("Pin to Board")
                     }
                     .padding(6)
                     CodeTextView(text: CodeStyle.attributed(CodeStyle.load(u), ext: u.pathExtension))
@@ -475,7 +475,7 @@ struct DocsTab: View {
                 HStack {
                     Text(model.mdSelection?.lastPathComponent ?? "Pick a markdown file").font(.system(size: 12, weight: .semibold))
                     Spacer()
-                    Button("Export PDF...") { export() }.disabled(model.mdSelection == nil)
+                    Button("Export PDF...") { export() }.disabled(model.mdSelection == nil).axName("Export PDF...")
                 }
                 .padding(6)
                 if let u = model.mdSelection {

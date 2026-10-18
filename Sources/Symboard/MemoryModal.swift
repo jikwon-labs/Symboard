@@ -161,7 +161,7 @@ struct MemoryModalView: View {
                 Button { hub.page = "pick" } label: { Label("Scan repo", systemImage: "sparkle.magnifyingglass") }.buttonStyle(PillButtonStyle())
                 Button { hub.newMemory() } label: { Label("New memory", systemImage: "plus") }.buttonStyle(PillButtonStyle(prominent: true))
             }
-            Button { hub.page = nil } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }
+            Button { hub.page = nil } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }.tip("Close memory")
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim).padding(.top, 4)
         }
         .padding(18)
@@ -194,7 +194,7 @@ struct MemoryModalView: View {
                     Text("\(hub.repo.map { ($0 as NSString).lastPathComponent } ?? "This repo") \(model.state.memories.filter { $0.repoPath == hub.repo }.count)")
                 }
                 .buttonStyle(ChipStyle(on: !hub.allRepos))
-                Button("All repos \(model.state.memories.count)") { hub.allRepos = true }.buttonStyle(ChipStyle(on: hub.allRepos))
+                Button("All repos \(model.state.memories.count)") { hub.allRepos = true }.buttonStyle(ChipStyle(on: hub.allRepos)).axName("All repos \(model.state.memories.count)")
                 Spacer()
             }
             .padding(.horizontal, 18).padding(.top, 12)
@@ -223,7 +223,7 @@ struct MemoryModalView: View {
                                     Text(n.body).font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.75)).lineLimit(2)
                                 }
                                 Spacer()
-                                Button { hub.editing = n; hub.page = "edit" } label: { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                                Button { hub.editing = n; hub.page = "edit" } label: { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Edit note")
                             }
                             .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
                         }
@@ -255,7 +255,7 @@ struct MemoryModalView: View {
             Spacer()
             HStack {
                 Spacer()
-                Button("Cancel") { hub.page = "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                Button("Cancel") { hub.page = "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
                 Button("Scan with \(AgentCatalog.choice(id: hub.agent)?.name ?? "CLI")") { hub.startScan() }.buttonStyle(PillButtonStyle(prominent: true))
             }
         }
@@ -274,7 +274,7 @@ struct MemoryModalView: View {
                     Text("Facts appear here as the agent writes them.").font(.system(size: 11)).foregroundStyle(Color.symDim)
                 }
                 Spacer()
-                Button("Cancel") { hub.cancelScan() }.buttonStyle(PillButtonStyle())
+                Button("Cancel") { hub.cancelScan() }.buttonStyle(PillButtonStyle()).axName("Cancel")
             }
             HStack(spacing: 14) {
                 ForEach(Array(["Launch", "Read the repo", "Write facts"].enumerated()), id: \.offset) { i, s in
@@ -312,8 +312,8 @@ struct MemoryModalView: View {
             }
             HStack {
                 Spacer()
-                Button("Discard") { hub.proposals = []; hub.page = "list" }.buttonStyle(PillButtonStyle())
-                Button("Add \(hub.proposals.filter(\.selected).count) to memory") { hub.acceptProposals() }.buttonStyle(PillButtonStyle(prominent: true))
+                Button("Discard") { hub.proposals = []; hub.page = "list" }.buttonStyle(PillButtonStyle()).axName("Discard")
+                Button("Add \(hub.proposals.filter(\.selected).count) to memory") { hub.acceptProposals() }.buttonStyle(PillButtonStyle(prominent: true)).axName("Add \(hub.proposals.filter(\.selected).count) to memory")
             }
         }
         .padding(18)
@@ -337,7 +337,7 @@ struct MemoryModalView: View {
                     hub.editing = MemoryNote(repoPath: hub.repo, title: p.fact.title, body: p.fact.body, category: p.fact.category)
                     hub.proposals.removeAll { $0.id == p.id }
                     hub.page = "edit"
-                } label: { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                } label: { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Edit note")
             }
         }
         .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
@@ -365,22 +365,22 @@ struct MemoryEditor: View {
                 Button {
                     hub.rewrite(note) { note.body = $0 }
                 } label: { if hub.rewriting { ProgressView().controlSize(.small) } else { Label("Rewrite", systemImage: "sparkles") } }
-                    .buttonStyle(PillButtonStyle()).help("Rewrite with \(AgentCatalog.choice(id: hub.agent)?.name ?? "CLI") (uses your plan)")
+                    .buttonStyle(PillButtonStyle()).tip("Rewrite with \(AgentCatalog.choice(id: hub.agent)?.name ?? "CLI") (uses your plan)")
             }
             TextEditor(text: $note.body)
                 .font(.system(size: 13)).scrollContentBackground(.hidden).foregroundStyle(Color.symText)
                 .frame(minHeight: 160).padding(8).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
             HStack(spacing: 6) {
                 Text("APPLIES TO").font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundStyle(Color.symDim)
-                Button("This repo") { note.repoPath = hub.repo }.buttonStyle(ChipStyle(on: note.repoPath != nil))
-                Button("All repos") { note.repoPath = nil }.buttonStyle(ChipStyle(on: note.repoPath == nil))
+                Button("This repo") { note.repoPath = hub.repo }.buttonStyle(ChipStyle(on: note.repoPath != nil)).axName("This repo")
+                Button("All repos") { note.repoPath = nil }.buttonStyle(ChipStyle(on: note.repoPath == nil)).axName("All repos")
             }
             Spacer()
             HStack {
-                Button("Delete") { hub.delete(note.id) }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent)
+                Button("Delete") { hub.delete(note.id) }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).axName("Delete")
                 Spacer()
-                Button("Cancel") { hub.page = "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
-                Button("Save memory") { hub.save(note) }.buttonStyle(PillButtonStyle(prominent: true))
+                Button("Cancel") { hub.page = "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
+                Button("Save memory") { hub.save(note) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Save memory")
                     .disabled(note.title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
@@ -438,7 +438,7 @@ struct MemoryCardView: View {
                 .menuStyle(.borderlessButton).fixedSize()
                 Toggle("Enter", isOn: $enter).toggleStyle(.checkbox).font(.system(size: 11))
                 Spacer()
-                Button("Send \(picked.isEmpty ? notes.count : picked.count)") { send() }.buttonStyle(PillButtonStyle(prominent: true))
+                Button("Send \(picked.isEmpty ? notes.count : picked.count)") { send() }.buttonStyle(PillButtonStyle(prominent: true)).axName("Send \(picked.isEmpty ? notes.count : picked.count)")
                     .disabled(target == nil || notes.isEmpty)
             }
             if !sent.isEmpty { Text(sent).font(.system(size: 10)).foregroundStyle(Color.symDim) }

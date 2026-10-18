@@ -114,7 +114,7 @@ struct MissionListView: View {
                         Circle().fill(Color(nsColor: item.0.color)).frame(width: 8, height: 8)
                         Text("\(item.1)").font(.system(size: 11, weight: .semibold))
                     }
-                    .help(item.0.label)
+                    .hint(item.0.label)
                 }
                 Spacer()
             }
