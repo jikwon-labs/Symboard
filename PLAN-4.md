@@ -39,7 +39,12 @@ STATUS: IN_PROGRESS
   - 재현: 노드 알약·그룹 요약·미션 맵은 바뀌었지만, 상단 live 알약은 살아 있는 프로세스 수만 보여 일하는 중인지 알 수 없었다.
   - 고침: 일하는 콘솔이 있으면 live 점을 강조색으로 바꾸고 "· 1 working" 을 붙인다.
   - 확인한 실제 입력: 명령 바 → "@Ada write a 200-word paragraph about ocean tides, no tools" → Return(1초 캡처 `4-working-board-1s.png`: READY → RUNNING, "idle" → "1 running", "2 live" → "2 live · 1 working"). 이 답은 5초 안에 끝나 미션 맵을 못 열어서, "@Ada write about 600 words on the history of mechanical clocks, no tools" 로 한 번 더 → 2초 뒤 도구 메뉴 → Mission Map(`4-working-mission-1s.png`: 부제 "1 working", Working 1, 행 "Working", 팀 "1 working"). 끝나면 Done 으로.
-- [ ] 5. 글 쓰는 창이 열리자마자 첫 칸에 초점, Enter 저장 / Esc 취소(여러 줄은 Cmd+Enter)
+- [x] 5. 글 쓰는 창이 열리자마자 첫 칸에 초점, Enter 저장 / Esc 취소(여러 줄은 Cmd+Enter)
+  - 찾은 창: 칸반 새 카드·카드 고치기, 캘린더 새 일정, 노드·그룹·작업공간·열 이름 바꾸기와 역할(NSAlert `Prompt.text`), 넘겨주기 메모, 넘겨주기 보내기 전 고치기(여러 줄), 계정 프로필 추가(NSAlert), 계정 팝오버 새 이름, 루프 Start from scratch, 메모리 새 메모, git 커밋 메시지, 문서 요청, 다이어그램 설명, 웹 타일 빈 새 탭 주소. 체크리스트 Add an objective 는 이미 초점이 갔다.
+  - 원인: SwiftUI 입력 칸에 초점 지정이 없었다. NSAlert 는 `initialFirstResponder` 만 두었는데 창이 뜬 뒤 첫 단추가 초점을 가져가는 때가 있다.
+  - 고침: `.autoFocus()`(창이 붙은 뒤 0.05·0.25초에 초점) 를 위 SwiftUI 칸에 붙였다(이미 내용이 있는 고치기 창과 주소가 있는 웹 탭은 제외). 칸반·캘린더는 Enter 저장(제목이 비면 무시)·Esc 취소(`onExitCommand`). 루프·메모리는 Enter 저장, 여러 줄 칸에서는 Cmd+Enter 로 저장 단추. NSAlert 는 `Prompt.run` 이 창이 뜬 뒤 칸에 초점을 주고 글자를 모두 골라 둔다(바로 치면 바뀜). 여러 줄 Prompt 는 Cmd+Enter 가 OK.
+  - 확인한 실제 입력(새 상태 /tmp/symv4e, /tmp/symfocus git 레포): 칸반 DOING "Add card" 클릭 → 바로 "Write docs" → Return → 카드 생김(`5-kanban-typed-enter.png`). Add card → "nope" → Esc → 카드 안 생김. … → Rename… → 바로 "Sprint board" → Return → 이름 바뀜(`5-rename-typed.png`). 루프 → Start from scratch → 바로 "Hourly ping"(`5-loop-scratch-typed.png`) → 지시 칸 클릭 "say hi" → Cmd+Return → 루프 생김. Memory → New memory → 바로 "Use pnpm not npm" → Return → 저장(`5-memory-typed.png`). 브랜치 칩 → 바로 "Add b line" → Return → `/tmp/symfocus` 에 커밋 a671b03(`5-git-typed.png`). 문서 스튜디오 → 바로 "a short README"(`5-docs-typed.png`, Enter 는 질문이 되어 R 항목에서). 다이어그램 → 바로 "login flow"(`5-diagram-typed.png`). 웹 타일 놓기 → 바로 "example.invalid" → Return → 그 주소로 이동(`5-web-typed.png`). 캘린더 + New → 바로 "Standup" → Return → 18일에 일정(`5-calendar-typed.png`, `5-calendar-enter.png`).
+  - 시험 도구 한계: git 팝오버에서 커밋한 뒤 orca 가 "초점 창 없음" 으로 Esc·클릭을 거부했다(AppKit 키 창은 본 창이었다 — 디버그 `windows` 로 확인). CGEvent 도구는 이 터미널에 손쉬운 사용 권한이 없어(`CGPreflightPostEventAccess` false) 이벤트가 버려진다. 팝오버는 디버그 통로로 닫았다.
 - [ ] 6. 칸반 Done 열 카드 표시
 - [ ] 7. 앱이 스스로 만드는 노드(인스펙터, 복제, 컴포저 그룹, 문서·다이어그램 결과)도 보이는 영역 안으로
 - [ ] 8. 셸 Ctrl+C 실제 입력 확인(`sleep 100` 끊기)

@@ -630,9 +630,21 @@ enum Prompt {
         alert.accessoryView = field
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
-        alert.window.initialFirstResponder = field
-        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        guard run(alert, focus: field) == .alertFirstButtonReturn else { return nil }
         return field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 창을 띄우고 열리자마자 field 에 초점을 준다(글자는 모두 골라 둔다).
+    /// initialFirstResponder 만으로는 NSAlert 가 첫 단추에 초점을 두는 때가 있어, 창이 뜬 뒤 한 번 더 잡는다.
+    /// Enter 는 첫 단추(저장), Esc 는 Cancel 단추.
+    static func run(_ alert: NSAlert, focus field: NSView) -> NSApplication.ModalResponse {
+        alert.layout()
+        alert.window.initialFirstResponder = field
+        DispatchQueue.main.async {
+            alert.window.makeFirstResponder(field)
+            (field as? NSTextField)?.selectText(nil)
+        }
+        return alert.runModal()
     }
 
     static func multiline(title: String, message: String = "", value: String = "") -> String? {
@@ -648,8 +660,9 @@ enum Prompt {
         alert.accessoryView = scroll
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
-        alert.window.initialFirstResponder = tv
-        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        // 여러 줄 칸은 Enter 가 줄바꿈이라 Cmd+Enter 로 저장한다.
+        alert.buttons[0].keyEquivalentModifierMask = .command
+        guard run(alert, focus: tv) == .alertFirstButtonReturn else { return nil }
         return tv.string
     }
 }

@@ -720,3 +720,25 @@ struct PopoverAnchor: NSViewRepresentable {
     }
     func updateNSView(_ nsView: NSView, context: Context) {}
 }
+
+/// 글을 쓰는 창이 열리자마자 첫 칸에 초점을 준다. 바로 친 글자가 사라지지 않게 한다.
+/// 창이 키 창이 되고 SwiftUI 가 필드를 붙인 뒤에 잡아야 해서 조금 미뤄 두 번 시도한다.
+struct AutoFocus: ViewModifier {
+    var enabled: Bool
+    @FocusState private var focused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .focused($focused)
+            .onAppear {
+                guard enabled else { return }
+                for delay in [0.05, 0.25] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { focused = true }
+                }
+            }
+    }
+}
+
+extension View {
+    func autoFocus(_ enabled: Bool = true) -> some View { modifier(AutoFocus(enabled: enabled)) }
+}

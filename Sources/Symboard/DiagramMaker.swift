@@ -203,6 +203,7 @@ struct DiagramPopover: View {
             HStack(spacing: 6) {
                 TextField("", text: $maker.describe, prompt: Text("Describe a diagram...").foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
+                    .autoFocus()
                     .onSubmit { if !maker.describe.isEmpty { maker.generate(kind: nil) } }
                 Button("Generate") { maker.generate(kind: nil) }.buttonStyle(PillButtonStyle(prominent: !maker.describe.isEmpty)).axName("Generate")
                     .disabled(maker.describe.isEmpty)

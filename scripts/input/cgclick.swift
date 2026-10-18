@@ -9,10 +9,15 @@ func symboardWindowOrigin() -> CGPoint? {
     guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "local.symboard.app").first,
           let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]
     else { return nil }
+    // 팝오버도 layer 0 창으로 잡히므로 가장 큰 창(본 창)을 기준으로 삼는다.
+    var best: (area: CGFloat, origin: CGPoint)?
     for w in list where (w[kCGWindowOwnerPID as String] as? Int32) == app.processIdentifier && (w[kCGWindowLayer as String] as? Int) == 0 {
-        if let b = w[kCGWindowBounds as String] as? [String: CGFloat] { return CGPoint(x: b["X"] ?? 0, y: b["Y"] ?? 0) }
+        if let b = w[kCGWindowBounds as String] as? [String: CGFloat] {
+            let area = (b["Width"] ?? 0) * (b["Height"] ?? 0)
+            if area > (best?.area ?? 0) { best = (area, CGPoint(x: b["X"] ?? 0, y: b["Y"] ?? 0)) }
+        }
     }
-    return nil
+    return best?.origin
 }
 
 func post(_ type: CGEventType, _ p: CGPoint, clicks: Int64 = 1) {

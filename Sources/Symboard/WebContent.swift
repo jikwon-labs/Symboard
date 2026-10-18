@@ -264,6 +264,7 @@ struct WebTileBar: View {
                     Image(systemName: "globe").font(.system(size: 10)).foregroundStyle(Color.symDim)
                     TextField("", text: $state.address, prompt: Text("Address or :port").foregroundColor(Color.symDim))
                         .textFieldStyle(.plain).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
+                        .autoFocus(state.address.isEmpty)
                         .onSubmit { web.navigate(state.address) }
                 }
                 .padding(.horizontal, 8).padding(.vertical, 4)

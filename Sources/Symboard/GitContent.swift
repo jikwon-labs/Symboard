@@ -245,6 +245,7 @@ struct GitCardView: View {
                     HStack(spacing: 6) {
                         TextField("", text: $card.message, prompt: Text(GitInfo.defaultMessage(card.selected.isEmpty ? s.changes : card.selected)).foregroundColor(Color.symDim))
                             .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
+                            .autoFocus()
                             .onSubmit { Task { await card.commit() } }
                         if card.generating { ProgressView().controlSize(.mini) } else {
                             Button { Task { await card.generateMessage(agent: "claude") } } label: { Image(systemName: "sparkles") }

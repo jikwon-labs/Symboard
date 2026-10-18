@@ -284,6 +284,8 @@ struct LoopsModal: View {
                     }
                     section("NAME") {
                         TextField("", text: $draft.name, prompt: Text("e.g. Suite watchdog").foregroundColor(Color.symDim)).modifier(FieldLook())
+                            .autoFocus(draft.editing == nil && draft.name.isEmpty)
+                            .onSubmit { if draft.isValid { c.saveLoop() } }
                     }
                     section("INSTRUCTION") {
                         TextEditor(text: $draft.message)
@@ -399,6 +401,7 @@ struct LoopsModal: View {
             Spacer()
             Button("Cancel") { chrome.loopsPage = runner.rows.isEmpty ? nil : "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
             Button(draft.editing == nil ? "Create loop" : "Save loop") { c.saveLoop() }
+                .keyboardShortcut(.return, modifiers: .command)
                 .buttonStyle(PillButtonStyle(prominent: true)).disabled(!draft.isValid).opacity(draft.isValid ? 1 : 0.5)
         }
         .padding(.horizontal, 18).padding(.vertical, 14)

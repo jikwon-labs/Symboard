@@ -82,7 +82,7 @@ final class ProfilesModel: ObservableObject {
         alert.accessoryView = grid
         alert.addButton(withTitle: "Add")
         alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn, !name.stringValue.isEmpty, !folder.stringValue.isEmpty else { return }
+        guard Prompt.run(alert, focus: name) == .alertFirstButtonReturn, !name.stringValue.isEmpty, !folder.stringValue.isEmpty else { return }
         add(name: name.stringValue, agent: agentPopup.indexOfSelectedItem == 0 ? .claude : .codex, folder: folder.stringValue)
     }
 }

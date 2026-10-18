@@ -539,6 +539,16 @@ struct CardEditor: View {
         self.save = save; self.cancel = cancel; self.delete = delete
     }
 
+    /// Enter·저장 단추. 제목이 비면 저장하지 않는다.
+    func submit() {
+        let t = title.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty else { return }
+        var c = editing ?? KanbanCard(title: "")
+        c.title = t
+        c.notes = notes; c.due = due; c.priority = priority
+        save(c)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -550,6 +560,8 @@ struct CardEditor: View {
                 Circle().fill(Priority.color(priority)).frame(width: 7, height: 7)
                 TextField("", text: $title, prompt: Text("Card title").foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 14, weight: .medium)).foregroundStyle(Color.symText)
+                    .autoFocus()
+                    .onSubmit(submit)
             }
             .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
             TextField("", text: $notes, prompt: Text("Notes (optional)").foregroundColor(Color.symDim), axis: .vertical)
@@ -585,17 +597,13 @@ struct CardEditor: View {
                 }
                 Spacer()
                 Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
-                Button(editing == nil ? "Add card" : "Save") {
-                    var c = editing ?? KanbanCard(title: "")
-                    c.title = title.trimmingCharacters(in: .whitespaces)
-                    c.notes = notes; c.due = due; c.priority = priority
-                    save(c)
-                }
+                Button(editing == nil ? "Add card" : "Save", action: submit)
                 .buttonStyle(PillButtonStyle(prominent: true)).axName(editing == nil ? "Add card" : "Save")
                 .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(16)
+        .onExitCommand(perform: cancel)
         .frame(width: 340)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.symSurface))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.symBorder))

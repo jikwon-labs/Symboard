@@ -120,11 +120,23 @@ struct EventEditor: View {
         self.save = save; self.cancel = cancel; self.delete = delete
     }
 
+    /// Enter·저장 단추. 제목이 비면 저장하지 않는다.
+    func submit() {
+        let t = title.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty else { return }
+        var e = event ?? CalendarEvent(title: "", day: day)
+        e.title = t
+        e.day = Calendar.current.startOfDay(for: day); e.allDay = allDay; e.colorHex = color; e.notes = notes
+        save(e)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 TextField("", text: $title, prompt: Text("Event title").foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
+                    .autoFocus()
+                    .onSubmit(submit)
                 Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close")
             }
             HStack(spacing: 6) {
@@ -132,6 +144,7 @@ struct EventEditor: View {
                 DatePicker("", selection: $day, displayedComponents: .date).labelsHidden().datePickerStyle(.field)
             }
             .font(.system(size: 12))
+        .onExitCommand(perform: cancel)
             HStack {
                 Image(systemName: "clock").foregroundStyle(Color.symDim)
                 Text("All day").font(.system(size: 12)).foregroundStyle(Color.symText)
@@ -149,16 +162,12 @@ struct EventEditor: View {
             }
             TextField("", text: $notes, prompt: Text("Notes").foregroundColor(Color.symDim))
                 .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
+                .onSubmit(submit)
             HStack {
                 if event != nil { Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip("Delete event") }
                 Spacer()
                 Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
-                Button(event == nil ? "Add event" : "Save") {
-                    var e = event ?? CalendarEvent(title: "", day: day)
-                    e.title = title.trimmingCharacters(in: .whitespaces)
-                    e.day = Calendar.current.startOfDay(for: day); e.allDay = allDay; e.colorHex = color; e.notes = notes
-                    save(e)
-                }
+                Button(event == nil ? "Add event" : "Save", action: submit)
                 .buttonStyle(PillButtonStyle(prominent: true)).axName(event == nil ? "Add event" : "Save").disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }

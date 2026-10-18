@@ -159,6 +159,7 @@ struct DocumentsStudio: View {
             HStack(spacing: 6) {
                 TextField("", text: $docs.request, prompt: Text("Ask for any document...").foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
+                    .autoFocus()
                     .onSubmit { if !docs.request.isEmpty { docs.generate(kind: nil) } }
                 Button { docs.generate(kind: nil) } label: {
                     Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)

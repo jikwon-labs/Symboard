@@ -51,7 +51,7 @@ final class HandoffCoordinator {
         alert.accessoryView = stack
         alert.addButton(withTitle: "Ask for Summary")
         alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard Prompt.run(alert, focus: note) == .alertFirstButtonReturn else { return }
         start(source: source, target: targets[popup.indexOfSelectedItem].id, note: note.stringValue, autoSend: false)
     }
 

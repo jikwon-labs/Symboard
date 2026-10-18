@@ -55,6 +55,7 @@ struct AccountsPopover: View {
             Text("CONNECT ANOTHER ACCOUNT").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
             HStack(spacing: 6) {
                 TextField("", text: $newName, prompt: Text("e.g. Work account").foregroundColor(Color.symDim)).modifier(FieldLook())
+                    .autoFocus(profiles.profiles.isEmpty)
                     .onSubmit(connect)
                 Button(action: connect) { Label("Connect", systemImage: "plus") }.buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)

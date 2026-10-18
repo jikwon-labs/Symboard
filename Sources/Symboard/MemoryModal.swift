@@ -362,6 +362,8 @@ struct MemoryEditor: View {
             }
             HStack {
                 TextField("", text: $note.title, prompt: Text("Title").foregroundColor(Color.symDim)).modifier(FieldLook())
+                    .autoFocus(note.title.isEmpty)
+                    .onSubmit { hub.save(note) }
                 Button {
                     hub.rewrite(note) { note.body = $0 }
                 } label: { if hub.rewriting { ProgressView().controlSize(.small) } else { Label("Rewrite", systemImage: "sparkles") } }
@@ -380,7 +382,7 @@ struct MemoryEditor: View {
                 Button("Delete") { hub.delete(note.id) }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).axName("Delete")
                 Spacer()
                 Button("Cancel") { hub.page = "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
-                Button("Save memory") { hub.save(note) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Save memory")
+                Button("Save memory") { hub.save(note) }.keyboardShortcut(.return, modifiers: .command).buttonStyle(PillButtonStyle(prominent: true)).axName("Save memory")
                     .disabled(note.title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
