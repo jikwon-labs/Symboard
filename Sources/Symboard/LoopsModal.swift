@@ -145,11 +145,13 @@ struct LoopsModal: View {
                 default: if runner.rows.isEmpty { gallery } else { list }
                 }
             }
-            .frame(maxWidth: 1000, maxHeight: 720)
+            .frame(maxWidth: 1000)
+            // 배경을 높이 상한보다 먼저 달아, 내용이 짧으면 카드도 내용 높이로 줄어든다.
             .background(RoundedRectangle(cornerRadius: 18).fill(Color.symSurface))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.symBorder))
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .shadow(color: .black.opacity(0.6), radius: 30, y: 10)
+            .frame(maxHeight: 720)
             .padding(.horizontal, 80).padding(.vertical, 60)
         }
     }
@@ -176,8 +178,17 @@ struct LoopsModal: View {
 
     // MARK: 틀 고르기
 
+    /// 내용이 들어가면 스크롤 없이 내용 높이만큼, 넘치면 스크롤.
+    func fitOrScroll<V: View>(@ViewBuilder _ content: () -> V) -> some View {
+        let c = content()
+        return ViewThatFits(in: .vertical) {
+            c
+            ScrollView { c }
+        }
+    }
+
     var gallery: some View {
-        ScrollView {
+        fitOrScroll {
             VStack(alignment: .leading, spacing: 12) {
                 Text("TEMPLATES").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
@@ -196,7 +207,7 @@ struct LoopsModal: View {
                             .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised))
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.symBorder))
                         }
-                        .buttonStyle(.plainHit)
+                        .buttonStyle(.plainHit).axName(t.name)
                     }
                 }
                 HStack {
@@ -213,7 +224,7 @@ struct LoopsModal: View {
     // MARK: 목록
 
     var list: some View {
-        ScrollView {
+        fitOrScroll {
             VStack(spacing: 8) {
                 ForEach(runner.rows) { row in
                     HStack(spacing: 12) {
