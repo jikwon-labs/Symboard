@@ -69,6 +69,7 @@ final class ChromeModel: ObservableObject {
     @Published var gitCard: GitCardModel?
     @Published var gitOpen = false
     @Published var usageOpen = false
+    @Published var accountsOpen = false
     @Published var penColor = "#F05A38"
     @Published var penWidth = 3.0
     /// 루프 모달: nil 이면 닫힘, "list"·"gallery"·"form".

@@ -47,10 +47,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         _ = model.loops
         buildUI()
         observe()
-        sidePanel.addTab("Profiles", view: AnyView(ProfilesPanelView(profiles: model.profiles) { [weak self] p in
-            self?.addTerminal(spec: TerminalSpec(agent: p.agent, cwd: self?.projectPath ?? NewTerminalDialog.lastCwd, profileID: p.id), at: nil,
-                              title: "\(p.agent.displayName) (\(p.name))")
-        }))
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.model.usage.refresh() }
         showWorkspace(model.selectedWorkspace.id)
         refreshGit()
@@ -567,7 +563,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func openUsage() { chrome.usageOpen.toggle() }
-    func openProfiles() { togglePanel(tab: "Profiles") }
+    func openProfiles() { chrome.accountsOpen.toggle() }
+
+    /// 프로필(없으면 기본 로그인)로 콘솔을 하나 띄운다.
+    func openProfileConsole(_ p: AccountProfile?, agent: AgentKind) {
+        chrome.accountsOpen = false
+        var spec = TerminalSpec(agent: agent, cwd: projectPath, profileID: p?.id)
+        spec.profileID = p?.id
+        addTerminal(spec: spec, at: nil, applyActiveProfile: false)
+    }
     func openLoops() { chrome.loopsPage = chrome.loopsPage == nil ? "list" : nil }
     func openMemory() { memoryHub.page = memoryHub.page == nil ? "list" : nil }
 
@@ -818,7 +822,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     @discardableResult
     func addTerminal(spec: TerminalSpec, at point: Point?, size: CGSize = CGSize(width: 640, height: 400),
-                     title: String? = nil, teamID: UUID? = nil, role: String? = nil) -> BoardNode {
+                     title: String? = nil, teamID: UUID? = nil, role: String? = nil, applyActiveProfile: Bool = true) -> BoardNode {
+        var spec = spec
+        // 새 콘솔은 그 CLI 에 고른 계정 프로필을 따른다.
+        if applyActiveProfile, spec.profileID == nil, spec.agent == .claude || spec.agent == .codex {
+            spec.profileID = model.profiles.active(for: spec.agent)
+        }
         let frame: Rect
         if let point { frame = Rect(x: point.x, y: point.y, w: size.width, h: size.height) }
         else { frame = model.suggestedFrame(size: size, near: scrollView.visibleCenter) }

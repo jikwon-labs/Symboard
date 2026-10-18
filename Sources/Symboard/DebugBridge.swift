@@ -544,6 +544,11 @@ final class DebugBridge {
             if let j = cmd["json"] as? String, let spec = DiagramSpec.parse(j) { d.draw(spec, center: controller.scrollView.visibleCenter) }
             if cmd["fakeDrawing"] as? Bool == true { d.drawing = "Claude Code"; _ = d.placeStarter("Flow", at: controller.scrollView.visibleCenter, empty: true) }
             log.append("diagram drawing=\(d.drawing ?? "-") error=\(d.error ?? "-") nodes=\(model.selectedWorkspace.nodes.count) links=\(model.selectedWorkspace.links?.count ?? 0)")
+        case "accounts":
+            if let o = cmd["open"] as? Bool { controller.chrome.accountsOpen = o }
+            if let n = cmd["connect"] as? String { let p = model.profiles.connect(name: n, agent: .claude); if cmd["console"] as? Bool == true { controller.openProfileConsole(p, agent: .claude) } }
+            if let i = cmd["use"] as? Int, i < model.state.profiles.count { model.profiles.setActive(model.state.profiles[i].id, for: model.state.profiles[i].agent) }
+            log.append("accounts profiles=\(model.state.profiles.map(\.name)) active=\(model.state.activeProfiles ?? [:])")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

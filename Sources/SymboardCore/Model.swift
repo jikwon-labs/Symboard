@@ -348,6 +348,8 @@ public struct AppState: Codable, Equatable, Sendable {
     public var selectedWorkspaceID: UUID?
     public var profiles: [AccountProfile]
     public var memories: [MemoryNote]
+    /// CLI(rawValue)마다 새 콘솔에 쓸 프로필. 없으면 기본 로그인.
+    public var activeProfiles: [String: UUID]?
 
     public init(version: Int = AppState.currentVersion, workspaces: [Workspace] = [],
                 selectedWorkspaceID: UUID? = nil, profiles: [AccountProfile] = [], memories: [MemoryNote] = []) {

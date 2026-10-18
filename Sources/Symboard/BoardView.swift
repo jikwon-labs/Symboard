@@ -133,6 +133,8 @@ final class CanvasView: NSView {
     /// 모델과 노드 뷰를 맞춘다. 새로 생긴 노드는 뷰를 만들고, 사라진 노드는 뷰를 뗀다.
     func reloadNodes() {
         guard let ws = workspace else { return }
+        // 층 순서를 맞추기 전에 화살표 층이 있어야 한다.
+        arrowsView.isArrowLayer = true
         let ids = Set(ws.nodes.map(\.id))
         for (id, v) in nodeViews where !ids.contains(id) {
             v.removeFromSuperview()
@@ -155,7 +157,6 @@ final class CanvasView: NSView {
     func syncInk() {
         if subviews.last !== inkView { addSubview(inkView, positioned: .above, relativeTo: nil) }
         arrowsView.isArrowLayer = true
-        if subviews.dropLast().last !== arrowsView { addSubview(arrowsView, positioned: .below, relativeTo: inkView) }
         inkView.sync(workspace?.strokes ?? [])
     }
 
@@ -235,15 +236,22 @@ final class CanvasView: NSView {
     /// 모델 배열 순서대로 겹침 순서를 맞춘다(뒤에 있을수록 위).
     private func applyOrder(_ ws: Workspace) {
         var rank: [ObjectIdentifier: Int] = [:]
-        for (i, n) in ws.nodes.enumerated() { if let v = nodeViews[n.id] { rank[ObjectIdentifier(v)] = i } }
-        let current = subviews.compactMap { rank[ObjectIdentifier($0)] }
-        guard current != current.sorted() else { return }
-        let box = Unmanaged.passRetained(RankBox(rank))
+        for (i, n) in ws.nodes.enumerated() { if let v = nodeViews[n.id] { rank[ObjectIdentifier(v)] = i * 2 } }
+        // 다이어그램 화살표는 가장 위 도형·글자 바로 위, 콘솔 같은 창형 노드보다는 아래.
+        let topFlat = ws.nodes.enumerated().filter { NodeView.isHeaderless($0.element.kind) }.map { $0.offset * 2 }.max() ?? -2
+        let arrowRank = topFlat + 1
+        let current = subviews.compactMap { v -> Int? in
+            if let l = v as? LinksView, l.isArrowLayer { return arrowRank }
+            return rank[ObjectIdentifier(v)]
+        }
+        guard current != current.sorted() || subviews.last !== inkView else { return }
+        let box = Unmanaged.passRetained(RankBox(rank, arrow: arrowRank))
         sortSubviews({ a, b, ctx in
-            let r = Unmanaged<RankBox>.fromOpaque(ctx!).takeUnretainedValue().rank
+            let rb0 = Unmanaged<RankBox>.fromOpaque(ctx!).takeUnretainedValue()
+            let r = rb0.rank, arrowRank = rb0.arrow
             func rk(_ v: NSView) -> Int {
                 if v is InkOverlayView { return Int.max }
-                if let l = v as? LinksView, l.isArrowLayer { return Int.max - 1 }
+                if let l = v as? LinksView, l.isArrowLayer { return arrowRank }
                 return r[ObjectIdentifier(v)] ?? -1
             }
             let ra = rk(a), rb = rk(b)
@@ -259,8 +267,6 @@ final class CanvasView: NSView {
             let front = Unmanaged<NSView>.fromOpaque(ctx!).takeUnretainedValue()
             if a is InkOverlayView { return .orderedDescending }
             if b is InkOverlayView { return .orderedAscending }
-            if a === front, b is LinksView, (b as! LinksView).isArrowLayer { return .orderedAscending }
-            if b === front, a is LinksView, (a as! LinksView).isArrowLayer { return .orderedDescending }
             if a === front { return .orderedDescending }
             if b === front { return .orderedAscending }
             return .orderedSame
@@ -453,7 +459,8 @@ final class CanvasView: NSView {
 
 private final class RankBox {
     let rank: [ObjectIdentifier: Int]
-    init(_ r: [ObjectIdentifier: Int]) { rank = r }
+    let arrow: Int
+    init(_ r: [ObjectIdentifier: Int], arrow: Int) { rank = r; self.arrow = arrow }
 }
 
 extension Notification.Name {

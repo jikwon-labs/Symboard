@@ -89,7 +89,7 @@ STATUS: IN_PROGRESS
 
 ## G. 계정 프로필
 
-- [ ] G1. 위쪽 아이콘 팝오버: CLI 탭·노란 안내·ACTIVE 행·저장 계정 행·현재 로그인 저장·Connect (node-accounts.jpg)
+- [x] G1. 위쪽 아이콘 팝오버: CLI 탭·노란 안내·ACTIVE 행·저장 계정 행·현재 로그인 저장·Connect (node-accounts.jpg)
 
 ## 마무리
 
@@ -146,6 +146,11 @@ STATUS: IN_PROGRESS
   - 남은 차이: 원본은 종이 아래에 CLI 터미널 화면이 비치지만 여기는 진행 한 줄만 보인다. CLI 배지 옆 "+"(다른 CLI 추가)는 없다.
 - S1·S2: 원본 studio-diagrams.jpg, agent3/diag-pop-1.2.png, agent3/diagrams-2.5.png, agent3/diagrams-12.5.png / 내 것 `v2/S1-diagram-popover.png`, `v2/S2-claude-is-drawing.png`, `v2/S2-diagram-real-ink.png`, `v2/S2-diagram-colorful-bands.png`, `v2/S2-diagram-node-format.png`. 왼쪽 막대 다이어그램 버튼 → 팝오버: MODEL(Claude/Codex), STYLE Ink/Colorful, FROM YOUR PROJECT 6개(Architecture, User flow, Data flow, Components, Request lifecycle, State flow), Describe + Generate, STARTER SHAPES(Flow/Steps/Branch/Mind map, 에이전트 없이 바로 놓음). 생성: 위쪽 "Claude Code is drawing ×" 칩 + 흐린 빈 상자·화살표 자리표시 → 에이전트가 낸 JSON(제목·그룹·노드·간선, DiagramSpec 파서·층 배치 단위 테스트) → 자리표시를 지우고 그룹 상자 → 제목 → 노드 → 화살표 순서로 0.09초 간격 등장 → 전체 보기. 결과는 보드의 진짜 객체: 손그림 둥근 사각형(제목+부제), 바깥 요소는 타원, 점선 그룹 상자+라벨, 라벨 달린 손그림 화살표(도형 위 층), 손글씨 제목. 노드를 고르면 H6 서식 패널(선·배경·굵기·선 모양·거칠기·모서리·글자 크기·글꼴·불투명도·레이어/복제/삭제).
   - 실제 호출: /tmp/symsample 에서 claude Architecture 1회(약 40초), 노드 9·그룹 3·간선 9 의 다이어그램이 그려짐(`v2/S2-diagram-real-ink.png`). 그때 그룹 상자끼리 겹치고 일부 글이 잘려서, 그룹마다 세로 띠를 주는 배치로 고치고(단위 테스트 groupBoxesDoNotOverlap) 같은 내용을 손으로 옮긴 JSON 으로 다시 그려 확인(`v2/S2-diagram-colorful-bands.png`, 추가 CLI 호출 없음). 색 채움 그룹 아래에 화살표가 묻혀서 화살표를 도형 위 층으로 옮김.
+  - 고친 것(G 확인 중 발견): 화살표 층을 맨 위에 두었더니 콘솔 창 위로도 화살표가 지나갔다 → 화살표 층을 "가장 위 도형·글자" 바로 위, 콘솔 같은 창형 노드 아래에 두도록 층 순서 계산을 바꿈(`v2/G1-accounts.png` 에서 콘솔이 화살표를 가림).
   - 남은 차이: 원본 서식 패널은 글꼴 8종, 여기는 4종. 원본은 노드가 나타난 뒤 층 배치로 미끄러지듯 정리되는 움직임이 있는데 여기는 처음부터 제자리에 나타난다.
+
+- G1: 원본 node-accounts.jpg / 내 것 `v2/G1-accounts.png`, `v2/G1-accounts-profile-console.png`. 위쪽 계정 아이콘 → 팝오버: accounts + CLI 탭(Claude/Codex), 노란 안내(직접 쓴 문장: 키체인 로그인은 설정 폴더로 완전히 나뉘지 않을 수 있으니 콘솔 안에서 확인), "Your sign-in"(기본 로그인) 행, 저장한 프로필 행(이니셜·이름·상태·Use·콘솔 열기·이름 바꾸기·삭제), 고른 프로필은 ACTIVE, "Save your current sign-in as a profile", CONNECT ANOTHER ACCOUNT(이름 + Connect → 앱 데이터 폴더 아래 빈 설정 폴더를 만들고 그 계정으로 콘솔을 띄워 거기서 로그인). ACTIVE 프로필은 이후 새 claude·codex 콘솔에 자동으로 붙는다(AppState.activeProfiles). 환경 변수·경로는 화면에 드러내지 않음.
+  - 확인: "Work account" Connect → 빈 설정 폴더로 claude 가 첫 실행 화면(테마 고르기)을 보임 = 기본 계정과 분리됨. 로그인은 하지 않았다. Use 로 ACTIVE 바뀜, state.json 에 저장.
+  - 남은 차이: 원본 CLI 탭에는 CLI 가 더 많다(여기는 설정 폴더 환경 변수를 확인한 claude·codex 만).
 
 ## 막힌 것

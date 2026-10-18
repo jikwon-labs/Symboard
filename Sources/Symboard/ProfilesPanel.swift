@@ -21,7 +21,42 @@ final class ProfilesModel: ObservableObject {
         profiles = model.state.profiles
     }
 
+    func active(for agent: AgentKind) -> UUID? { model.state.activeProfiles?[agent.rawValue] }
+
+    func setActive(_ id: UUID?, for agent: AgentKind) {
+        model.mutateState { s in
+            var m = s.activeProfiles ?? [:]
+            m[agent.rawValue] = id
+            s.activeProfiles = m
+        }
+        objectWillChange.send()
+    }
+
+    func rename(_ id: UUID, to name: String) {
+        model.mutateState { s in if let i = s.profiles.firstIndex(where: { $0.id == id }) { s.profiles[i].name = name } }
+        profiles = model.state.profiles
+    }
+
+    /// 새 계정: 앱 데이터 폴더 아래 빈 설정 폴더를 만든다. 첫 실행에서 CLI 가 로그인을 묻는다.
+    @discardableResult
+    func connect(name: String, agent: AgentKind) -> AccountProfile {
+        let slug = name.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" }.reduce("") { $0 + String($1) }
+        let dir = model.store.directory.appendingPathComponent("profiles/\(agent.rawValue)-\(slug)-\(UUID().uuidString.prefix(4))").path
+        add(name: name, agent: agent, folder: dir)
+        return model.state.profiles.last!
+    }
+
+    /// 지금 기본 로그인(기본 설정 폴더)을 이름 붙은 프로필로.
+    func saveCurrent(agent: AgentKind) {
+        let dir = agent == .codex ? NSHomeDirectory() + "/.codex" : NSHomeDirectory() + "/.claude"
+        model.mutateState { $0.profiles.append(AccountProfile(name: "Saved sign-in", agent: agent, configDir: dir)) }
+        profiles = model.state.profiles
+    }
+
     func remove(_ id: UUID) {
+        model.mutateState { s in
+            for (k, v) in s.activeProfiles ?? [:] where v == id { s.activeProfiles?[k] = nil }
+        }
         model.mutateState { $0.profiles.removeAll { $0.id == id } }
         profiles = model.state.profiles
     }

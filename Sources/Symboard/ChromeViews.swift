@@ -126,7 +126,8 @@ struct TopRightBar: View {
             }
 
             HStack(spacing: 2) {
-                iconButton("person.crop.circle", "Accounts") { c.openProfiles() }
+                iconButton("person.crop.circle", "Accounts") { chrome.accountsOpen.toggle() }
+                    .popover(isPresented: $chrome.accountsOpen, arrowEdge: .bottom) { AccountsPopover(profiles: c.model.profiles, c: c) }
                 iconButton("gearshape", "Settings") { c.openSettings() }
                 Menu {
                     Button("Mission Map") { c.openMission() }
