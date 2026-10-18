@@ -427,7 +427,7 @@ struct MemoryCardView: View {
                             }
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plainHit)
+                        .buttonStyle(.plainHit).axName(n.title)
                     }
                 }
             }

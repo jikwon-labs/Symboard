@@ -56,6 +56,8 @@ STATUS: IN_PROGRESS
   - 고침: 모달·팝오버(별 메뉴·삽입·도형·git·사용량·계정·미션 맵·루프·컴포저·스튜디오·메모리·다이어그램·설정 패널)가 하나라도 열리면 `chrome.overlayOpen` 이 켜지고 알약을 숨긴다.
   - 확인(실제 입력): 접근성 트리의 "Try …" 단추 수 — 처음 1 → 삽입 팝오버 클릭 0 → Esc 1 → 루프 모달 0 → Esc 1.
 - [ ] 13. 2차에서 자동 확인 못 한 것 실제 입력 확인: 칸반 카드 끌어 옮기기, 메모리 카드 Send, git 메시지 생성, 메모리 Rewrite, 에이전트 판단 루프 목표
+  - [x] 13b 메모리 카드 Send: Memory → Write memory → Commands·제목·본문 입력 → Save memory → Place card on board → 카드의 "Pick a console" 메뉴에서 Maya → Send 1 → 카드에 "Sent 1 to Maya", Maya 프롬프트에 메모 본문이 붙여넣어짐(Enter 끔이라 실행 안 됨). 모두 실제 클릭·타이핑.
+  - [x] 13d 메모리 Rewrite(실제 CLI 1회, /tmp/symsample): 편집 화면에서 Rewrite 클릭 → 스피너 → 약 2~3분 뒤 본문이 "# Run the sample / From the repo root: ```sh python3 src/hello.py``` / Expected output …" 로 바뀜.
   - [x] 13a 칸반 카드 끌기: orca drag 로 카드·노드 머리를 끌어도 아무 일이 없었다. 이벤트를 찍어 보니 orca 의 끌기 이벤트는 창 없이(화면 좌표) 온다. 창 없는 마우스 이벤트를 그 자리의 우리 창으로 다시 겨누는 감시를 넣었다(실제 마우스는 늘 창이 있어 영향 없음). 또 카드 끌기를 시스템 끌어 놓기(.draggable, 실제 커서만 따라감) 대신 SwiftUI DragGesture + 열·카드 자리 계산(`Board.dropTarget`, 단위 테스트 4개)으로 바꿨다. 확인(실제 끌기): 100% 에서 DOING 의 Write tests → DONE, 50% 에서 DONE → DOING, 노드 머리 끌기로 칸반 이동.
 
 ## 실제 입력으로 다시 확인할 흐름
