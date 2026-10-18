@@ -121,7 +121,7 @@ struct TopRightBar: View {
                 HStack(spacing: 6) {
                     Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Color.symDim)
                     if let p = chrome.sessionPercent {
-                        SessionRing(percent: p).hint("Session \(p)% used")
+                        SessionRing(percent: p, tintHex: chrome.sessionTint).hint("Session \(p)% used")
                     }
                     Text(chrome.resetText)
                 }
@@ -760,11 +760,12 @@ extension View {
 /// 사용량 알약 안의 작은 세션 % 링(가운데 claude 글자).
 struct SessionRing: View {
     var percent: Int
+    var tintHex = "#E8704A"
     var body: some View {
         ZStack {
             Circle().stroke(Color.symBorder, lineWidth: 2)
             Circle().trim(from: 0, to: CGFloat(min(max(percent, 0), 100)) / 100)
-                .stroke(Color(hex: "#E8704A"), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .stroke(Color(hex: tintHex), style: StrokeStyle(lineWidth: 2, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(percent)").font(.system(size: 7, weight: .bold, design: .rounded)).foregroundStyle(Color.symText)
         }

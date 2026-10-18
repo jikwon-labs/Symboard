@@ -386,6 +386,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let pill = model.usage.pill
         if chrome.resetText != pill.text { chrome.resetText = pill.text }
         if chrome.sessionPercent != pill.percent { chrome.sessionPercent = pill.percent }
+        let tint = model.usage.pillAgent == .codex ? "#6C7BFF" : "#E8704A"
+        if chrome.sessionTint != tint { chrome.sessionTint = tint }
         let pending = model.sessions.pendingResume.count
         if chrome.resumeCount != pending { chrome.resumeCount = pending }
         let live = model.sessions.liveCount

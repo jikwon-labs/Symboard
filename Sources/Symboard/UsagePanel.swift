@@ -22,6 +22,8 @@ final class UsageStore: ObservableObject {
     /// "/status" 또는 "session log".
     @Published var codexLimitsSource = ""
     let codexProbe = CodexStatusProbe()
+    /// 알약이 보일 CLI. 팝오버에서 codex 탭을 고르면 원본처럼 알약도 codex 한도로 바뀐다.
+    @Published var pillAgent: AgentKind = .claude
     unowned let model: AppModel
 
     init(model: AppModel) { self.model = model }
@@ -181,6 +183,9 @@ final class UsageStore: ObservableObject {
         if scannedAt == nil, let cached = Prefs.shared.string("usage.blockEnd").flatMap(Double.init) {
             ends.append(Date(timeIntervalSince1970: cached))
         }
+        if pillAgent == .codex, let l = codexLimits.first(where: { PlanUsageParser.isSession($0.name) }) ?? codexLimits.first {
+            return UsagePill.Display(text: "resets " + PlanUsageParser.shortReset(l.resets ?? "–"), percent: l.percent, fromCLI: true)
+        }
         return UsagePill.display(limits: limits, readAt: limitsAt, blockEnds: ends)
     }
 }
@@ -227,7 +232,9 @@ struct UsagePopover: View {
             if store.stats.isEmpty || (store.scannedAt.map { Date().timeIntervalSince($0) > 120 } ?? true) { store.refresh() }
             if store.limitsAt.map({ Date().timeIntervalSince($0) > 120 }) ?? true { store.refreshLimits() }
         }
+        .onDisappear { store.pillAgent = .claude }
         .onChange(of: agent) { _, a in
+            store.pillAgent = a
             if a == .codex, store.codexLimitsSource != "/status" || (store.codexLimitsAt.map { Date().timeIntervalSince($0) > 120 } ?? true) {
                 store.refreshCodexLimits()
             }

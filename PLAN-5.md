@@ -123,7 +123,12 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, Workspace 2 를 연 채 Cmd+Q → 다시 띄움): 타일마다 같은 칩(ON HOLD), 토스트 "14 consoles"(`v9-resume-toast.png`) → Iris 칩 Yes → Iris 만 뜸, 토스트 "13 consoles" → 토스트 Yes → 13개가 차례로 떠서 42 live.
   - 쓰는 데 지장 있는 차이: 없음.
   - 모양 차이: 이 콘솔들은 질문을 한 적이 없어 이을 대화가 없으므로 claude 첫 화면이 뜬다(원본은 지난 대화). 대화가 있는 콘솔의 이어하기는 3·4차에서 확인. 원본은 이어지는 동안 "Claude lane restored — relaunching." 두 줄을 보이고, 우리는 "Restored — picking up the last conversation..." 한 줄.
-- [ ] V10. node-usage.mp4
+- [x] V10. node-usage.mp4
+  - 원본 조작: 알약 "resets 4:09am" 아래 팝오버(claude: 14% 링·주간 줄·활동 칸·통계) → Codex 아이콘 → codex 화면(Monthly limit 27%), 알약도 codex 초기화 시각으로 → Claude → 아래로 스크롤(LAST 24H) → 막대 아이콘 → tokens(Reading local session logs → 30일 막대·BY AGENT).
+  - 우리(`env -i`): 알약 → 같은 꼴 팝오버(16% · Resets 10pm, 주간 22% · 0%, 7일, 활동 칸, 통계, LAST 30D, `v10-usage-claude.png`) → X → codex(Weekly limit 0%, 마지막 세션 로그) → Claude → tokens(7.4B, 30일 막대, BY AGENT).
+  - 쓰는 데 지장 있는 차이(고침): 팝오버에서 codex 를 골라도 위 알약이 claude 그대로였다 → 원본처럼 알약도 codex 한도·초기화 시각과 보라 링으로, 팝오버를 닫으면 claude 로 돌아간다. 확인: X → 알약 "0 · resets 12:10 am on 24 Oct", C → "16 · resets 10pm".
+  - 시험 도구 한계: 팝오버 머리의 막대 아이콘은 orca 좌표·접근성 어느 쪽으로도 눌리지 않아(팝오버가 별도 창이고 접근성 트리에 안 나옴) tokens 쪽은 디버그 `usage page=tokens` 로 열고 화면만 확인했다. C/X 아이콘은 실제 클릭으로 눌렸다.
+  - 모양 차이: 원본은 CLI 다섯 아이콘, 우리는 둘. 원본 LAST 24H, 우리 LAST 30D.
 - [ ] V11. node-webtiles.mp4
 - [ ] V12. studio-code.mp4
 - [ ] V13. studio-diagrams.mp4
