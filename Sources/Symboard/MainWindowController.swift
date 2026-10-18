@@ -658,6 +658,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         return fitted
     }
 
+    /// 앱이 만든 노드가 막대 밑이나 화면 밖에 있으면 보이게 화면을 옮긴다(노드 자리는 그대로).
+    /// 보이는 영역은 막대를 뺀 safeCanvasRect 이고, 그 영역의 가운데가 화면 가운데보다 (아래 110 − 위 70)/2 만큼 위에 있다.
+    func reveal(_ frames: [Rect]) {
+        let mag = Double(scrollView.magnification)
+        guard let r = CanvasLayout.reveal(frames, in: safeCanvasRect, magnification: mag) else { return }
+        let z = max(r.zoom, Double(scrollView.minMagnification))
+        scrollView.center(on: Point(x: r.center.x, y: r.center.y + 20 / z), zoom: z)
+    }
+
     func place(_ p: Placement, at point: Point) {
         let s = p.size
         let isShape: Bool = { if case .shape = p { return true }; return false }()
@@ -714,6 +723,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         model.addNode(copy)
         currentCanvas?.select(copy.id)
+        reveal([copy.frame])
     }
 
     /// 토스트의 Yes/No: 기다리는 콘솔을 모두 차례로 띄운다. Yes 면 끝난 뒤 전체가 보이게 줄인다.
@@ -901,6 +911,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let node = BoardNode(kind: .terminal, frame: frame, title: name, terminal: spec, teamID: teamID, role: role)
         model.addNode(node)
         currentCanvas?.select(node.id)
+        if point == nil { reveal([frame]) }
         return node
     }
 
@@ -924,6 +935,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         configure(&node)
         model.addNode(node)
         currentCanvas?.select(node.id)
+        // 자리를 정해 주지 않은 노드(문서·메모리·파일 카드)는 놓인 자리가 보이게 한다.
+        // 자리를 정한 쪽(놓기·다이어그램·인스펙터)은 부른 곳에서 알아서 보이게 한다.
+        if point == nil { reveal([node.frame]) }
     }
 
     /// 새 루프 양식을 연다. nodeID 가 있으면 그 콘솔만 고른 상태로.
@@ -1086,6 +1100,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let node = BoardNode(kind: .image, frame: frame, title: url.lastPathComponent, text: url.path, strokes: [])
         model.addNode(node)
         currentCanvas?.select(node.id)
+        reveal([frame])
     }
 
     func setPen(_ on: Bool) { setTool(on ? .pen : .select) }

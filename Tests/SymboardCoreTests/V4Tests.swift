@@ -189,3 +189,23 @@ enum ScreenSamples {
         #expect(spec.extraArgs == ["--dangerously-bypass-approvals-and-sandbox"] && PermissionMode.label(for: spec) == "AUTO")
     }
 }
+
+@Suite struct RevealTests {
+    let safe = Rect(x: 0, y: 0, w: 1000, h: 600)
+
+    @Test func insideIsLeftAlone() {
+        #expect(CanvasLayout.reveal([Rect(x: 100, y: 100, w: 200, h: 200)], in: safe, magnification: 1) == nil)
+    }
+
+    @Test func offRightEdgeCentersWithoutZoomingIn() {
+        let r = CanvasLayout.reveal([Rect(x: 700, y: 100, w: 200, h: 200), Rect(x: 980, y: 160, w: 440, h: 360)], in: safe, magnification: 0.8)
+        #expect(r != nil)
+        #expect(r!.center.x == (700 + 1420) / 2)
+        #expect(r!.zoom <= 0.8)
+    }
+
+    @Test func smallNodeKeepsZoom() {
+        let r = CanvasLayout.reveal([Rect(x: 1100, y: 100, w: 200, h: 200)], in: safe, magnification: 0.5)
+        #expect(r?.zoom == 0.5)
+    }
+}

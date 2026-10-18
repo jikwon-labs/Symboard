@@ -186,6 +186,8 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
         if let insp = model.selectedWorkspace.nodes.last, let wsID = model.workspaceID(containing: nodeID) {
             model.mutateWorkspace(wsID) { $0.links = ($0.links ?? []) + [NodeLink(from: self.nodeID, to: insp.id)] }
             c.currentCanvas?.layoutLinks()
+            // 웹 타일 오른쪽에 붙어 생겨 화면 끝이면 오른쪽 막대 밑으로 들어간다. 둘 다 보이게 화면을 옮긴다.
+            c.reveal([me.frame, insp.frame])
         }
     }
 
