@@ -47,8 +47,8 @@ final class LoopDraft: ObservableObject {
     @Published var useTime = false
     @Published var timeMinutes = 120.0
     @Published var useGoal = false
-    /// "text", "command", "agent"
-    @Published var goalMode = "agent"
+    /// "command", "agent", "text". 원본처럼 목표를 켜면 "A command passes" 가 먼저 골라져 있다.
+    @Published var goalMode = "command"
     @Published var goal = ""
     @Published var goalCommand = ""
     @Published var goalAgent = "claude"
@@ -92,7 +92,7 @@ final class LoopDraft: ObservableObject {
         let fresh = LoopDraft()
         editing = nil; name = fresh.name; message = fresh.message; when = fresh.when; intervalMinutes = fresh.intervalMinutes
         idleSeconds = fresh.idleSeconds; pattern = ""; targetAll = true; picked = []; useRuns = false; runs = 10
-        useTime = false; timeMinutes = 120; useGoal = false; goalMode = "agent"; goal = ""; goalCommand = ""; goalAgent = "claude"; background = true
+        useTime = false; timeMinutes = 120; useGoal = false; goalMode = "command"; goal = ""; goalCommand = ""; goalAgent = "claude"; background = true
     }
 
     var trigger: LoopTrigger {
@@ -361,8 +361,6 @@ struct LoopsModal: View {
     var goalEditor: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Button { draft.goalMode = "text" } label: { Label("Output shows text", systemImage: "text.magnifyingglass") }
-                    .buttonStyle(ChipStyle(on: draft.goalMode == "text"))
                 Button { draft.goalMode = "command" } label: { Label("A command passes", systemImage: "terminal") }
                     .buttonStyle(ChipStyle(on: draft.goalMode == "command"))
                 Button { draft.goalMode = "agent" } label: { Label("An agent judges", systemImage: "scope") }
@@ -372,6 +370,8 @@ struct LoopsModal: View {
                         Button(LoopSummary.agentName(a)) { draft.goalAgent = a }.buttonStyle(ChipStyle(on: draft.goalAgent == a))
                     }
                 }
+                Button { draft.goalMode = "text" } label: { Label("Output shows text", systemImage: "text.magnifyingglass") }
+                    .buttonStyle(ChipStyle(on: draft.goalMode == "text"))
             }
             switch draft.goalMode {
             case "command":
@@ -448,9 +448,14 @@ struct LoopsModal: View {
         .buttonStyle(.plainHit)
     }
 
+    /// 원본처럼 스위치를 글 왼쪽에 둔다. 글을 눌러도 켜고 끈다.
     func toggle(_ b: Binding<Bool>, _ title: String) -> some View {
-        Toggle(isOn: b) { Text(title).font(.system(size: 13)).foregroundStyle(Color.symText) }
-            .toggleStyle(.switch).tint(Color.symAccent).controlSize(.small)
+        HStack(spacing: 10) {
+            Toggle("", isOn: b).labelsHidden().toggleStyle(.switch).tint(Color.symAccent).controlSize(.small)
+                .accessibilityLabel(title)
+            Text(title).font(.system(size: 13)).foregroundStyle(Color.symText)
+                .onTapGesture { b.wrappedValue.toggle() }
+        }
     }
 }
 

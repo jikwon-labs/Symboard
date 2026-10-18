@@ -47,7 +47,10 @@ STATUS: IN_PROGRESS
   - 바꾼 것: `MemoryNote.disabled`(없으면 켜짐, 예전 저장분 그대로) 와 `isEnabled`. 목록 줄을 `MemoryListRow` 로: 오른쪽 체크로 켜고 끔(끈 줄은 흐림), 마우스를 올리면 고치기·휴지통. 바닥 "N active entries · …". 메모리 카드는 켜진 것만 보낸다. 스캔 단계에 Wrap up 과 단계 사이 선, 머리에 "N facts" 알약. 끝나면 Wrap up 을 0.8초 보인 뒤 검토로. 단위 테스트 2개.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-5, /tmp/symsample): Memory → Scan repo → Scan with Claude Code(질문 1) → 8초 "Launch now", 20초 "Launch done / Read the repo now"(`compare/5-memory-scan.png`) → 35초 REVIEW 9 of 9 → Add 9 to memory → 목록 9줄 모두 체크, "9 active entries" → 둘째 줄 체크 클릭 → 흐려지고 체크 빈 원, "8 active entries", 그 줄에 고치기·휴지통(`compare/5-memory-list.png`) → 휴지통 클릭 → 그 줄이 사라짐.
   - 못 본 것: Write facts·Wrap up 단계는 13초 간격 확인 사이에 지나가 화면으로 보지 못했다(접근성 상태로만 단계 이름 4개 확인). 마지막 점검에서 다시 스캔하지는 않는다(질문 한도).
-- [ ] 6. node-loops: 목표 기본값을 원본과 같은 종류로
+- [x] 6. node-loops: 목표 기본값을 원본과 같은 종류로
+  - 원본 장면: `node-loops.mp4` 12초. STOP 에서 "When a goal is met" 를 켜면 "A command passes" 가 먼저 골라져 있고 칸은 비어 있다(안내 글만). 고르는 칩은 두 개(A command passes · An agent judges). 스위치는 글 왼쪽.
+  - 바꾼 것: 목표 기본 종류를 "agent" 에서 "command" 로(새 루프·초기화 둘 다). 칩 순서를 원본처럼 command → agent 로 하고, 우리만 있는 "Output shows text" 는 맨 뒤로. STOP·BEHAVIOR 스위치를 글 왼쪽에 두고 글을 눌러도 켜지게.
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-5): 오른쪽 막대 Loops → Start from scratch → 아래로 스크롤 → "When a goal is met" 글 클릭 → 스위치 켜짐, "A command passes" 골라짐, 칸 비어 있음(안내 "e.g. swift test"). 비교 그림 `compare/6-loops-goal.png`.
 - [ ] 7. node-webtiles: 지구 도구 고른 뒤 끌어서 타일 크기
 - [ ] 8. node-accounts: 팝오버 머리 CLI 아이콘, 없는 CLI 는 흐리게 + "설치되지 않음"
 - [ ] 9. node-composer: Fill all 도 8번 규칙
