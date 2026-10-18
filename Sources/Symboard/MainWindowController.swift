@@ -413,7 +413,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         studio?.studio.tab = tab
     }
 
-    func openShapes() { chrome.flash("Shapes come with the whiteboard tools") }
 
     func openDiagram() { openStudio(tab: "Diagram") }
 
@@ -475,6 +474,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             addNode(kind: .orchestrator, size: s, title: "Orchestrator", at: origin)
         case .calendar:
             addNode(kind: .calendar, size: s, title: "Calendar", at: origin) { $0.events = [] }
+        case .shape(let k):
+            addNode(kind: .shape, size: s, title: k.capitalized, at: Point(x: point.x - s.width / 2, y: point.y - s.height / 2)) {
+                $0.shape = ShapeSpec(kind: k)
+                $0.style = NodeStyle(fontSize: 20, font: "hand", align: "center")
+                $0.text = ""
+            }
         }
         setTool(.select)
     }

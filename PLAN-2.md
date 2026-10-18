@@ -61,7 +61,7 @@ STATUS: IN_PROGRESS
 - [x] H3. 오른쪽 막대 삽입 팝오버 Checklist/Board/Calendar, 체크리스트 원형 카운터 (node-kanban.jpg r1)
 - [x] H4. 캘린더 노드: 월 격자·오늘·이벤트 팝오버·칩 (node-kanban.jpg r3)
 - [x] H5. 스티키: 헤더 없는 종이·손글씨체·접힌 모서리·종이 색 8개 팝오버 (node-kanban.jpg)
-- [ ] H6. 도형(사각·원·마름모·화살표)·속성 팝오버·도형 안 텍스트·스케치풍 (agent2/k-shape.jpg)
+- [x] H6. 도형(사각·원·마름모·화살표)·속성 팝오버·도형 안 텍스트·스케치풍 (agent2/k-shape.jpg)
 - [ ] I1. 펜 팝오버(색 9+사용자·굵기 5)·스무딩 곡선·십자 커서·지우개, 이미지 헤더 없음 (node-ink.jpg)
 
 ## L·M·N.
@@ -120,5 +120,7 @@ STATUS: IN_PROGRESS
   - 고친 것: 창이 뒤에 있을 때 캔버스 첫 클릭이 창 활성화로만 쓰여 놓기가 안 되던 문제(acceptsFirstMouse).
 - H3·H4: 원본 agent2/k-shape.jpg(체크리스트·캘린더), node-kanban.mp4 20~28초(일정 팝오버) / 내 것 `v2/H3-insert-menu-checklist.png`, `v2/H4-calendar.png`, `v2/H4-calendar-event.png`. 오른쪽 막대 삽입 팝오버: Checklist/Board/Calendar(+ 스티키·오케스트레이터). 체크리스트: 남은 수 원형 카운터(진행 링), 빈 상태 "No objectives / Add one to begin" + 흐린 자리 줄, 아래 + Add an objective. 캘린더 노드: 월 이름·+ New·Today·위/아래, 월요일 시작 6주 격자(Board.monthGrid 단위 테스트), 오늘 강조색 원, 날짜 누르면 일정 팝오버(제목·날짜·종일·색 6개·메모·Cancel/Add event), 일정 칩 누르면 고치기·삭제. 재실행 후 일정 유지 확인. 노드 안 날짜 글은 영어 로캘로 고정.
 - H5: 원본 node-kanban.mp4 40·44초, agent2/k-shape.jpg / 내 것 `v2/H5-sticky-paper.png`. 헤더 없는 머스터드 종이(기본 #C9A227), 옅은 줄무늬, 오른쪽 아래 접힌 모서리, 그림자, 손글씨 흰 글씨. 고르면 왼쪽 막대 옆 PAPER 색 8개+사용자 색, 앞으로/뒤로/복제/삭제(A10 과 같은 패널). 두 번 눌러 편집. 남은 차이: 원본 선택 표시는 종이 모양을 따라가지만 여기는 노드 사각형 테두리.
+- H6: 원본 agent2/k-shape.jpg(화살표), GAPS H 도형 설명, studio-diagrams 의 손그림 상자 / 내 것 `v2/H6-shapes-panel.png`. 왼쪽 막대 도형 버튼 → 사각형·원·마름모·화살표 팝오버 → 캔버스 클릭으로 놓기. 헤더 없는 노드, 선은 노드마다 고정 씨앗으로 두 번 겹쳐 흔든 손그림(Neat/Sketch/Rough), 도형 안 글자 바로 편집(두 번 눌러). 속성 패널: 선 색·배경 색(없음 포함)·굵기 S/M/L·실선/파선/점선·거칠기·모서리(사각형)·글자 크기·글꼴·불투명도·레이어/복제/삭제.
+  - 남은 차이: 원본은 끌어서 크기를 정하며 그리지만 여기는 클릭으로 기본 크기를 놓고 손잡이로 키운다. 둥근 사각형의 손그림 모서리는 깎은 팔각형으로 흉내 냈다.
 
 ## 막힌 것

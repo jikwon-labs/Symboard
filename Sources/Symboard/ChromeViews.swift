@@ -187,7 +187,12 @@ struct LeftRail: View {
             toolButton("pencil.tip", "Pen", active: chrome.tool == .pen) { c.setTool(chrome.tool == .pen ? .select : .pen) }
             toolButton("eraser", "Eraser", active: chrome.tool == .eraser) { c.setTool(chrome.tool == .eraser ? .select : .eraser) }
             Divider().frame(width: 24).overlay(Color.symBorder)
-            toolButton("square.on.circle", "Shapes", active: false) { c.openShapes() }
+            Button { chrome.shapeOpen.toggle() } label: { Image(systemName: "square.on.circle") }
+                .buttonStyle(RailToolStyle(active: { if case .place(.shape) = chrome.tool { return true } else { return false } }()))
+                .help("Shapes")
+                .popover(isPresented: $chrome.shapeOpen, arrowEdge: .trailing) {
+                    ShapePicker { k in chrome.shapeOpen = false; c.setTool(.place(.shape(k))) }
+                }
             toolButton("point.3.connected.trianglepath.dotted", "Diagram", active: false) { c.openDiagram() }
             toolButton("globe", "Web tile", active: chrome.tool == .place(.web)) { c.setTool(.place(.web)) }
             toolButton("photo", "Image", active: false) { c.addImageFromPanel() }

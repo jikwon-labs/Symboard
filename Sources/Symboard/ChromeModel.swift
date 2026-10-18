@@ -12,6 +12,7 @@ enum Placement: Equatable {
     case web
     case orchestrator
     case calendar
+    case shape(String)
 
     var size: CGSize {
         switch self {
@@ -23,6 +24,7 @@ enum Placement: Equatable {
         case .web: return CGSize(width: 760, height: 520)
         case .orchestrator: return CGSize(width: 380, height: 500)
         case .calendar: return CGSize(width: 560, height: 470)
+        case .shape(let k): return k == "arrow" ? CGSize(width: 240, height: 60) : (k == "rect" ? CGSize(width: 220, height: 130) : CGSize(width: 180, height: 160))
         }
     }
 
@@ -62,6 +64,7 @@ final class ChromeModel: ObservableObject {
     /// 이어하기 답을 기다리는 콘솔 수와 토스트를 닫았는지.
     @Published var missionOpen = false
     @Published var insertOpen = false
+    @Published var shapeOpen = false
     /// 루프 모달: nil 이면 닫힘, "list"·"gallery"·"form".
     @Published var loopsPage: String?
     @Published var missionSelected: UUID?

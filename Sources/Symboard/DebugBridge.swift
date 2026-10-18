@@ -271,6 +271,7 @@ final class DebugBridge {
             case "web": tool = .place(.web)
             case "orchestrator": tool = .place(.orchestrator)
             case "calendar": tool = .place(.calendar)
+            case "rect", "ellipse", "diamond", "arrow": tool = .place(.shape(t))
             default: tool = t.hasPrefix("agent:") ? .place(.agent(String(t.dropFirst(6)))) : .select
             }
             controller.setTool(tool)
@@ -432,6 +433,19 @@ final class DebugBridge {
             }
         case "insertMenu":
             controller.chrome.insertOpen = cmd["open"] as? Bool ?? true
+        case "shapeStyle":
+            if let n = node(cmd) {
+                model.mutateNode(n.id) { node in
+                    var sp = node.shape ?? ShapeSpec()
+                    if let v = cmd["stroke"] as? String { sp.strokeHex = v }
+                    if let v = cmd["fill"] as? String { sp.fillHex = v.isEmpty ? nil : v }
+                    if let v = cmd["width"] as? Double { sp.strokeWidth = v }
+                    if let v = cmd["dash"] as? String { sp.dash = v }
+                    if let v = cmd["rough"] as? Double { sp.roughness = v }
+                    node.shape = sp
+                }
+                controller.currentCanvas?.nodeViews[n.id]?.syncFromModel()
+            }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

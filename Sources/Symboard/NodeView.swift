@@ -42,7 +42,7 @@ final class NodeView: NSView {
     private let shield = MoveShieldView()
     private(set) var editing = false
 
-    static func isHeaderless(_ kind: NodeKind) -> Bool { [.text, .sticky, .image].contains(kind) }
+    static func isHeaderless(_ kind: NodeKind) -> Bool { [.text, .sticky, .image, .shape].contains(kind) }
 
     static func make(node: BoardNode, model: AppModel) -> NodeView {
         let content: NodeContent
