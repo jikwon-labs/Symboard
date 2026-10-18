@@ -366,6 +366,28 @@ final class DebugBridge {
             controller.chrome.missionOpen = cmd["open"] as? Bool ?? true
             if let n = node(cmd) { controller.chrome.missionSelected = n.id }
             if let t = cmd["team"] as? Int, t < model.selectedWorkspace.teams.count { controller.chrome.missionSelected = model.selectedWorkspace.teams[t].id }
+        case "loopsPage":
+            controller.chrome.loopsPage = cmd["page"] as? String
+        case "loopForm":
+            // 틀 이름, 대상(all 또는 노드 번호 목록), 멈춤 설정을 채우고 save 면 저장한다.
+            let d = controller.loopDraft
+            if let t = cmd["template"] as? String, let tpl = LoopTemplate.all.first(where: { $0.name == t }) { d.apply(tpl) }
+            if let m = cmd["message"] as? String { d.message = m }
+            if let n = cmd["name"] as? String { d.name = n }
+            if let w = cmd["when"] as? String { d.when = w }
+            if let v = cmd["minutes"] as? Double { d.intervalMinutes = v }
+            if let v = cmd["idle"] as? Double { d.idleSeconds = v }
+            if let p = cmd["pattern"] as? String { d.pattern = p }
+            if let idx = cmd["targets"] as? [Int] { d.targetAll = false; d.picked = Set(idx.compactMap { $0 < nodes.count ? nodes[$0].id : nil }) }
+            if cmd["all"] as? Bool == true { d.targetAll = true }
+            if let r = cmd["runs"] as? Int { d.useRuns = true; d.runs = r }
+            if let g = cmd["goalMode"] as? String { d.useGoal = true; d.goalMode = g }
+            if let g = cmd["goal"] as? String { d.goal = g }
+            if let g = cmd["goalCommand"] as? String { d.goalCommand = g }
+            if let b = cmd["background"] as? Bool { d.background = b }
+            controller.chrome.loopsPage = "form"
+            if cmd["save"] as? Bool == true { controller.saveLoop() }
+            log.append("loopForm valid=\(d.isValid)")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

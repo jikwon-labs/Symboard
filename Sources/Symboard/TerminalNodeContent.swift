@@ -51,10 +51,8 @@ final class TerminalNodeContent: NSObject, NodeContent {
              self.model.handoff.begin(from: self.nodeID)
          },
          ClosureMenuItem(title: "Add Loop...") { [weak self] in
-             guard let self, let wsID = self.model.workspaceID(containing: self.nodeID),
-                   let ws = self.model.workspace(wsID),
-                   let rule = LoopDialog.run(nodes: ws.nodes, preselect: self.nodeID) else { return }
-             self.model.loops.add(rule)
+             guard let self else { return }
+             (NSApp.delegate as? AppDelegate)?.windowController.newLoop(for: self.nodeID)
          }]
     }
 

@@ -59,6 +59,8 @@ final class ChromeModel: ObservableObject {
     @Published var resetText = "usage"
     /// 이어하기 답을 기다리는 콘솔 수와 토스트를 닫았는지.
     @Published var missionOpen = false
+    /// 루프 모달: nil 이면 닫힘, "list"·"gallery"·"form".
+    @Published var loopsPage: String?
     @Published var missionSelected: UUID?
     @Published var resumeCount = 0
     /// Connect 를 누른 오케스트레이터. 이때 보드의 콘솔을 누르면 연결/해제된다.

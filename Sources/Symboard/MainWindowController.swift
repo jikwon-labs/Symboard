@@ -7,12 +7,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let model: AppModel
     let chrome = ChromeModel()
     let composer = ComposerState()
+    let loopDraft = LoopDraft()
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
     private var homeHost: NSView!
     private var missionHost: NSView?
     private var missionObserver: Any?
+    private var loopsObserver: Any?
     private var canvases: [UUID: CanvasView] = [:]
     private var shownWorkspaceID: UUID?
     private var observers: [NSObjectProtocol] = []
@@ -42,7 +44,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
                               title: "\(p.agent.displayName) (\(p.name))")
         }))
         sidePanel.addTab("Usage", view: AnyView(UsagePanelView(store: model.usage)))
-        sidePanel.addTab("Loops", view: AnyView(LoopPanelView(runner: model.loops) { [weak self] in self?.newLoop(for: nil) }))
         showWorkspace(model.selectedWorkspace.id)
         refreshGit()
         gitTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
@@ -113,6 +114,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             mission.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         missionObserver = chrome.$missionOpen.sink { [weak self] open in self?.missionHost?.isHidden = !open }
+        let loopsHost = HiddenAwareHostingView(rootView: LoopsHost(model: model, chrome: chrome, draft: loopDraft, c: self))
+        loopsHost.translatesAutoresizingMaskIntoConstraints = false
+        loopsHost.sizingOptions = []
+        loopsHost.isHidden = true
+        content.addSubview(loopsHost)
+        NSLayoutConstraint.activate([
+            loopsHost.topAnchor.constraint(equalTo: content.topAnchor),
+            loopsHost.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            loopsHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            loopsHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+        ])
+        loopsObserver = chrome.$loopsPage.sink { page in loopsHost.isHidden = page == nil }
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: content.topAnchor),
@@ -419,7 +432,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     func openUsage() { togglePanel(tab: "Usage") }
     func openProfiles() { togglePanel(tab: "Profiles") }
-    func openLoops() { togglePanel(tab: "Loops") }
+    func openLoops() { chrome.loopsPage = chrome.loopsPage == nil ? "list" : nil }
     func openMemory() { togglePanel(tab: "Memory") }
     func openMission() { chrome.missionOpen.toggle() }
 
@@ -688,10 +701,21 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         currentCanvas?.select(node.id)
     }
 
+    /// 새 루프 양식을 연다. nodeID 가 있으면 그 콘솔만 고른 상태로.
     func newLoop(for nodeID: UUID?) {
-        guard let rule = LoopDialog.run(nodes: model.selectedWorkspace.nodes, preselect: nodeID ?? currentCanvas?.selectedNodeID) else { return }
-        model.loops.add(rule)
-        showPanel(tab: "Loops")
+        loopDraft.reset()
+        if let nodeID { loopDraft.targetAll = false; loopDraft.picked = [nodeID] }
+        chrome.loopsPage = "gallery"
+    }
+
+    /// 루프 양식의 Create/Save.
+    func saveLoop() {
+        guard loopDraft.isValid else { return }
+        let consoles = model.selectedWorkspace.nodes.filter { $0.kind == .terminal }
+        let rule = loopDraft.rule(fallbackNode: consoles.first?.id ?? UUID())
+        if loopDraft.editing != nil { model.loops.replace(rule) } else { model.loops.add(rule, to: model.selectedWorkspace.id) }
+        loopDraft.reset()
+        chrome.loopsPage = "list"
     }
 
     var studio: StudioWindowController?
@@ -841,6 +865,16 @@ struct MissionHost: View {
     let c: MainWindowController
     var body: some View {
         if chrome.missionOpen { MissionMapView(model: model, beat: .shared, chrome: chrome, c: c) }
+    }
+}
+
+struct LoopsHost: View {
+    @ObservedObject var model: AppModel
+    @ObservedObject var chrome: ChromeModel
+    @ObservedObject var draft: LoopDraft
+    let c: MainWindowController
+    var body: some View {
+        if chrome.loopsPage != nil { LoopsModal(model: model, runner: model.loops, chrome: chrome, draft: draft, c: c) }
     }
 }
 

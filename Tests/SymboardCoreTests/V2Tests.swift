@@ -77,3 +77,64 @@ import Testing
         #expect(ResumePolicy.candidates(in: st) == [a.id, d.id])
     }
 }
+
+@Suite struct LoopV2Tests {
+    @Test func sentenceAndRate() {
+        var r = LoopRule(nodeID: UUID(), message: "go", trigger: .interval(seconds: 900))
+        r.targetAll = true
+        r.useMaxRuns = false
+        r.goalMode = "agent"
+        r.goal = "ALL GREEN"
+        #expect(LoopSummary.sentence(r, consoleCount: 1) == "Every 15 min, the instruction is sent to every console on the board, until Claude judges the goal met.")
+        #expect(LoopSummary.perHour(r, consoleCount: 1) == 4)
+        r.goalMode = "command"; r.goalCommand = "swift test"; r.useMaxRuns = true; r.maxRuns = 5
+        #expect(LoopSummary.sentence(r, consoleCount: 3).hasSuffix("until 5 runs or `swift test` passes."))
+    }
+
+    @Test func timeLimitStops() {
+        let t0 = Date()
+        var r = LoopRule(nodeID: UUID(), message: "go", trigger: .interval(seconds: 10))
+        r.timeLimit = 30
+        var rt = LoopRuntime(startedAt: t0)
+        #expect(LoopEngine.evaluate(rule: r, runtime: &rt, now: t0.addingTimeInterval(31), idleSeconds: 0, lastOutputAt: nil) == .stop(reason: "time limit"))
+    }
+
+    @Test func targetsAllIncludesLater() {
+        var ws = Workspace(name: "W")
+        let a = BoardNode(kind: .terminal, frame: Rect(x: 0, y: 0, w: 1, h: 1), title: "a", terminal: TerminalSpec(agent: .shell, cwd: "/"))
+        ws.nodes = [a]
+        var r = LoopRule(nodeID: a.id, message: "m", trigger: .idle(seconds: 5))
+        r.targetAll = true
+        #expect(r.targets(in: ws) == [a.id])
+        let b = BoardNode(kind: .terminal, frame: Rect(x: 0, y: 0, w: 1, h: 1), title: "b", terminal: TerminalSpec(agent: .shell, cwd: "/"))
+        ws.nodes.append(b)
+        #expect(r.targets(in: ws) == [a.id, b.id])
+        r.targetAll = nil
+        #expect(r.targets(in: ws) == [a.id])
+    }
+}
+
+@Suite struct AgentStreamTests {
+    @Test func claudeDeltasAndResult() {
+        var p = AgentStreamParser(agent: "claude")
+        #expect(p.parse(line: #"{"type":"system","subtype":"init"}"#).isEmpty)
+        #expect(p.parse(line: #"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hel"}}}"#) == [.text("Hel")])
+        #expect(p.parse(line: #"{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","name":"Read"}}}"#) == [.activity("Read")])
+        // 조각을 받은 뒤의 통째 메시지는 겹치지 않게 버린다.
+        #expect(p.parse(line: #"{"type":"assistant","message":{"content":[{"type":"text","text":"Hello"}]}}"#).isEmpty)
+        #expect(p.parse(line: #"{"type":"result","subtype":"success","is_error":false,"result":"Hello"}"#) == [.done("Hello", true)])
+    }
+
+    @Test func codexItems() {
+        var p = AgentStreamParser(agent: "codex")
+        #expect(p.parse(line: #"{"type":"item.started","item":{"id":"1","type":"command_execution","command":"ls"}}"#) == [.activity("ls")])
+        #expect(p.parse(line: #"{"type":"item.completed","item":{"id":"2","type":"agent_message","text":"Done."}}"#) == [.text("Done.")])
+        #expect(p.parse(line: #"{"type":"turn.completed","usage":{}}"#) == [.done(nil, true)])
+    }
+
+    @Test func verdicts() {
+        #expect(AgentStreamParser.verdict("YES - tests pass") == true)
+        #expect(AgentStreamParser.verdict("\n no.") == false)
+        #expect(AgentStreamParser.verdict("maybe") == nil)
+    }
+}

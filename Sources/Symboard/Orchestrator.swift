@@ -156,6 +156,7 @@ struct OrchestratorView: View {
             }
             .padding(.bottom, 6)
         }
+        .clipped()
     }
 
     func row(_ n: BoardNode) -> some View {

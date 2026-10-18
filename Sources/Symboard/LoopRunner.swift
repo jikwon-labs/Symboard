@@ -2,27 +2,36 @@ import AppKit
 import SwiftUI
 import SymboardCore
 
-/// 루프 규칙을 1초마다 확인해서 정해진 문장을 노드에 보낸다.
+/// 루프 규칙을 1초마다 확인해서 정해진 문장을 대상 콘솔에 보낸다.
+/// 목표 판정이 명령·에이전트면 보내기 직전에 먼저 확인하고, 달성됐으면 보내지 않고 끈다.
 @MainActor
 final class LoopRunner: ObservableObject {
     unowned let model: AppModel
-    private var runtimes: [UUID: LoopRuntime] = [:]
+    private struct Key: Hashable { var rule: UUID; var node: UUID }
+    private var runtimes: [Key: LoopRuntime] = [:]
+    private var ruleStarted: [UUID: Date] = [:]
+    private var lastRound: [UUID: Date] = [:]
+    private var checking: Set<UUID> = []
     private var observer: NSObjectProtocol?
-    /// 패널에 보여 줄 줄. 1초마다 갱신.
+    private var notes: [UUID: String] = [:]
+    /// 모달 목록 줄. 1초마다 갱신.
     @Published private(set) var rows: [LoopRow] = []
 
     struct LoopRow: Identifiable, Equatable {
         var id: UUID
+        var name: String
         var nodeTitle: String
         var message: String
         var trigger: String
-        var goal: String
+        var summary: String
         var enabled: Bool
         var runs: String
+        var runCount: Int
         var note: String
+        /// 다음 실행까지 남은 초(간격 조건일 때).
+        var nextIn: Int?
+        var checking: Bool
     }
-
-    private var notes: [UUID: String] = [:]
 
     init(model: AppModel) {
         self.model = model
@@ -33,11 +42,22 @@ final class LoopRunner: ObservableObject {
 
     // MARK: 규칙 편집
 
-    func add(_ rule: LoopRule) {
-        guard let wsID = model.workspaceID(containing: rule.nodeID) else { return }
+    func add(_ rule: LoopRule, to wsID: UUID? = nil) {
+        guard let wsID = wsID ?? model.workspaceID(containing: rule.nodeID) ?? Optional(model.selectedWorkspace.id) else { return }
         model.mutateWorkspace(wsID) { $0.loops.append(rule) }
-        runtimes[rule.id] = LoopRuntime()
+        ruleStarted[rule.id] = Date()
         refreshRows()
+    }
+
+    func replace(_ rule: LoopRule) {
+        mutate(rule.id) { $0 = rule }
+        reset(rule.id)
+        refreshRows()
+    }
+
+    func rule(_ id: UUID) -> LoopRule? {
+        for ws in model.state.workspaces { if let r = ws.loops.first(where: { $0.id == id }) { return r } }
+        return nil
     }
 
     func setEnabled(_ id: UUID, _ on: Bool) {
@@ -45,7 +65,7 @@ final class LoopRunner: ObservableObject {
             r.enabled = on
             if on { r.runCount = 0 }
         }
-        if on { runtimes[id] = LoopRuntime(); notes[id] = nil }
+        if on { reset(id); notes[id] = nil }
         refreshRows()
     }
 
@@ -53,8 +73,14 @@ final class LoopRunner: ObservableObject {
         for ws in model.state.workspaces where ws.loops.contains(where: { $0.id == id }) {
             model.mutateWorkspace(ws.id) { $0.loops.removeAll { $0.id == id } }
         }
-        runtimes[id] = nil
+        reset(id)
         refreshRows()
+    }
+
+    private func reset(_ id: UUID) {
+        for k in runtimes.keys where k.rule == id { runtimes[k] = nil }
+        ruleStarted[id] = Date()
+        lastRound[id] = nil
     }
 
     private func mutate(_ id: UUID, _ body: (inout LoopRule) -> Void) {
@@ -66,171 +92,159 @@ final class LoopRunner: ObservableObject {
         }
     }
 
+    private func workspace(of id: UUID) -> Workspace? { model.state.workspaces.first { $0.loops.contains { $0.id == id } } }
+
+    /// 지금 바로 한 번 보낸다(목록의 ▶).
+    func runNow(_ id: UUID) {
+        guard let r = rule(id), let ws = workspace(of: id) else { return }
+        deliver(r, to: r.targets(in: ws), at: Date())
+    }
+
     // MARK: 실행
 
     private func tick() {
         let now = Date()
         for ws in model.state.workspaces {
             for rule in ws.loops {
-                guard let session = model.sessions.session(for: rule.nodeID) else { continue }
-                if session.outputListeners[rule.id] == nil {
-                    session.outputListeners[rule.id] = { [weak self] text in
-                        guard let self, var rt = self.runtimes[rule.id] else { return }
-                        rt.pending += text
-                        if rt.pending.count > 8000 { rt.pending = String(rt.pending.suffix(4000)) }
-                        self.runtimes[rule.id] = rt
+                let targets = rule.targets(in: ws)
+                for nid in targets { attachListener(rule.id, nid) }
+                guard rule.enabled else { continue }
+                if rule.background == false && ws.id != model.selectedWorkspace.id { continue }
+                if checking.contains(rule.id) { continue }
+                let started = ruleStarted[rule.id] ?? now
+                ruleStarted[rule.id] = started
+                var fired: [UUID] = []
+                var stop: String?
+                for nid in targets {
+                    guard let session = model.sessions.session(for: nid) else { continue }
+                    let key = Key(rule: rule.id, node: nid)
+                    var rt = runtimes[key] ?? LoopRuntime(startedAt: started)
+                    let d = LoopEngine.evaluate(rule: rule, runtime: &rt, now: now, idleSeconds: session.idleSeconds(now: now),
+                                                lastOutputAt: session.tracker.lastOutput)
+                    runtimes[key] = rt
+                    switch d {
+                    case .fire: if session.running { fired.append(nid) }
+                    case .stop(let reason): stop = reason
+                    case .none: break
                     }
                 }
-                guard rule.enabled else { continue }
-                var rt = runtimes[rule.id] ?? LoopRuntime(startedAt: now)
-                let decision = LoopEngine.evaluate(rule: rule, runtime: &rt, now: now,
-                                                   idleSeconds: session.idleSeconds(now: now),
-                                                   lastOutputAt: session.tracker.lastOutput)
-                runtimes[rule.id] = rt
-                switch decision {
-                case .none:
-                    break
-                case .fire:
-                    guard session.running else { continue }
-                    session.sendText(rule.message, submit: true)
-                    mutate(rule.id) { $0.runCount += 1 }
-                    notes[rule.id] = "sent at \(Self.time(now))"
-                case .stop(let reason):
+                if let reason = stop {
                     mutate(rule.id) { $0.enabled = false }
                     notes[rule.id] = reason == "goal" ? "goal reached at \(Self.time(now))" : "stopped: \(reason)"
+                    continue
+                }
+                guard !fired.isEmpty else { continue }
+                switch rule.goalMode ?? "text" {
+                case "command", "agent":
+                    check(rule, ws: ws) { [weak self] met in
+                        guard let self else { return }
+                        if met {
+                            self.mutate(rule.id) { $0.enabled = false }
+                            self.notes[rule.id] = "goal met at \(Self.time(Date()))"
+                        } else {
+                            self.deliver(rule, to: fired, at: Date())
+                        }
+                        self.refreshRows()
+                    }
+                default:
+                    deliver(rule, to: fired, at: now)
                 }
             }
         }
         refreshRows()
     }
 
+    private func attachListener(_ ruleID: UUID, _ nid: UUID) {
+        guard let session = model.sessions.session(for: nid), session.outputListeners[ruleID] == nil else { return }
+        session.outputListeners[ruleID] = { [weak self] text in
+            guard let self else { return }
+            let key = Key(rule: ruleID, node: nid)
+            guard var rt = self.runtimes[key] else { return }
+            rt.pending += text
+            if rt.pending.count > 8000 { rt.pending = String(rt.pending.suffix(4000)) }
+            self.runtimes[key] = rt
+        }
+    }
+
+    private func deliver(_ rule: LoopRule, to ids: [UUID], at now: Date) {
+        var sent = 0
+        for id in ids {
+            guard let s = model.sessions.session(for: id), s.running else { continue }
+            s.sendText(rule.message, submit: true)
+            sent += 1
+        }
+        guard sent > 0 else { return }
+        mutate(rule.id) { $0.runCount += 1 }
+        lastRound[rule.id] = now
+        notes[rule.id] = "sent to \(sent) at \(Self.time(now))"
+    }
+
+    /// 목표 판정. 명령은 프로젝트 폴더에서 돌려 종료 코드 0 이면 달성, 에이전트는 CLI 에 YES/NO 를 묻는다.
+    private func check(_ rule: LoopRule, ws: Workspace, done: @escaping (Bool) -> Void) {
+        checking.insert(rule.id)
+        notes[rule.id] = "checking goal..."
+        let cwd = ws.projectPath ?? NSHomeDirectory()
+        let finish: (Bool) -> Void = { [weak self] met in
+            self?.checking.remove(rule.id)
+            done(met)
+        }
+        if rule.goalMode == "command" {
+            let cmd = rule.goalCommand ?? ""
+            guard !cmd.isEmpty else { finish(false); return }
+            let shell = ProcessEnvironment.userShell
+            Task.detached {
+                let p = Process()
+                p.executableURL = URL(fileURLWithPath: shell)
+                p.arguments = ["-lc", cmd]
+                p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+                p.standardOutput = FileHandle.nullDevice
+                p.standardError = FileHandle.nullDevice
+                var code: Int32 = -1
+                if (try? p.run()) != nil { p.waitUntilExit(); code = p.terminationStatus }
+                await MainActor.run { finish(code == 0) }
+            }
+            return
+        }
+        let screens = rule.targets(in: ws).compactMap { id -> String? in
+            guard let s = model.sessions.session(for: id), let n = model.node(id) else { return nil }
+            return "### \(n.title)\n" + String(s.recentText.suffix(3000))
+        }.joined(separator: "\n\n")
+        let prompt = """
+        Decide whether this goal has been met, judging only from the recent terminal output below.
+        Goal: \(rule.goal)
+
+        \(screens)
+
+        Answer with YES or NO as the first word, then one short reason.
+        """
+        let job = AgentJob(.init(agent: rule.goalAgent ?? "claude", prompt: prompt, cwd: cwd, tools: ""))
+        job.onDone = { text, ok in finish(ok && AgentStreamParser.verdict(text) == true) }
+        jobs[rule.id] = job
+        job.start()
+    }
+
+    private var jobs: [UUID: AgentJob] = [:]
+
     func refreshRows() {
+        let now = Date()
         var out: [LoopRow] = []
         for ws in model.state.workspaces {
             for r in ws.loops {
-                let title = ws.nodes.first { $0.id == r.nodeID }?.title ?? "?"
-                out.append(LoopRow(id: r.id, nodeTitle: title, message: r.message, trigger: Self.describe(r.trigger),
-                                   goal: r.goal, enabled: r.enabled, runs: "\(r.runCount)/\(r.maxRuns)", note: notes[r.id] ?? ""))
+                let targets = r.targets(in: ws)
+                let title = r.targetAll == true ? "All consoles" : targets.compactMap { id in ws.nodes.first { $0.id == id }?.title }.joined(separator: ", ")
+                let next = LoopSummary.secondsUntilNext(r, startedAt: ruleStarted[r.id] ?? now, lastFired: lastRound[r.id], now: now)
+                out.append(LoopRow(id: r.id, name: r.name ?? "Loop", nodeTitle: title, message: r.message, trigger: LoopSummary.when(r.trigger),
+                                   summary: LoopSummary.sentence(r, consoleCount: targets.count), enabled: r.enabled,
+                                   runs: "\(r.runCount)/\(r.maxRuns)", runCount: r.runCount, note: notes[r.id] ?? "",
+                                   nextIn: next.map { Int($0.rounded(.up)) }, checking: checking.contains(r.id)))
             }
         }
         if out != rows { rows = out }
-    }
-
-    static func describe(_ t: LoopTrigger) -> String {
-        switch t {
-        case .interval(let s): return "every \(Int(s))s"
-        case .idle(let s): return "when idle \(Int(s))s"
-        case .output(let p): return "when output has \"\(p)\""
-        }
     }
 
     static func time(_ d: Date) -> String {
         let f = DateFormatter()
         f.dateFormat = "HH:mm:ss"
         return f.string(from: d)
-    }
-}
-
-// MARK: 새 루프 창
-
-@MainActor
-enum LoopDialog {
-    static func run(nodes: [BoardNode], preselect: UUID?) -> LoopRule? {
-        let terminals = nodes.filter { $0.kind == .terminal }
-        guard !terminals.isEmpty else {
-            let a = NSAlert()
-            a.messageText = "No terminal nodes in this workspace."
-            a.runModal()
-            return nil
-        }
-        let alert = NSAlert()
-        alert.messageText = "New Loop"
-        alert.informativeText = "Automatically type a message into a node. The loop turns itself off when the goal text appears in the output."
-        let nodePopup = NSPopUpButton(frame: .zero, pullsDown: false)
-        nodePopup.addItems(withTitles: terminals.map { $0.role.map { r in "\(r) - " } ?? "" }.enumerated().map { "\($0.element)\(terminals[$0.offset].title)" })
-        if let pre = preselect, let i = terminals.firstIndex(where: { $0.id == pre }) { nodePopup.selectItem(at: i) }
-        let message = NSTextField(string: "continue")
-        let triggerPopup = NSPopUpButton(frame: .zero, pullsDown: false)
-        triggerPopup.addItems(withTitles: ["Every N seconds", "When idle for N seconds", "When output contains text"])
-        triggerPopup.selectItem(at: 1)
-        let value = NSTextField(string: "30")
-        value.placeholderString = "seconds, or text to watch for"
-        let goal = NSTextField(string: "")
-        goal.placeholderString = "e.g. ALL TESTS PASSED (optional)"
-        let maxRuns = NSTextField(string: "20")
-        let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Node"), nodePopup],
-            [NSTextField(labelWithString: "Message"), message],
-            [NSTextField(labelWithString: "Start when"), triggerPopup],
-            [NSTextField(labelWithString: "Value"), value],
-            [NSTextField(labelWithString: "Goal text"), goal],
-            [NSTextField(labelWithString: "Max runs"), maxRuns],
-        ])
-        grid.column(at: 0).xPlacement = .trailing
-        grid.rowSpacing = 8
-        grid.frame = NSRect(x: 0, y: 0, width: 420, height: 200)
-        for f in [message, value, goal] { f.widthAnchor.constraint(equalToConstant: 320).isActive = true }
-        maxRuns.widthAnchor.constraint(equalToConstant: 60).isActive = true
-        alert.accessoryView = grid
-        alert.addButton(withTitle: "Start Loop")
-        alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
-        let msg = message.stringValue
-        guard !msg.isEmpty else { return nil }
-        let trigger: LoopTrigger
-        switch triggerPopup.indexOfSelectedItem {
-        case 0: trigger = .interval(seconds: max(5, value.doubleValue))
-        case 1: trigger = .idle(seconds: max(3, value.doubleValue))
-        default:
-            guard !value.stringValue.isEmpty else { return nil }
-            trigger = .output(pattern: value.stringValue)
-        }
-        return LoopRule(nodeID: terminals[nodePopup.indexOfSelectedItem].id, message: msg, trigger: trigger,
-                        goal: goal.stringValue.trimmingCharacters(in: .whitespaces), maxRuns: max(1, maxRuns.integerValue))
-    }
-}
-
-// MARK: 패널
-
-struct LoopPanelView: View {
-    @ObservedObject var runner: LoopRunner
-    var newLoop: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Loops").font(.system(size: 12, weight: .semibold))
-                Spacer()
-                Button("New Loop", action: newLoop).controlSize(.small)
-            }
-            .padding(10)
-            if runner.rows.isEmpty {
-                Text("No loops. A loop types a message into a node on a schedule, when it goes idle, or when some text appears.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).padding(.horizontal, 10)
-                Spacer()
-            } else {
-                List(runner.rows) { row in
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Toggle("", isOn: Binding(get: { row.enabled }, set: { runner.setEnabled(row.id, $0) }))
-                                .toggleStyle(.switch).controlSize(.mini).labelsHidden()
-                            Text(row.nodeTitle).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                            Spacer()
-                            Button { runner.remove(row.id) } label: { Image(systemName: "trash") }.buttonStyle(.plain)
-                        }
-                        Text("\"\(row.message)\" \(row.trigger)").font(.system(size: 11)).lineLimit(2)
-                        HStack(spacing: 6) {
-                            if !row.goal.isEmpty { Text("goal: \(row.goal)") }
-                            Text("runs \(row.runs)")
-                            if !row.note.isEmpty { Text(row.note) }
-                        }
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 3)
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-            }
-        }
     }
 }

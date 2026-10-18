@@ -50,9 +50,9 @@ STATUS: IN_PROGRESS
 
 ## J. 루프
 
-- [ ] J1. 템플릿 카드 시작 화면 + 처음부터 만들기 (node-loops.jpg r1)
-- [ ] J2. 생성 모달: 템플릿 칩·이름·지시문·시작 조건 카드 3개·간격 칩·대상·멈춤 토글 3개·목표 판정·요약 문장 (agent2/l-mid.jpg)
-- [ ] J3. 목록 행: 상태 점·횟수·요약·카운트다운·지금 실행·토글·메뉴, 오른쪽 막대 배지 (agent2/l-end.jpg)
+- [x] J1. 템플릿 카드 시작 화면 + 처음부터 만들기 (node-loops.jpg r1)
+- [x] J2. 생성 모달: 템플릿 칩·이름·지시문·시작 조건 카드 3개·간격 칩·대상·멈춤 토글 3개·목표 판정·요약 문장 (agent2/l-mid.jpg)
+- [x] J3. 목록 행: 상태 점·횟수·요약·카운트다운·지금 실행·토글·메뉴, 오른쪽 막대 배지 (agent2/l-end.jpg)
 
 ## H·I. 칸반·스티키·체크리스트·캘린더·도형·펜
 
@@ -111,6 +111,9 @@ STATUS: IN_PROGRESS
   - 남은 차이: 원본은 오케스트레이터를 어디서 만드는지 영상에 안 나와 삽입 메뉴에 넣었다. 진행 표시는 READY 수/전체.
 - D1·D2: 원본 teams.jpg, agent1/teams-30.jpg / 내 것 `v2/D1-mission-map.png`, `v2/D2-mission-console-detail.png`, `v2/D2-mission-team-detail.png`. 위쪽 도구 메뉴 Mission Map → 보드 위 큰 모달(뒤 어둡게). 부제 "N orchestrator · N teams · N consoles · N working", 필터 칩 All/Working/Needs you/Idle/Done(개수), 검색, 왼쪽 열 Command center·오케스트레이터 → 가운데 팀 → 오른쪽 콘솔 곡선(오케스트레이터에 안 닿는 콘솔은 Command center 에서 점선), 아래 범례. 오른쪽 상세: 선택 없음=상태별 개수와 구조 요약, 팀=Show this team on the board, 콘솔=Go to the console·Pause·Kill·지금 상태와 그 상태로 지난 시간·소속(그룹/오케스트레이터/Command center). 한 번 누르면 보기, 두 번 누르면 모달 닫고 그 노드로 이동.
   - 고친 것: 고정 크기 모달이 창 크기를 줄여 버렸다(NSHostingView 크기 제약) → 최대 크기로 바꾸고 호스팅 뷰 sizingOptions 를 비움. 시험 중 실수로 `yes` 를 백그라운드로 띄워 바로 pkill 로 끔.
-  - 남은 차이: 모달이 열려 있을 때 창 왼쪽 위에 오케스트레이터 행의 상태 알약 몇 개가 비치는 그리기 흠이 있다(모달을 닫으면 사라짐). 원인 미확인.
+  - 확인: 모달 뒤 왼쪽 위에 보이던 "ready" 알약들은 그리기 흠이 아니라 창 왼쪽 밖으로 걸친 오케스트레이터 노드의 오른쪽 끝이었다(이름 쪽은 창 밖).
+- J1~J3: 원본 node-loops.jpg, agent2/l-mid.jpg, agent2/l-end.jpg / 내 것 `v2/J1-loops-templates.png`, `v2/J2-loop-form.png`, `v2/J3-loop-list.png`. 오른쪽 막대 루프 버튼 → 모달. 루프가 없으면 틀 카드 7개(이름·설명·지시문은 직접 씀) + Start from scratch. 양식: 틀 칩 줄, 이름, 지시문, 시작 조건 카드 3개(타이머 5m~2h 칩+스테퍼 / 조용해지면 초 / 출력 문구), 대상(모든 콘솔·나중 것 포함 / 골라서), 멈춤 토글 3개(횟수·시간·목표: 출력 문구 / 명령 성공 / 에이전트 판단+CLI), 다른 작업공간에서도 계속 토글, 아래 요약 문장과 시간당 횟수(SymboardCore LoopSummary, 단위 테스트). 목록 줄: 상태 점·이름·횟수·요약·지시문·카운트다운·지금 실행·토글·메뉴(고치기·삭제), 오른쪽 막대 배지.
+  - 실행 확인: Kai 셸에 "조용해지면 4초, echo nudge, 목표=`test -f /tmp/symsample/DONE`" 루프 → 3회 보냄 → DONE 파일을 만들자 다음 확인에서 "goal met" 으로 꺼짐(4 runs). 에이전트 판단은 claude -p(도구 없음)에 YES/NO 를 묻는 방식으로 만들었고 응답 해석은 단위 테스트로만 봤다(실제 호출은 사용량 때문에 아직 안 함).
+  - 남은 차이: 원본의 "Typed into each targeted console" 아래 미리보기 문구 위치 등 작은 배치. 1차의 노드 하나 대상 규칙은 그대로 동작(대상 목록이 없으면 nodeID).
 
 ## 막힌 것

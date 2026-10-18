@@ -188,19 +188,45 @@ public enum LoopTrigger: Codable, Equatable, Sendable {
 
 public struct LoopRule: Codable, Equatable, Sendable, Identifiable {
     public var id: UUID
+    /// 1차 규칙의 대상 노드. 2차에서는 targetAll·targetIDs 가 없을 때만 쓴다.
     public var nodeID: UUID
     public var message: String
     public var trigger: LoopTrigger
-    /// 출력에 이 문구가 나오면 루프를 끈다. 비어 있으면 끄지 않는다.
+    /// 출력에 이 문구가 나오면 루프를 끈다. 비어 있으면 끄지 않는다(goalMode 가 nil·"text" 일 때).
     public var goal: String
     public var enabled: Bool
     public var maxRuns: Int
     public var runCount: Int
 
+    // 2차에서 더한 값. 없으면 1차와 같이 동작한다.
+    public var name: String?
+    /// 작업공간의 모든 콘솔(나중에 열리는 것 포함).
+    public var targetAll: Bool?
+    public var targetIDs: [UUID]?
+    /// 횟수로 멈추기를 켰는지. nil 이면 켠 것으로 본다(1차 호환).
+    public var useMaxRuns: Bool?
+    /// 켜고 나서 이 초가 지나면 멈춘다.
+    public var timeLimit: Double?
+    /// 목표 판정: "text"(출력 문구), "command"(명령 성공), "agent"(에이전트 판단). nil 이면 "text".
+    public var goalMode: String?
+    public var goalCommand: String?
+    /// agent 판정에 쓸 CLI id(claude, codex).
+    public var goalAgent: String?
+    /// 다른 작업공간을 보고 있어도 계속 돌지. nil 이면 계속.
+    public var background: Bool?
+
     public init(id: UUID = UUID(), nodeID: UUID, message: String, trigger: LoopTrigger,
                 goal: String = "", enabled: Bool = true, maxRuns: Int = 50, runCount: Int = 0) {
         self.id = id; self.nodeID = nodeID; self.message = message; self.trigger = trigger
         self.goal = goal; self.enabled = enabled; self.maxRuns = maxRuns; self.runCount = runCount
+    }
+
+    /// 실제로 보낼 콘솔: 전체면 지금 작업공간의 모든 터미널.
+    public func targets(in ws: Workspace) -> [UUID] {
+        let terminals = ws.nodes.filter { $0.kind == .terminal }.map(\.id)
+        if targetAll == true { return terminals }
+        let ids = targetIDs ?? [nodeID]
+        return ids.filter { terminals.contains($0) }
     }
 }
 
