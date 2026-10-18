@@ -159,3 +159,29 @@ import Testing
         #expect(r.at != nil)
     }
 }
+
+@Suite struct UsageFileCacheTests {
+    func rec(_ key: String?, _ n: Int) -> UsageRecord {
+        UsageRecord(day: "2026-10-18", agent: .claude, counts: TokenCounts(input: n, output: 0, cacheRead: 0, cacheWrite: 0), key: key)
+    }
+
+    @Test func reusesUnchangedFilesAndRereadsChanged() {
+        let cache = UsageFileCache()
+        let t = Date(timeIntervalSince1970: 1000)
+        var reads = 0
+        _ = cache.records(path: "/a", stamp: .init(modified: t, size: 10)) { reads += 1; return [rec("x", 1)] }
+        _ = cache.records(path: "/a", stamp: .init(modified: t, size: 10)) { reads += 1; return [rec("x", 1)] }
+        #expect(reads == 1)
+        let r = cache.records(path: "/a", stamp: .init(modified: t, size: 20)) { reads += 1; return [rec("x", 1), rec("y", 2)] }
+        #expect(reads == 2)
+        #expect(r.count == 2)
+        cache.prune(keeping: [])
+        _ = cache.records(path: "/a", stamp: .init(modified: t, size: 20)) { reads += 1; return [] }
+        #expect(reads == 3)
+    }
+
+    @Test func mergeDropsDuplicateKeysAcrossFilesButKeepsKeyless() {
+        let merged = UsageFileCache.merge([[rec("m1", 1), rec(nil, 5)], [rec("m1", 1), rec("m2", 2), rec(nil, 5)]])
+        #expect(merged.map(\.counts.input) == [1, 5, 2, 5])
+    }
+}

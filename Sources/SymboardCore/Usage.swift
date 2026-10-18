@@ -28,9 +28,11 @@ public struct UsageRecord: Equatable, Sendable {
     public var time: Date? = nil
     public var model: String? = nil
     public var session: String? = nil
+    /// claude 메시지 중복을 가리는 열쇠(메시지 id|요청 id). 파일을 따로 읽어 둔 뒤 합칠 때 쓴다.
+    public var key: String? = nil
 
-    public init(day: String, agent: AgentKind, counts: TokenCounts, time: Date? = nil, model: String? = nil, session: String? = nil) {
-        self.day = day; self.agent = agent; self.counts = counts; self.time = time; self.model = model; self.session = session
+    public init(day: String, agent: AgentKind, counts: TokenCounts, time: Date? = nil, model: String? = nil, session: String? = nil, key: String? = nil) {
+        self.day = day; self.agent = agent; self.counts = counts; self.time = time; self.model = model; self.session = session; self.key = key
     }
 
     /// 이 응답이 받은 문맥 크기(입력 + 캐시).
@@ -106,7 +108,7 @@ public enum UsageParser {
                                     cacheWrite: usage["cache_creation_input_tokens"] as? Int ?? 0)
                 let t = date(fromISO: field(text, "\"timestamp\":\""))
                 out.append(UsageRecord(day: t.map { dayFormatter.string(from: $0) } ?? fallbackDay, agent: .claude, counts: c, time: t,
-                                       model: field(text, "\"model\":\""), session: field(text, "\"sessionId\":\"")))
+                                       model: field(text, "\"model\":\""), session: field(text, "\"sessionId\":\""), key: key))
             }
         }
         return out
@@ -436,5 +438,48 @@ public enum CodexLimitParser {
             return (out, when)
         }
         return ([], nil)
+    }
+}
+
+/// 파일마다 읽은 결과를 (수정 시각, 크기)로 기억해 두고, 바뀌지 않은 로그는 다시 읽지 않는다.
+/// 5분마다 다시 훑을 때 수백 개 로그를 매번 다시 읽느라 CPU·메모리가 튀던 것을 줄인다(5차 시험).
+public final class UsageFileCache: @unchecked Sendable {
+    public struct Stamp: Equatable, Sendable {
+        public var modified: Date
+        public var size: Int
+        public init(modified: Date, size: Int) { self.modified = modified; self.size = size }
+    }
+    private var entries: [String: (Stamp, [UsageRecord])] = [:]
+    private let lock = NSLock()
+    public private(set) var hits = 0
+    public private(set) var misses = 0
+
+    public init() {}
+
+    /// 같은 표식이면 기억한 결과, 아니면 parse 로 읽어 기억한다. seen 에 없던 경로는 지운다.
+    public func records(path: String, stamp: Stamp, parse: () -> [UsageRecord]) -> [UsageRecord] {
+        lock.lock()
+        if let e = entries[path], e.0 == stamp { hits += 1; lock.unlock(); return e.1 }
+        lock.unlock()
+        let r = parse()
+        lock.lock(); entries[path] = (stamp, r); misses += 1; lock.unlock()
+        return r
+    }
+
+    public func prune(keeping paths: Set<String>) {
+        lock.lock(); entries = entries.filter { paths.contains($0.key) }; lock.unlock()
+    }
+
+    /// 파일들의 결과를 차례로 합치며, 같은 열쇠의 claude 기록은 처음 것만 남긴다.
+    public static func merge(_ perFile: [[UsageRecord]]) -> [UsageRecord] {
+        var seen = Set<String>()
+        var out: [UsageRecord] = []
+        for recs in perFile {
+            for r in recs {
+                if let k = r.key, !seen.insert(k).inserted { continue }
+                out.append(r)
+            }
+        }
+        return out
     }
 }

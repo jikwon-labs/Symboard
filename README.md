@@ -6,14 +6,37 @@ macOS 14 이상, Apple Silicon. 개인용이라 로그인·결제·자동 업데
 
 ## 빌드와 실행
 
+### 만들기
+
 ```bash
-swift build -c release   # 빌드
-swift test               # 단위 테스트(SymboardCore, 72개)
-scripts/bundle.sh        # build/Symboard.app 생성(release 빌드 포함)
-open build/Symboard.app  # 실행
+scripts/bundle.sh        # release 빌드 후 build/Symboard.app 생성(아이콘 포함)
+swift test               # 단위 테스트(SymboardCore)
 ```
 
-- 의존성: SwiftTerm 1.11.2 고정(1.12 부터는 Metal Toolchain 이 있어야 빌드된다, `DECISIONS.md`).
+### 띄우기 — Finder 에서 더블클릭
+
+1. Finder 에서 `build/Symboard.app` 을 더블클릭한다. (터미널에서는 `open build/Symboard.app`.)
+2. 처음 뜨면 **Projects** 화면이다. **Open folder** 로 작업할 레포 폴더를 고른다.
+3. 왼쪽 막대의 별(Spawn agent)을 누르면 이 맥에 깔린 CLI(Claude Code, Codex, Shell …)가 보인다. 하나를 고르고 캔버스를 누르면 콘솔이 뜬다.
+
+Finder·Dock 으로 띄운 앱은 터미널의 PATH 를 물려받지 않는다. 그래서 앱이 시작할 때 사용자 로그인 셸(`$SHELL -l -i`)에서 PATH 를 한 번 얻어 온다. nvm·volta·asdf·mise·homebrew 로 깐 `claude`·`codex` 도 그대로 찾는다. 셸 설정이 4초 안에 끝나지 않거나 망가졌으면 흔한 설치 위치를 더해서 찾는다.
+
+### /Applications 로 옮겨 쓰기
+
+```bash
+scripts/bundle.sh
+ditto build/Symboard.app /Applications/Symboard.app   # 덮어써도 상태는 그대로(아래 상태 폴더)
+open /Applications/Symboard.app
+```
+
+- 서명은 임시(ad-hoc) 서명이다. 다른 맥으로 옮겨 처음 열 때 막히면 Finder 에서 오른쪽 클릭 → 열기.
+- Dock 에 고정하려면 실행 중에 Dock 아이콘 오른쪽 클릭 → 옵션 → Dock 에 유지.
+- 창을 닫아도(Cmd+W) 앱과 콘솔은 계속 돈다. Dock 아이콘을 누르면 같은 창이 다시 열린다. 끝내려면 Cmd+Q. 다시 켜면 콘솔이 모두 복원되고, 이어 갈 대화가 있는 claude·codex 만 "Resume all conversations?" 로 묻는다.
+
+### 그 밖
+
+- 의존성: SwiftTerm 1.11.2 를 `Vendor/SwiftTerm` 에 옮겨 두고 읽기 작업이 쌓이는 문제 하나를 고쳤다(`Vendor/SwiftTerm/PATCHES.md`). 1.12 부터는 Metal Toolchain 이 있어야 빌드된다(`DECISIONS.md`).
+- 시험할 때 Finder 와 같은 환경: `env -i HOME=$HOME USER=$USER LOGNAME=$USER SHELL=/bin/zsh PATH=/usr/bin:/bin:/usr/sbin:/sbin SYMBOARD_HOME=/tmp/sym-test build/Symboard.app/Contents/MacOS/Symboard`. `SYMBOARD_LAGLOG=1` 을 더하면 5초마다 메인 스레드 지연(p50·p95·최대)을 표준 오류에 남긴다.
 - 상태 저장: `~/Library/Application Support/Symboard/state.json`(버전 붙은 JSON). 환경 변수 `SYMBOARD_HOME` 으로 다른 폴더를 쓸 수 있다(시험용). 1차 상태 파일을 그대로 읽는다(작업공간에 프로젝트 폴더를 붙이고 콘솔 이름을 짧은 이름으로 바꿈).
 - 같은 폴더 아래: `status/`(훅 상태), `docs/`(문서 스튜디오 라이브러리), `profiles/`(새로 연결한 계정 설정 폴더).
 
@@ -44,7 +67,7 @@ open build/Symboard.app  # 실행
 | 화이트보드 | 손글씨 제목 글자, 접힌 종이 스티키, 4열 칸반(카드 모달·끌어 옮기기), 체크리스트, 월 캘린더(일정 팝오버), 손그림 도형(사각·원·마름모·화살표), 펜(색 9+사용자·굵기 5, 부드러운 곡선)·지우개. 고르면 왼쪽 막대 옆에 속성 패널 |
 | git 카드 | 파일마다 골라 커밋하고 이어서 push, 메시지 자동(또는 CLI 로 한 줄 생성), 최근 커밋·히스토리 |
 | 웹 타일 | 탭·뒤로/앞으로/새로고침·주소줄, 빈 탭은 localhost 포트 칩과 빠른 열기, 모니터·휴대폰 해상도로 렌더해 타일에 맞춤, 옆 타일로 Elements·Console 인스펙터 |
-| 사용량 | 로컬 세션 로그에서 현재 5시간 묶음·12개월 활동 칸·모델/세션/연속일 통계·30일 토큰 그래프·에이전트별 비율. 요금제 한도 %는 로그에 없어서 "?" |
+| 사용량 | 위쪽 알약에 claude `/usage` 의 세션 % 링과 초기화 시각(없으면 로그로 짐작). 팝오버는 claude `/usage`·codex `/status` 의 한도 %, 로컬 세션 로그의 12개월 활동 칸·통계·30일 토큰 그래프·에이전트별 비율 |
 | 스튜디오 | 보드 위 패널. 코드(줄 번호·구문 색 편집·저장·보드에 카드로), 마크다운(읽기·원문·힘 기반 링크 그래프·PDF), 문서(CLI 로 레포 문서 생성 → 흰 종이에 실시간 → PDF·보드 카드) |
 | 다이어그램 | CLI 가 JSON 으로 낸 노드·간선·그룹을 보드 위에 손그림 도형·점선 그룹·라벨 화살표·손글씨 제목으로 차례로 그림. 시작 도형 4종 |
 | 메모리 | 모달에서 레포 스캔(CLI 가 사실을 한 줄씩) → 검토 → 저장, 분류·적용 범위 편집, 보드 메모리 카드에서 골라 콘솔로 보내기 |

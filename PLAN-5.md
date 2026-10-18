@@ -51,7 +51,26 @@ STATUS: IN_PROGRESS
 
 ## 많이 띄우기
 
-- [ ] 6. 셸 24 + claude 4, 그룹 4개, `@all` 대량 출력, CPU·메모리 60초, 끌기·확대·타이핑, 미션 맵 28개·검색·필터, 10분 방치 메모리, Cmd+Q 후 복원·이어하기 토스트
+- [x] 6. 셸 24 + claude 4, 그룹 4개, `@all` 대량 출력, CPU·메모리 60초, 끌기·확대·타이핑, 미션 맵 28개·검색·필터, 10분 방치 메모리, Cmd+Q 후 복원·이어하기 토스트
+  - 띄운 것(`env -i`, SYMBOARD_HOME=/tmp/symv5-6, 폴더 /tmp/symsample): 아래 Group → 컴포저 4번. Frontend 8(Fill all 셸 → + 네 번 → 윗줄 타일 4개를 눌러 Claude), Backend 7, Testers 7, Reviewers 6(모두 셸). "28 live". claude 4개는 띄우기만 했다(질문 0).
+  - 대량 출력: `@all` 은 claude 4개에도 글을 보내 질문이 되므로, 셸 24개만 겨눴다: `@backend @testers @reviewers @dax @rafa @kai @zoe for i in $(seq 1 3000); do echo line $i; done`(명령 바에 실제 타이핑).
+  - 반응 재기: 메인 스레드 지연 감시(`SYMBOARD_LAGLOG=1`, 0.1초마다 메인 큐에 일을 넣고 실제로 돌기까지 걸린 시간 → 5초마다 p50·p95·최대) 를 새로 넣었다. 출력 중 캔버스 끌기 3번·스크롤 2번·명령 바 타이핑을 orca 로 보냈고, 동작마다 왕복 0.39~0.44초(출력이 없을 때와 같은 orca 자체 시간), 친 글자가 바로 보였다(`6-` 화면은 아래).
+  - 찾은 문제 1(고침): **읽기 작업 누수**. `heap` 으로 보니 출력할수록 `OS_dispatch_operation`·직렬 큐가 늘기만 했다(8만 8천 → 14만 6천, 약 65MB). SwiftTerm `LocalProcess.childProcessRead` 가 같은 읽기가 끝나기 전 조각(`done == false`)마다 새 `io.read` 를 걸어 끝나지 않은 작업이 쌓였다. SwiftTerm 1.11.2 를 `Vendor/SwiftTerm` 으로 옮기고 끝났을 때만 다시 걸게 고쳤다(`PATCHES.md`). 고친 뒤 5번 쏟아도 28개 그대로.
+  - 찾은 문제 2(고침): **5분마다 사용량 로그 905개를 다시 읽음**(CPU 16%, 메모리 튐). 파일별 결과를 (수정 시각, 크기)로 기억해 바뀐 파일만 읽는다(`UsageFileCache`, 단위 테스트 2개). 다시 훑기 15.5초 → 0.2초.
+  - 남은 것(원인만 확인): 쏟아지는 동안 `Malloc Small (empty)` — 터미널 줄 객체를 만들고 지운 빈 쪽 — 이 물리 메모리로 잡혀 있다가 몇 분 뒤 운영체제가 거둬 간다. 살아 있는 heap 은 100~180MB 로 일정하다. `malloc_zone_pressure_relief` 로 당겨 보려 했으나 이 macOS 에서 0바이트를 돌려줘서 빼고, 10분 방치에서 내려오는 것을 확인했다.
+  - 수치(ps `%cpu`·`rss` 는 공유 쪽을 포함해 크게 나온다. 물리 사용량은 vmmap "Physical footprint"):
+
+    | 측정 | 고치기 전 | 고친 뒤 |
+    |---|---|---|
+    | 28개 가만히(60초) | CPU 평균 2.7%, RSS 391MB, footprint 약 300MB | CPU 0.0~0.3%, RSS 391MB, footprint 292~296MB |
+    | 한 번 쏟을 때(셸 24 × 3000줄) | 끝나는 데 약 2초, CPU 최대 135%, RSS 391 → 832MB | CPU 최대 124%, footprint 296 → 738~795MB |
+    | 다섯 번 연달아 | RSS 832 → 1240 → 1590MB(셋째까지), 읽기 작업 8.8만 → 14.6만 | 읽기 작업 28 그대로, footprint 최대 1.9GB 뒤 1.5GB |
+    | 메인 스레드 지연(5초 묶음, 쏟는 동안 최악) | p95 5.8ms, 최대 46.8ms | p95 15.3ms, 최대 36.5ms |
+    | 다 끝나고 10분 방치(30초 간격 footprint) | — | 753 → 753(4분) → 631·646 → 292(5분 반) → 292 → 466MB(9분, 5분 주기 사용량 훑기) — 계속 늘지 않음 |
+    | 사용량 로그 다시 훑기 | 15.5초 | 0.2초 |
+
+  - 미션 맵: 도구 메뉴 → Mission Map → "0 orchestrators · 4 teams · 28 consoles", Idle 28(`6-mission-28.png`). 검색 "rev" → Reviewers 6개만(`6-mission-search.png`). Working 칩 → 0개.
+  - 복원: Cmd+Q → 다시 띄움 → 28개 그대로, 셸 24개 바로 live, 토스트 "Resume all conversations? 4 consoles can pick up their last chat"(claude 4개만, `6-restore-toast-4.png`) → Yes → 28 live. 이 시험에서 다섯 번 다시 띄우며 매번 같았다.
 
 ## 영상 따라 하기
 

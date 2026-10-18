@@ -142,25 +142,37 @@ final class UsageStore: ObservableObject {
         }
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        var records: [UsageRecord] = []
-        var seen = Set<String>()
-        var count = 0
+        var perFile: [[UsageRecord]] = []
+        var paths = Set<String>()
+        func stamp(_ path: String, _ m: Date) -> UsageFileCache.Stamp {
+            let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? Int) ?? 0
+            return .init(modified: m, size: size ?? 0)
+        }
         for root in claudeRoots {
             for (path, m) in files(under: root + "/projects") {
-                guard let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .alwaysMapped) else { continue }
-                count += 1
-                records += UsageParser.claude(data: data, fallbackDay: fmt.string(from: m), seen: &seen)
+                paths.insert(path)
+                perFile.append(fileCache.records(path: path, stamp: stamp(path, m)) {
+                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .alwaysMapped) else { return [] }
+                    var seen = Set<String>()
+                    return UsageParser.claude(data: data, fallbackDay: fmt.string(from: m), seen: &seen)
+                })
             }
         }
         for root in codexRoots {
             for (path, m) in files(under: root + "/sessions") {
-                guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
-                count += 1
-                records += UsageParser.codex(jsonl: text, fallbackDay: fmt.string(from: m), session: path)
+                paths.insert(path)
+                perFile.append(fileCache.records(path: path, stamp: stamp(path, m)) {
+                    guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [] }
+                    return UsageParser.codex(jsonl: text, fallbackDay: fmt.string(from: m), session: path)
+                })
             }
         }
-        return (records, count)
+        fileCache.prune(keeping: paths)
+        return (UsageFileCache.merge(perFile), paths.count)
     }
+
+    /// 로그 파일별로 읽은 결과(바뀌지 않은 파일은 다시 읽지 않는다).
+    nonisolated static let fileCache = UsageFileCache()
 
     /// 위쪽 알약: claude `/usage` 의 세션 % 와 초기화 시각. 그 값이 없거나 지났으면 가장 가까운 5시간 묶음 끝(짐작).
     /// 아직 훑기 전이면 지난번에 구한 묶음 끝(prefs.json)을 쓴다.

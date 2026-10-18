@@ -8,7 +8,8 @@ let package = Package(
         .executable(name: "Symboard", targets: ["Symboard"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm", exact: "1.11.2"),
+        // 1.11.2 에 읽기 작업이 쌓이는 문제를 고친 사본(Vendor/SwiftTerm/PATCHES.md).
+        .package(path: "Vendor/SwiftTerm"),
     ],
     targets: [
         .target(name: "SymboardCore"),
