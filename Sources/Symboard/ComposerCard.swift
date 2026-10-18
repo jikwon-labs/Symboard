@@ -61,6 +61,7 @@ struct ComposerCard: View {
     @ObservedObject var state: ComposerState
     @ObservedObject var catalog = AgentCatalog.shared
     var spawn: () -> Void
+    @State private var fillNote: String?
 
     var roleColor: Color { Color(hex: state.role.colorHex) }
     var choices: [AgentChoice] { catalog.available }
@@ -113,14 +114,20 @@ struct ComposerCard: View {
             }
             .animation(.spring(duration: 0.25), value: state.tiles.count)
 
-            HStack(spacing: 6) {
-                Text("Fill all").font(.system(size: 12)).foregroundStyle(Color.symDim)
-                ForEach(choices) { c in
-                    Button { state.fillAll(c.id) } label: { AgentBadge(choice: c, size: 24) }
-                        .buttonStyle(.plainHit)
-                        .overlay(Circle().stroke(state.tiles.allSatisfy { $0 == c.id } ? Color.symAccent : .clear, lineWidth: 1.5).padding(-3))
-                        .tip("Fill all with \(c.name)")
+            // 원본처럼 아는 CLI 를 모두 늘어놓는다. 이 맥에 없는 것은 흐리게, 누르면 안내만(계정 팝오버와 같은 규칙).
+            HStack(alignment: .top, spacing: 6) {
+                Text("Fill all").font(.system(size: 12)).foregroundStyle(Color.symDim).padding(.top, 6)
+                CLIIconStrip(ids: AgentCatalog.known.map(\.id), supported: Set(AgentCatalog.known.map(\.id)),
+                             selected: state.tiles.first.flatMap { f in state.tiles.allSatisfy { $0 == f } ? f : nil },
+                             size: 24, feature: "teams", perRow: 6,
+                             onPick: { state.fillAll($0.id); fillNote = nil }, onNote: { fillNote = $0 })
+            }
+            if let fillNote {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "info.circle").foregroundStyle(Color.symDim)
+                    Text(fillNote).font(.system(size: 11)).foregroundStyle(Color.symText.opacity(0.85)).fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(8).background(RoundedRectangle(cornerRadius: 8).fill(Color.symRaised))
             }
 
             Divider().overlay(Color.symBorder)

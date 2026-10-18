@@ -60,7 +60,10 @@ STATUS: IN_PROGRESS
   - 원본 장면: `node-accounts.mp4` 0초. 머리에 "accounts" 와 CLI 아이콘 다섯(지금 것은 동그란 배경, 나머지 흐림), 오른쪽 끝 닫기 X.
   - 바꾼 것: 공용 `CLIIconStrip`(AgentCatalog.swift)과 Core `CLIIconState`(ready·unsupported·missing, 안내 문구; 단위 테스트 3개). 계정 팝오버 머리에 Claude·Codex·Gemini·Cursor·Qwen 다섯을 글자 배지로(로고 그림 없음). 이 맥에 없는 CLI 는 회색·투명·사선, 누르면 "… is not installed on this Mac. Install `gemini` …" 안내만 뜨고 띄우지 않는다. 깔렸지만 계정 프로필을 다루지 않는 CLI 는 "not supported yet" 안내. 닫기 X 추가. 팝오버가 글 길이만큼 늘어나게(`fixedSize`) — 안내가 뜨면 경고 글이 잘리던 것을 같이 고쳤다.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-7; 이 맥에 gemini·qwen·cursor-agent 없음): 위 계정 단추 → 다섯 아이콘, 셋은 흐리고 사선 → Gemini 클릭 → 안내 줄, "0 live" 그대로, gemini 프로세스 없음 → Codex 클릭 → 안내 사라지고 "Used by new Codex consoles". 비교 그림 `compare/8-accounts-icons.png`.
-- [ ] 9. node-composer: Fill all 도 8번 규칙
+- [x] 9. node-composer: Fill all 도 8번 규칙
+  - 원본 장면: `node-composer.mp4` 4초. "Fill all" 옆에 CLI 아이콘이 두 줄(5개 + 2개 + 더하기)로, 고른 것은 동그란 테두리.
+  - 바꾼 것: Fill all 을 8번의 `CLIIconStrip` 로 바꿔 아는 CLI 8개를 모두 6개씩 두 줄로 늘어놓는다. 없는 CLI 는 흐리게 사선, 누르면 카드 안에 "not installed" 안내만(타일은 그대로, 띄우지 않음). 깔린 것을 누르면 예전처럼 모두 채우고 안내를 지운다. 타일을 눌러 바꾸는 것은 깔린 것 사이에서만 돈다(예전대로).
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-7): Group → 컴포저 → Fill all 줄에 C·X·G·A·Cu·Q / O·>_ (G·A·Cu·Q·O 사선) → G 클릭 → "Gemini CLI is not installed on this Mac…" 안내, 타일 Claude 4개 그대로, "0 live" → >_ 클릭 → 타일 넷 모두 Shell, 안내 사라짐 → Esc. 비교 그림 `compare/9-composer-fillall.png`.
 - [ ] 10. studio-code: 저장 뒤 "Saved"
 - [ ] 11. studio-diagrams: 화면 맞춤이 다이어그램만, 노드 고르면 노드 편집 패널
 - [ ] 12. studio-documents: GENERATE PDF 누르면 작은 메뉴 먼저

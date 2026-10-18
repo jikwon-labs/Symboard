@@ -102,12 +102,20 @@ struct CLIIconStrip: View {
     var selected: String?
     var size: CGFloat = 22
     let feature: String
+    /// 정하면 이 수마다 줄을 바꾼다(컴포저 Fill all).
+    var perRow: Int?
     let onPick: (AgentChoice) -> Void
     let onNote: (String) -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            ForEach(ids, id: \.self) { id in
+        if let perRow {
+            FlowRows(items: ids, perRow: perRow) { icon($0) }
+        } else {
+            HStack(spacing: 6) { ForEach(ids, id: \.self) { icon($0) } }
+        }
+    }
+
+    @ViewBuilder func icon(_ id: String) -> some View {
                 if let ch = AgentCatalog.choice(id: id) {
                     let state = CLIIconState.of(id, installed: catalog.installed, supported: supported)
                     Button {
@@ -129,7 +137,5 @@ struct CLIIconStrip: View {
                     .tip(state == .missing ? "\(ch.name) is not installed" : ch.name)
                     .axName(state == .missing ? "\(ch.name) (not installed)" : ch.name)
                 }
-            }
-        }
     }
 }
