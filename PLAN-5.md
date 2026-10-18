@@ -107,7 +107,11 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, Workspace 3): 오른쪽 막대 둘째 → Board → TO DO Add card → 같은 대화상자, 같은 글 → Today → Low → Add card(초록 막대·Today·Low) → IN PROGRESS → DONE 끌기(DONE 1). Calendar → + New → "Coordinate" → 파랑 → Add event(18일) → 24일로 끌기. 도형 → Sticky → 클릭 → 바로 타이핑(`v6-sticky-typed.png`).
   - 쓰는 데 지장 있는 차이(고침): ① 캘린더 일정을 다른 날로 끌 수 없었다 → 일정 끌기(놓을 칸 강조, 시각 유지). ② 스티커를 놓은 뒤 글을 바로 칠 수 없었다(두 번 눌러야 편집) → 놓자마자 편집 상태. ③ 도형 메뉴에 Sticky 가 없었다(Insert 에만) → 원본처럼 도형 메뉴에도.
   - 모양 차이(남김): 원본 날짜 칸은 Today 를 누르면 날짜 입력으로 바뀌고 dd/mm/yyyy, 우리는 칩 그대로. 원본 일정 기본색은 노랑, 우리는 주황. 스티커 PAPER 패널이 새 스티커를 가린다(원본도 왼쪽 패널이지만 스티커가 화면 가운데라 겹치지 않음).
-- [ ] V7. node-loops.mp4
+- [x] V7. node-loops.mp4
+  - 원본 조작: Loops(빈 상태 틀 카드) → Start from scratch → NAME "Test watchdog" → INSTRUCTION 붙여넣기 → 기본값(On a schedule, 15 min, All consoles) → 스크롤 → When a goal is met → An agent judges(Claude) → "ALL GREEN" → Keep running behind other tabs → Create loop → 목록 한 줄, 카운트다운 in 15:00 → 14:56, 오른쪽 막대 루프 아이콘에 빨간 1.
+  - 우리(`env -i`, Workspace 3): 오른쪽 막대 맨 아래 → 같은 틀 카드 화면 → Start from scratch → 같은 이름·지시 → 스크롤 → When a goal is met → (An agent judges·Claude 가 기본) → "ALL GREEN" → 바닥 요약 "…until Claude judges the goal met." → Create loop → 목록 한 줄 "in 14:59"·▶·토글·…, 루프 아이콘 빨간 1(`v7-loop-list.png`). 질문을 보내지 않으려고 끄고 지웠다.
+  - 쓰는 데 지장 있는 차이: 없음.
+  - 모양 차이: 틀 카드 이름·설명 글이 원본과 다르다(원본 문구를 옮기지 않으려고 2차에서 바꿈). 원본 목표 기본은 "A command passes", 우리는 "An agent judges". 원본 BEHAVIOR 토글 기본 꺼짐, 우리는 켜짐.
 - [ ] V8. node-memory.mp4
 - [ ] V9. node-resume.mp4
 - [ ] V10. node-usage.mp4
