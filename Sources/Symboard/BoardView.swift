@@ -458,6 +458,11 @@ final class CanvasView: NSView {
         return true
     }
 
+    /// 보드에 초점이 있을 때 Cmd+V: 클립보드의 그림(파일 또는 그림 자체)을 이미지 노드로 놓는다.
+    @objc func paste(_ sender: Any?) {
+        controller?.pasteImage()
+    }
+
     private func imageURLs(from info: NSDraggingInfo) -> [URL] {
         let opts: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingContentsConformToTypes: ["public.image"]]
         return info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: opts) as? [URL] ?? []

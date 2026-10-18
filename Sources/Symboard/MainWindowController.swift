@@ -1101,6 +1101,28 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         addImage(url: url, at: nil)
     }
 
+    /// 클립보드의 그림을 보드에 놓는다. 그림 파일이면 그 파일을, 그림 자체(스크린샷 복사 등)면 상태 폴더 images/ 에 PNG 로 저장해 쓴다.
+    @discardableResult
+    func pasteImage() -> Bool {
+        let pb = NSPasteboard.general
+        let opts: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingContentsConformToTypes: ["public.image"]]
+        if let urls = pb.readObjects(forClasses: [NSURL.self], options: opts) as? [URL], let u = urls.first {
+            addImage(url: u, at: nil)
+            return true
+        }
+        guard let img = NSImage(pasteboard: pb), let tiff = img.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) else {
+            chrome.flash("No image on the clipboard")
+            return false
+        }
+        let dir = model.store.directory.appendingPathComponent("images", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("pasted-\(UUID().uuidString.prefix(8)).png")
+        guard (try? png.write(to: url)) != nil else { chrome.flash("Could not save the pasted image"); return false }
+        addImage(url: url, at: nil)
+        return true
+    }
+
     func addImage(url: URL, at point: Point?) {
         let size = NSImage(contentsOf: url)?.size ?? CGSize(width: 400, height: 300)
         let scale = min(1, 520 / max(size.width, 1))

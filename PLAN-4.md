@@ -74,8 +74,14 @@ STATUS: IN_PROGRESS
   - 고침: `PlanUsageProbe` 가 화면 없는 터미널(SwiftTerm HeadlessTerminal)에 지금 프로젝트 폴더에서 claude 를 띄워 `/usage` 를 치고 화면을 읽은 뒤 닫는다. 모델에 질문하지 않는다. 폴더 신뢰·첫 실행처럼 선택 화면이 나오면 대신 고르지 않고 그만둔다(사용자 설정을 바꾸지 않으려고). `PlanUsageParser`(표본 테스트 2개)가 "Current session 29% used / Resets 5pm (Asia/Seoul)" 와 주간 줄들을 읽는다. 팝오버: 고리에 세션 %, "Resets 5pm (Asia/Seoul)", 주간 한도마다 이름·%·막대·초기화 시각, 바닥 "claude · /usage · local session logs". 팝오버를 열 때(2분 지난 값이면)와 새로 고침 단추에서 읽는다. 다 읽은 뒤 탐침 claude 가 남지 않는 것을 ps 로 확인.
   - 남은 차이: codex 는 `/status` 를 읽지 않아 로그 통계만 보인다. 위쪽 알약은 3차에서 맞춘 "resets 5:00pm"(로그 기준 추정) 그대로다.
   - 확인한 실제 입력(새 상태 /tmp/symv4i, 프로젝트 /tmp/symperm): 위 사용량 알약 클릭 → 처음엔 "reading claude /usage…" → 약 10초 뒤 고리 30% used, "Resets 5pm (Asia/Seoul)", Current week (all models) 18% · Resets Oct 22 at 8am(`N-usage.png`). 질문 0회.
-- [ ] 3. H 체크리스트·캘린더: 항목 추가·체크, 일정 추가
-- [ ] 4. I 이미지: 끌어 놓기 또는 붙여 넣기, 크기 조절
+- [x] 3. H 체크리스트·캘린더: 항목 추가·체크, 일정 추가
+  - 원본(`node-kanban.jpg` 아래 줄): 체크리스트 "No objectives / Add one to begin" + 흐린 자리줄 + "Add an objective", 캘린더 달 격자·+ New·Today·위아래, 일정 창(제목·날짜·All day·색·메모·Cancel/Add event). 우리 쪽 모양이 같다. 차이는 찾지 못했다.
+  - 확인한 실제 입력(새 상태 /tmp/symv4j): 오른쪽 막대 체크리스트 아이콘 → Checklist → 캔버스 클릭 → "Add an objective" 클릭 → "Write tests" Return → "Ship it" Return(입력칸이 계속 열려 이어 쓸 수 있음) → "0 of 2 done" → 첫 항목 동그라미 클릭 → "1 of 2 done", 줄 긋기, 고리 채움(`H-checklist.png`). 캘린더 + New → "Standup" → Return → 18일에 일정(5번, `5-calendar-enter.png`).
+- [x] 4. I 이미지: 끌어 놓기 또는 붙여 넣기, 크기 조절
+  - 차이(쓰는 데 지장): 보드에 그림 붙여 넣기(Cmd+V)가 없었다. 끌어 놓기와 왼쪽 막대 이미지 단추(파일 고르기)만 있었다.
+  - 고침: 보드에 초점이 있을 때 Cmd+V 가 클립보드의 그림 파일이면 그 파일로, 그림 자체(스크린샷 복사 등)면 상태 폴더 `images/` 에 PNG 로 저장해 이미지 노드를 놓는다(`pasteImage`). 그림이 없으면 "No image on the clipboard" 안내.
+  - 끌어 놓기는 Finder 같은 다른 앱을 눌러야 해서 시험하지 않았다(규칙: 다른 앱 클릭 금지). 코드는 3차 그대로.
+  - 확인한 실제 입력(새 상태 /tmp/symv4k): 시험용 그림(/tmp/symimg/test.png)을 클립보드에 그림으로 올림 → 보드 빈 곳 클릭 → Cmd+V → 480×320 이미지 노드와 속성 막대, `/tmp/symv4k/images/pasted-….png`(`I-image-pasted.png`) → 오른쪽 아래 손잡이를 끌어 330×220(비율 유지)(`I-image-resized.png`).
 - [ ] 5. C 오케스트레이터: 끌어서 팀과 연결, 연결 끊기, 연결된 팀에만 명령
 - [ ] 6. O·P 코드 스튜디오: 파일 열기, 고치기, 저장, 탭 여러 개
 - [ ] 7. Q 마크다운 스튜디오: Reading/Source/Graph 전환, 링크 따라가기
