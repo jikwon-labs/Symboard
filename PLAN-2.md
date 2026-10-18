@@ -82,8 +82,8 @@ STATUS: IN_PROGRESS
 
 - [x] K1. 메모리 모달·레포 필터·편집 화면·보드에 카드로 놓기 (node-memory.jpg, agent2/m-edit.jpg)
 - [x] K2. 레포 스캔(CLI 백그라운드)·단계 표시·제안 검토 (agent2/m-review.jpg)
-- [ ] R1. 문서 스튜디오 왼쪽(CLI·깊이·템플릿)·빈 상태 (agent3/documents-2.6.png)
-- [ ] R2. 생성 중 칩·Stop·실시간 종이·결과 종이·보드 문서 카드 (agent3/doc-gen.png, documents-19.png)
+- [x] R1. 문서 스튜디오 왼쪽(CLI·깊이·템플릿)·빈 상태 (agent3/documents-2.6.png)
+- [x] R2. 생성 중 칩·Stop·실시간 종이·결과 종이·보드 문서 카드 (agent3/doc-gen.png, documents-19.png)
 - [ ] S1. 다이어그램 팝오버(CLI·스타일·유형 6·자유 설명·시작 도형) (agent3/diag-pop-1.2.png)
 - [ ] S2. 생성 중 칩·자리표시→등장·결과 보드 직접 손그림·서식 팝오버 (agent3/diagrams-2.5.png, diagrams-12.5.png)
 
@@ -141,5 +141,8 @@ STATUS: IN_PROGRESS
   - 레포 스캔: CLI 고르기(Claude/Codex) → `claude -p --output-format stream-json --verbose --include-partial-messages --no-session-persistence --permission-mode dontAsk --tools Read,Glob,Grep` 를 레포 폴더에서 백그라운드로 실행, 단계 표시(Launch → Read the repo(도구 사용 이벤트) → Write facts(글 조각)), 한 줄 JSON 사실을 FactStream(단위 테스트)으로 꺼내 실시간으로 늘린다. 검토: "8 of 8 selected", 체크·분류·제목·본문·연필, Discard / Add N to memory.
   - 실제 호출: /tmp/symsample 에서 claude 로 2회. 1회째는 앱이 죽었다(내 보조 함수 이름 tag(_:) 가 SwiftUI View.tag 와 겹쳐 모달이 자기 안에 끝없이 들어감 → categoryTag 로 바꿔 해결, 가짜 제안으로 재현·확인). 2회째 약 25초에 사실 8개(실제 경로·명령 인용) → 모두 추가해 state.json 에 분류와 함께 저장 확인.
   - 남은 차이: 이번 실행에서는 에이전트가 사실을 마지막에 한꺼번에 써서 목록이 끝에 한 번에 찼다(조각 단위 표시 자체는 단위 테스트로만 확인). 메모리 카드의 Send, Rewrite 버튼은 자동 확인하지 않았다(Rewrite 는 사용량 때문에 실행하지 않음).
+- R1·R2: 원본 studio-documents.jpg, agent3/documents-2.6.png, agent3/doc-gen.png, agent3/documents-19.png / 내 것 `v2/R1-documents-empty.png`, `v2/R2-documents-writing.png`, `v2/R2-documents-result-real.png`, `v2/R2-document-card.png`. 오른쪽 막대 문서 버튼 → 패널. 왼쪽: 부제, CLI 배지 줄(Claude/Codex), Quick/Balanced/Thorough 와 지난 소요 시간("0:17"/"not timed"), 문서 종류 7개(이름·설명은 직접 씀: Overview, Getting started, Architecture, README, API guide, Data model, Security notes) + 다 되면 초록 체크·생성 중 점, 아래 자유 요청 입력. 빈 상태: 아이콘·제목·설명·"Generate with <CLI>"·라이브러리 저장 안내. 생성 중: "Writing with Claude Code · 15s" 칩, Stop, 흰 종이 카드에 스켈레톤 줄 → 본문이 0.25초마다 바뀌어 들어감(innerHTML 교체), 종이 아래 CLI 상태줄. 결과: 흰 종이+그림자, 강조색 밑줄 제목, 강조색 인라인 코드, NOTE/TIP 콜아웃, 카드형 표, "331 words · ~2 min read"·종이/원문 보기·재생성·보드로 보내기·Export PDF(저장 시트). 보드 카드: DOCUMENT 라벨+CLI 배지+제목+단어 수+종이 미리보기. 라이브러리는 ~/Library/Application Support/Symboard/docs/<레포>-<해시>/<종류>.md (사용자 레포에 파일을 만들지 않음).
+  - 실제 호출: /tmp/symsample 에서 claude Quick Overview 1회, 17초, 331낱말 문서 저장, PDF 76KB 생성 확인. `v2/R2-documents-writing.png` 는 글이 3초 안에 다 들어와 중간 화면을 잡지 못해 디버그로 앞부분 글을 넣어 찍은 것이다(그리는 경로는 같음).
+  - 남은 차이: 원본은 종이 아래에 CLI 터미널 화면이 비치지만 여기는 진행 한 줄만 보인다. CLI 배지 옆 "+"(다른 CLI 추가)는 없다.
 
 ## 막힌 것
