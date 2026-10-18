@@ -56,7 +56,10 @@ STATUS: IN_PROGRESS
   - 바꾼 것: 웹 도구일 때 캔버스 `mouseDown` 이 바로 놓지 않고 `sizingDrag` 를 시작한다. 끄는 동안 주황 사각형 + 흰 모서리 손잡이를 그리고, 놓으면 `placeWeb(in:)` 이 그 사각형(최소 320×220)에 타일을 놓는다. 24pt 미만으로 끌면 클릭으로 보고 예전처럼 기본 크기로 놓는다(이때는 1번 규칙으로 밀림). 직접 그린 자리는 밀지 않는다.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-7): 지구 도구 클릭 → 캔버스 (300,200)→(900,600) 끌기 → 600×400 웹 타일, 주소 칸에 초점(`compare/7-webtile-drag.png`). 지구 도구 → 빈 곳 클릭 → 820×600 기본 크기, 첫 타일 오른쪽으로 24pt 띄워 놓임(state.json 으로 크기 확인).
   - 못 본 것: orca 끌기는 한 번에 끝나 끄는 중의 사각형 화면은 찍지 못했다.
-- [ ] 8. node-accounts: 팝오버 머리 CLI 아이콘, 없는 CLI 는 흐리게 + "설치되지 않음"
+- [x] 8. node-accounts: 팝오버 머리 CLI 아이콘, 없는 CLI 는 흐리게 + "설치되지 않음"
+  - 원본 장면: `node-accounts.mp4` 0초. 머리에 "accounts" 와 CLI 아이콘 다섯(지금 것은 동그란 배경, 나머지 흐림), 오른쪽 끝 닫기 X.
+  - 바꾼 것: 공용 `CLIIconStrip`(AgentCatalog.swift)과 Core `CLIIconState`(ready·unsupported·missing, 안내 문구; 단위 테스트 3개). 계정 팝오버 머리에 Claude·Codex·Gemini·Cursor·Qwen 다섯을 글자 배지로(로고 그림 없음). 이 맥에 없는 CLI 는 회색·투명·사선, 누르면 "… is not installed on this Mac. Install `gemini` …" 안내만 뜨고 띄우지 않는다. 깔렸지만 계정 프로필을 다루지 않는 CLI 는 "not supported yet" 안내. 닫기 X 추가. 팝오버가 글 길이만큼 늘어나게(`fixedSize`) — 안내가 뜨면 경고 글이 잘리던 것을 같이 고쳤다.
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-7; 이 맥에 gemini·qwen·cursor-agent 없음): 위 계정 단추 → 다섯 아이콘, 셋은 흐리고 사선 → Gemini 클릭 → 안내 줄, "0 live" 그대로, gemini 프로세스 없음 → Codex 클릭 → 안내 사라지고 "Used by new Codex consoles". 비교 그림 `compare/8-accounts-icons.png`.
 - [ ] 9. node-composer: Fill all 도 8번 규칙
 - [ ] 10. studio-code: 저장 뒤 "Saved"
 - [ ] 11. studio-diagrams: 화면 맞춤이 다이어그램만, 노드 고르면 노드 편집 패널

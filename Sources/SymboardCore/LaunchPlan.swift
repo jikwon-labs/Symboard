@@ -139,3 +139,23 @@ public enum LaunchPlanner {
         return (shell, ["-l", "-i", "-c", "exec \"$0\" \"$@\""] + command)
     }
 }
+
+/// 팝오버 머리·컴포저 Fill all 에 늘어놓는 CLI 아이콘 하나의 상태.
+/// missing: 이 맥에 없다(흐리게, 누르면 안내만). unsupported: 깔렸지만 이 화면이 다루지 않는다(안내만). ready: 고를 수 있다.
+public enum CLIIconState: Equatable, Sendable {
+    case ready, unsupported, missing
+
+    public static func of(_ id: String, installed: Set<String>, supported: Set<String>) -> CLIIconState {
+        guard installed.contains(id) else { return .missing }
+        return supported.contains(id) ? .ready : .unsupported
+    }
+
+    /// 누르면 띄울 안내 한 줄. ready 는 nil.
+    public static func note(for state: CLIIconState, name: String, command: String, feature: String) -> String? {
+        switch state {
+        case .ready: return nil
+        case .missing: return "\(name) is not installed on this Mac. Install `\(command)` and reopen Symboard to use it here."
+        case .unsupported: return "\(name) is installed, but \(feature) are not supported for it yet."
+        }
+    }
+}

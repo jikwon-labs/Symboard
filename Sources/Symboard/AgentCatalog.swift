@@ -93,3 +93,43 @@ struct AgentBadge: View {
             .frame(width: size, height: size)
     }
 }
+
+/// 팝오버 머리·컴포저에 쓰는 CLI 아이콘 줄. 이 맥에 없는 CLI 는 흐리게 사선을 긋고, 눌러도 띄우지 않고 onNote 로 안내만 보낸다.
+struct CLIIconStrip: View {
+    @ObservedObject var catalog = AgentCatalog.shared
+    let ids: [String]
+    let supported: Set<String>
+    var selected: String?
+    var size: CGFloat = 22
+    let feature: String
+    let onPick: (AgentChoice) -> Void
+    let onNote: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(ids, id: \.self) { id in
+                if let ch = AgentCatalog.choice(id: id) {
+                    let state = CLIIconState.of(id, installed: catalog.installed, supported: supported)
+                    Button {
+                        if let note = CLIIconState.note(for: state, name: ch.name, command: ch.command ?? ch.id, feature: feature) { onNote(note) }
+                        else { onPick(ch) }
+                    } label: {
+                        AgentBadge(choice: ch, size: size)
+                            .saturation(state == .missing ? 0 : 1)
+                            .opacity(state == .missing ? 0.3 : (selected == nil || selected == id ? 1 : 0.5))
+                            .overlay {
+                                if state == .missing {
+                                    Rectangle().fill(Color.symDim).frame(width: size * 1.1, height: 1.2).rotationEffect(.degrees(-45))
+                                }
+                            }
+                            .padding(3)
+                            .background(Circle().fill(selected == id ? Color.symAccent.opacity(0.16) : .clear))
+                    }
+                    .buttonStyle(.plainHit)
+                    .tip(state == .missing ? "\(ch.name) is not installed" : ch.name)
+                    .axName(state == .missing ? "\(ch.name) (not installed)" : ch.name)
+                }
+            }
+        }
+    }
+}

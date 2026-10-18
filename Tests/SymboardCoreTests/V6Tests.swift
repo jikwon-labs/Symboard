@@ -57,3 +57,19 @@ import Testing
         #expect(!back.isEnabled)
     }
 }
+
+@Suite struct CLIIconStateTests {
+    @Test func missingWinsOverSupported() {
+        #expect(CLIIconState.of("gemini", installed: ["claude"], supported: ["claude", "gemini"]) == .missing)
+    }
+
+    @Test func installedButUnsupported() {
+        #expect(CLIIconState.of("qwen", installed: ["qwen", "claude"], supported: ["claude", "codex"]) == .unsupported)
+        #expect(CLIIconState.of("claude", installed: ["claude"], supported: ["claude"]) == .ready)
+    }
+
+    @Test func notesNeverLaunch() {
+        #expect(CLIIconState.note(for: .ready, name: "Claude Code", command: "claude", feature: "profiles") == nil)
+        #expect(CLIIconState.note(for: .missing, name: "Gemini CLI", command: "gemini", feature: "profiles")!.contains("not installed"))
+    }
+}

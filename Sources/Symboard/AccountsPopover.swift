@@ -10,6 +10,7 @@ struct AccountsPopover: View {
     @State private var newName = ""
     @State private var renaming: UUID?
     @State private var renameText = ""
+    @State private var note: String?
 
     var list: [AccountProfile] { profiles.profiles.filter { $0.agent == agent } }
     var activeID: UUID? { profiles.active(for: agent) }
@@ -20,16 +21,29 @@ struct AccountsPopover: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text("accounts").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
-                ForEach([AgentKind.claude, .codex], id: \.self) { a in
-                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }.tip("Show \(a.rawValue) accounts")
-                        .buttonStyle(.plainHit).opacity(agent == a ? 1 : 0.4)
-                }
+                // 원본처럼 CLI 다섯을 늘어놓는다. 계정 프로필은 claude·codex 만 다룬다.
+                CLIIconStrip(ids: ["claude", "codex", "gemini", "cursor", "qwen"], supported: ["claude", "codex"],
+                             selected: agent == .codex ? "codex" : "claude", feature: "account profiles",
+                             onPick: { ch in agent = ch.agent; note = nil }, onNote: { note = $0 })
                 Spacer()
+                Button { c.chrome.accountsOpen = false } label: { Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)) }
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close")
+            }
+            if let note {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "info.circle").foregroundStyle(Color.symDim)
+                    Text(note).font(.system(size: 11)).foregroundStyle(Color.symText.opacity(0.85)).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button { self.note = nil } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Dismiss note")
+                }
+                .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
             }
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color(hex: "#E9C46A"))
                 Text("\(cli) can keep its sign-in in the macOS Keychain, which a separate settings folder does not fully isolate. After switching, check the account inside the console (for example with /status).")
                     .font(.system(size: 11)).foregroundStyle(Color(hex: "#E9C46A").opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color(hex: "#E9C46A").opacity(0.08)))
             row(initials: nil, name: "Your sign-in", sub: "Used by new \(cli) consoles", active: activeID == nil,
@@ -62,9 +76,11 @@ struct AccountsPopover: View {
             }
             Text("Opens a \(cli) console on the board with its own settings folder so you can sign in there.")
                 .font(.system(size: 10)).foregroundStyle(Color.symDim)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
         .frame(width: 400)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color.symSurface)
     }
 
