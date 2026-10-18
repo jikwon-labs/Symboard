@@ -64,9 +64,9 @@ STATUS: IN_PROGRESS
 
 ## 실제 입력으로 다시 확인할 흐름
 
-- [ ] F1. 별 → Shell → 캔버스 클릭 → 아래 입력 `echo hi` + Return → 출력
-- [ ] F2. Group → Testers → 개수 5 → Fill all Shell → Spawn → TESTERS 프레임 → `@all echo ok` → "Sent to 6 consoles"
-- [ ] F3. Cmd+Q → 다시 실행 → 노드·그룹 같은 자리
+- [x] F1. 별 → Shell → 캔버스 클릭 → 아래 입력 `echo hi` + Return → 출력 — 새 상태 폴더 /tmp/symv3f, 홈 화면에서 Open folder 로 /tmp/symv3repo. "Sent to 1 console", Ada 에 hi, READY.
+- [x] F2. Group → Testers → 개수 5 → Fill all Shell → Spawn → TESTERS 프레임 → `@all echo ok` → "Sent to 6 consoles" — 6개 모두 ok 출력, 모두 READY. (처음 한 번은 Spawn 아래 가장자리를 눌러 팝오버만 닫혔다. 내 좌표 실수.)
+- [x] F3. Cmd+Q → 다시 실행 → 노드·그룹 같은 자리 — state.json 의 노드 이름·좌표·팀 비교가 같음, 화면에 TESTERS 프레임 그대로.
 - [ ] F4. 오케스트레이터 → Connect → 그룹 → Done → 연결선 → 오케스트레이터 입력으로 명령
 - [ ] F5. 미션 맵 → 콘솔 고르기 → Go to → 이동
 - [ ] F6. 루프: 템플릿 → 만들기 → 카운트다운 → 지금 실행 → 대상 콘솔 입력

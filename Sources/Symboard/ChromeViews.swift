@@ -38,7 +38,7 @@ struct TopLeftBar: View {
                     .menuIndicator(.visible)
                     .fixedSize()
                     .padding(.horizontal, 8)
-                    .hint(project ?? "")
+                    .help(project ?? "")
 
                     Rectangle().fill(Color.symBorder).frame(width: 1, height: 18)
 
