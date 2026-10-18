@@ -33,6 +33,7 @@ public enum NodeKind: String, Codable, Sendable, CaseIterable {
     case shape
     case inspector
     case memory
+    case document
 }
 
 /// 글자·도형 노드의 겉모양. 비어 있는 값은 노드 종류의 기본값을 쓴다.

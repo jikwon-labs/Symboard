@@ -299,3 +299,13 @@ import Testing
         #expect(f.finish() == [FactStream.Fact(category: "Context", title: "Note", body: "x")])
     }
 }
+
+@Suite struct DocKindTests {
+    @Test func promptMentionsDepthAndTitle() {
+        let p = DocKind.prompt(kind: DocKind.all[0], request: nil, depth: "quick", repoName: "symsample")
+        #expect(p.contains("# symsample Overview"))
+        #expect(p.contains("300 words"))
+        #expect(Markdown.firstHeading("intro\n# Title here\n## Sub") == "Title here")
+        #expect(Markdown.bodyHTML("# A").contains("<h1>A</h1>"))
+    }
+}

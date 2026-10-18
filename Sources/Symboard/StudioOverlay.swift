@@ -73,13 +73,19 @@ struct StudioOverlay: View {
         if let kind = studio.kind {
             ZStack {
                 Color.black.opacity(0.45).ignoresSafeArea().onTapGesture { c.closeStudio() }
-                HStack(spacing: 0) {
-                    sidebar(kind).frame(width: 300)
-                    Divider().overlay(Color.symBorder)
-                    VStack(spacing: 0) {
-                        topBar(kind)
-                        Divider().overlay(Color.symBorder)
-                        content(kind)
+                Group {
+                    if kind == "Documents" {
+                        DocumentsStudio(docs: c.docStudio, c: c)
+                    } else {
+                        HStack(spacing: 0) {
+                            sidebar(kind).frame(width: 300)
+                            Divider().overlay(Color.symBorder)
+                            VStack(spacing: 0) {
+                                topBar(kind)
+                                Divider().overlay(Color.symBorder)
+                                content(kind)
+                            }
+                        }
                     }
                 }
                 .background(RoundedRectangle(cornerRadius: 18).fill(Color.symSurface))
@@ -184,9 +190,7 @@ struct StudioOverlay: View {
     static func bytes(_ n: Int) -> String { n < 1024 ? "\(n) B" : String(format: "%.1f KB", Double(n) / 1024) }
 
     @ViewBuilder func content(_ kind: String) -> some View {
-        if kind == "Documents" {
-            DocumentsStudio(c: c)
-        } else if studio.selected == nil {
+        if studio.selected == nil {
             VStack(spacing: 8) {
                 Image(systemName: Self.icon(kind)).font(.system(size: 28)).foregroundStyle(Color.symDim)
                 Text("Pick a file on the left").font(.system(size: 13)).foregroundStyle(Color.symDim)
@@ -469,14 +473,3 @@ extension NSColor {
     var swiftUI: Color { Color(nsColor: self) }
 }
 
-/// 문서 스튜디오(R 에서 채운다).
-struct DocumentsStudio: View {
-    let c: MainWindowController
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "doc.richtext").font(.system(size: 28)).foregroundStyle(Color.symDim)
-            Text("Documents").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}

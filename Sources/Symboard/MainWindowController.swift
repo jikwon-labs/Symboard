@@ -9,6 +9,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let composer = ComposerState()
     let loopDraft = LoopDraft()
     lazy var studioState = StudioState(root: URL(fileURLWithPath: projectPath))
+    lazy var docStudio: DocStudioState = { let d = DocStudioState(model: model); d.c = self; return d }()
     lazy var memoryHub: MemoryHub = { let h = MemoryHub(model: model); h.c = self; return h }()
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
@@ -487,6 +488,27 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func studioAddToBoard() { studioInsert() }
+
+    /// 문서 스튜디오의 "보드로 보내기": DOCUMENT 카드.
+    func placeDocumentCard(_ id: String) {
+        let url = docStudio.url(for: id)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let agent = docStudio.agent
+        studioState.kind = nil
+        addNode(kind: .document, size: CGSize(width: 520, height: 620), title: "Document") { $0.text = url.path; $0.role = agent }
+    }
+
+    func studioExportDocPDF(_ id: String) {
+        let md = docStudio.url(for: id)
+        guard let w = window, FileManager.default.fileExists(atPath: md.path) else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = (Markdown.firstHeading((try? String(contentsOf: md, encoding: .utf8)) ?? "") ?? id) + ".pdf"
+        panel.beginSheetModal(for: w) { [weak self] r in
+            guard r == .OK, let out = panel.url else { return }
+            self?.exportPDF(markdown: md, to: out)
+        }
+    }
 
     func studioAddFolder() {
         let panel = NSOpenPanel()

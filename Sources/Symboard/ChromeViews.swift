@@ -429,6 +429,7 @@ struct LayersList: View {
         case .shape: return "square.on.circle"
         case .inspector: return "ladybug"
         case .memory: return "brain"
+        case .document: return "doc.richtext"
         }
     }
 }

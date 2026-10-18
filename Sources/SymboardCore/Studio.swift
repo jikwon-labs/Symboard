@@ -348,3 +348,65 @@ public enum ForceLayout {
         return p
     }
 }
+
+extension Markdown {
+    /// html() 결과에서 <body> 안쪽만(실시간 갱신용).
+    public static func bodyHTML(_ text: String) -> String {
+        let h = html(text)
+        guard let a = h.range(of: "<body>"), let b = h.range(of: "</body>", options: .backwards) else { return h }
+        return String(h[a.upperBound..<b.lowerBound])
+    }
+
+    /// 첫 번째 # 제목.
+    public static func firstHeading(_ text: String) -> String? {
+        for line in text.split(separator: "\n") where line.hasPrefix("# ") {
+            return String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+        }
+        return nil
+    }
+}
+
+/// 문서 스튜디오의 문서 종류와 생성 지시.
+public struct DocKind: Equatable, Sendable, Identifiable {
+    public var id: String
+    public var title: String
+    public var blurb: String
+    public var icon: String
+    public var focus: String
+
+    public static let all: [DocKind] = [
+        DocKind(id: "overview", title: "Overview", blurb: "The repo in one sitting", icon: "doc.text",
+                focus: "what the project is for, its main features, the technologies it uses and how the major parts fit together"),
+        DocKind(id: "start", title: "Getting started", blurb: "From clone to first change", icon: "figure.walk",
+                focus: "prerequisites, setup, running it locally, where to make a first change and how to verify it"),
+        DocKind(id: "architecture", title: "Architecture", blurb: "Modules, layers and data flow", icon: "square.3.layers.3d",
+                focus: "modules and layers, how data and requests flow through them, and the important boundaries"),
+        DocKind(id: "readme", title: "README", blurb: "A front page for the repo", icon: "text.alignleft",
+                focus: "a polished README: short pitch, features, quick start, usage examples and project layout"),
+        DocKind(id: "api", title: "API guide", blurb: "Public surface and how to call it", icon: "curlybraces",
+                focus: "the public API or CLI surface, parameters, return values and short usage examples"),
+        DocKind(id: "data", title: "Data model", blurb: "Entities and how they relate", icon: "cylinder",
+                focus: "the data entities, their fields, relationships and where they are stored"),
+        DocKind(id: "security", title: "Security notes", blurb: "Trust boundaries and risks", icon: "lock.shield",
+                focus: "trust boundaries, secrets handling, input validation and the main risks with mitigations"),
+    ]
+
+    /// 깊이: quick·balanced·thorough.
+    public static func prompt(kind: DocKind?, request: String?, depth: String, repoName: String) -> String {
+        let size: String
+        switch depth {
+        case "quick": size = "Keep it to roughly 300 words. Look only at the README, manifests and the top-level layout."
+        case "thorough": size = "Aim for roughly 1500 words. Read broadly across the source before writing."
+        default: size = "Aim for roughly 700 words. Read the README, manifests and the key source files."
+        }
+        let topic = kind.map { "Write a \($0.title) document for this repository covering \($0.focus)." }
+            ?? "Write a document for this repository: \(request ?? "")"
+        return """
+        \(topic)
+        \(size)
+        Write GitHub-flavored Markdown only, with no preamble and no closing remarks. Start with a single line "# \(repoName) \(kind?.title ?? "Notes")". \
+        Use ## sections, tables where they help, `inline code` for paths and commands, and at most two callouts written as "> [!NOTE] ..." or "> [!TIP] ...". \
+        Only state what you can see in the repository. End with a "## Summary" section.
+        """
+    }
+}

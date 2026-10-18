@@ -518,6 +518,21 @@ final class DebugBridge {
             }
             if let t = cmd["add"] as? String { h.save(MemoryNote(repoPath: h.repo, title: t, body: cmd["body"] as? String ?? "", category: cmd["category"] as? String)) }
             log.append("memory2 page=\(h.page ?? "-") phase=\(h.phase) proposals=\(h.proposals.count) notes=\(h.notes.count) error=\(h.scanError ?? "-")")
+        case "docs":
+            // generate(종류 id, 실제 CLI), depth, agent, select, card, pdf
+            let d = controller.docStudio
+            if controller.studioState.kind != "Documents" && cmd["open"] as? Bool != false { controller.openStudio(tab: "Docs") }
+            if let a = cmd["agent"] as? String { d.agent = a }
+            if let dp = cmd["depth"] as? String { d.depth = dp }
+            if let s = cmd["select"] as? String { d.selected = s }
+            if let v = cmd["view"] as? String { d.view = v }
+            if let g = cmd["generate"] as? String { d.generate(kind: g) }
+            if let fake = cmd["fakeLive"] as? String { d.selected = "overview"; d.generating = "overview"; d.startedAt = Date().addingTimeInterval(-13); d.live = fake; d.activity = "Writing" }
+            if cmd["stopFake"] as? Bool == true { d.generating = nil; d.live = "" }
+            if cmd["card"] as? Bool == true { controller.placeDocumentCard(d.selected) }
+            if let out = cmd["pdf"] as? String { controller.exportPDF(markdown: d.url(for: d.selected), to: URL(fileURLWithPath: out)) }
+            d.reload()
+            log.append("docs selected=\(d.selected) generating=\(d.generating ?? "-") live=\(d.live.count) library=\(d.library.keys.sorted()) error=\(d.error ?? "-") activity=\(d.activity)")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }
