@@ -66,7 +66,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(scrollView)
 
-        let home = host(HomeView(model: model, c: self))
+        let home = HiddenAwareHostingView(rootView: HomeView(model: model, c: self))
+        home.translatesAutoresizingMaskIntoConstraints = false
         home.isHidden = true
         homeHost = home
         content.addSubview(home)
@@ -267,6 +268,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             }
         }
         sidePanel.refreshStatuses()
+        currentCanvas?.layoutGroups()
         let live = model.sessions.liveCount
         if chrome.liveCount != live { chrome.liveCount = live }
         let loops = model.selectedWorkspace.loops.filter(\.enabled).count
@@ -439,10 +441,62 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             spec.sessionID = nil
             spec.hasLaunched = false
             copy.terminal = spec
-            copy.title = Self.defaultTitle(for: spec)
+            copy.title = nextName()
         }
         model.addNode(copy)
         currentCanvas?.select(copy.id)
+    }
+
+    func renameTeam(_ id: UUID) {
+        guard let t = model.selectedWorkspace.teams.first(where: { $0.id == id }),
+              let name = Prompt.text(title: "Rename group", value: t.name), !name.isEmpty else { return }
+        model.mutateWorkspace(model.selectedWorkspace.id) { ws in
+            if let i = ws.teams.firstIndex(where: { $0.id == id }) { ws.teams[i].name = name }
+        }
+        currentCanvas?.layoutGroups()
+    }
+
+    func ungroup(_ id: UUID) {
+        model.mutateWorkspace(model.selectedWorkspace.id) { ws in
+            for i in ws.nodes.indices where ws.nodes[i].teamID == id { ws.nodes[i].teamID = nil }
+            ws.teams.removeAll { $0.id == id }
+            ws.links?.removeAll { $0.to == id || $0.from == id }
+        }
+        currentCanvas?.layoutGroups()
+    }
+
+    /// 그룹의 콘솔을 모두 닫는다. 이름을 보여 주고 한 번 묻는다.
+    func closeTeam(_ id: UUID) {
+        let ids = model.selectedWorkspace.nodes.filter { $0.teamID == id }.map(\.id)
+        closeNodes(ids)
+    }
+
+    /// 여러 노드를 닫기 전에 이름을 늘어놓고 확인한다.
+    func closeNodes(_ ids: [UUID]) {
+        let nodes = ids.compactMap { model.node($0) }
+        guard !nodes.isEmpty else { return }
+        if nodes.count > 1 {
+            let names = nodes.map(\.title)
+            let shown = names.prefix(5).joined(separator: ", ") + (names.count > 5 ? " +\(names.count - 5)" : "")
+            chrome.confirm = PendingConfirm(message: "\(shown): about to close \(nodes.count) consoles", button: "Close \(nodes.count)") { [weak self] in
+                self?.removeNodes(nodes.map(\.id))
+            }
+            return
+        }
+        removeNodes(nodes.map(\.id))
+    }
+
+    private func removeNodes(_ ids: [UUID]) {
+        for n in ids.compactMap({ model.node($0) }) {
+            currentCanvas?.nodeViews[n.id]?.content.teardown()
+            model.removeNode(n.id)
+        }
+        let wsID = model.selectedWorkspace.id
+        model.mutateWorkspace(wsID) { ws in
+            let used = Set(ws.nodes.compactMap(\.teamID))
+            ws.teams.removeAll { !used.contains($0.id) }
+        }
+        currentCanvas?.layoutGroups()
     }
 
     func deleteSelection() {
@@ -454,8 +508,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     /// 아래 명령 바 입력을 대상 노드에 보낸다.
     func runCommand() {
-        let text = chrome.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = chrome.command.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        // "/close @이름..." 은 보내지 않고 그 콘솔들을 닫는다(여럿이면 확인).
+        let closing = text.hasPrefix("/close")
+        if closing { text = String(text.dropFirst(6)).trimmingCharacters(in: .whitespaces) + " _" }
         let ws = model.selectedWorkspace
         let cands = ws.nodes.filter { $0.kind == .terminal }.map { n in
             CommandTargets.Candidate(id: n.id, name: n.title, team: n.teamID.flatMap { t in ws.teams.first { $0.id == t }?.name })
@@ -464,6 +521,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         var targets = parsed.nodeIDs
         if parsed.implicit, let sel = currentCanvas?.selectedNodeID, model.node(sel)?.kind == .terminal { targets = [sel] }
         if !parsed.unknown.isEmpty { chrome.flash("No console named @\(parsed.unknown[0])"); return }
+        if closing {
+            chrome.command = ""
+            closeNodes(targets)
+            return
+        }
         guard !targets.isEmpty, !parsed.body.isEmpty else {
             chrome.flash(parsed.body.isEmpty ? "Type something to send" : "Select a console or start with @name")
             return
@@ -508,11 +570,16 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let frame: Rect
         if let point { frame = Rect(x: point.x, y: point.y, w: size.width, h: size.height) }
         else { frame = model.suggestedFrame(size: size, near: scrollView.visibleCenter) }
-        let name = title ?? Self.defaultTitle(for: spec)
+        let name = title ?? nextName()
         let node = BoardNode(kind: .terminal, frame: frame, title: name, terminal: spec, teamID: teamID, role: role)
         model.addNode(node)
         currentCanvas?.select(node.id)
         return node
+    }
+
+    /// 이 작업공간에서 아직 안 쓴 짧은 이름.
+    func nextName() -> String {
+        NamePool.next(used: Set(model.selectedWorkspace.nodes.filter { $0.kind == .terminal }.map(\.title)))
     }
 
     static func defaultTitle(for spec: TerminalSpec) -> String {
@@ -640,6 +707,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let zoom = min((size.width - 160) / (maxX - minX + 40), (size.height - 220) / (maxY - minY + 40), 1)
         scrollView.center(on: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / max(zoom, 0.1)), zoom: zoom)
     }
+}
+
+/// 숨겨져 있을 때 클릭을 가로채지 않는 호스팅 뷰.
+final class HiddenAwareHostingView<V: View>: NSHostingView<V> {
+    override func hitTest(_ point: NSPoint) -> NSView? { isHidden ? nil : super.hitTest(point) }
 }
 
 /// 아래 Presets 메뉴의 미리 정한 조합.

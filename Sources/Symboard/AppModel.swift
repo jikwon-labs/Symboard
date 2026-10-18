@@ -93,13 +93,23 @@ final class AppModel: ObservableObject {
         scheduleSave()
     }
 
-    /// 프로젝트 폴더가 없는(1차) 작업공간에 폴더를 붙인다.
+    /// 1차 상태를 2차 화면에 맞춘다: 프로젝트 폴더가 없는 작업공간에 폴더를 붙이고,
+    /// "프로그램 - 폴더" 꼴의 콘솔 이름을 짧은 사람 이름으로 바꾼다.
     func assignProjects(fallback: String) {
-        guard state.workspaces.contains(where: { $0.projectPath == nil }) else { return }
-        for i in state.workspaces.indices where state.workspaces[i].projectPath == nil {
-            state.workspaces[i].projectPath = Projects.inferPath(for: state.workspaces[i], fallback: fallback)
+        var changed = false
+        for i in state.workspaces.indices {
+            if state.workspaces[i].projectPath == nil {
+                state.workspaces[i].projectPath = Projects.inferPath(for: state.workspaces[i], fallback: fallback)
+                changed = true
+            }
+            for j in state.workspaces[i].nodes.indices {
+                let n = state.workspaces[i].nodes[j]
+                guard let spec = n.terminal, n.title == MainWindowController.defaultTitle(for: spec) else { continue }
+                state.workspaces[i].nodes[j].title = NamePool.next(used: Set(state.workspaces[i].nodes.map(\.title)))
+                changed = true
+            }
         }
-        scheduleSave()
+        if changed { scheduleSave() }
     }
 
     // MARK: 노드
@@ -125,6 +135,7 @@ final class AppModel: ObservableObject {
         mutateWorkspace(wsID) { ws in
             ws.nodes.removeAll { $0.id == id }
             ws.loops.removeAll { $0.nodeID == id }
+            ws.links?.removeAll { $0.from == id || $0.to == id }
         }
         NotificationCenter.default.post(name: .nodesChanged, object: wsID)
     }

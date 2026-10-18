@@ -86,6 +86,12 @@ final class CanvasView: NSView {
     /// 놓기 도구일 때 마우스 위치(뷰 좌표). 점선 자리표시를 그린다.
     private var hoverPoint: NSPoint?
     private(set) var nodeViews: [UUID: NodeView] = [:]
+    private(set) var groupViews: [UUID: GroupFrameView] = [:]
+    private lazy var linksView: LinksView = {
+        let v = LinksView(frame: bounds)
+        addSubview(v, positioned: .below, relativeTo: nil)
+        return v
+    }()
     private var panStart: (NSPoint, NSPoint)?
     private var currentStroke: [Point]?
     var penColor = "#FF3B30"
@@ -124,7 +130,76 @@ final class CanvasView: NSView {
         }
         for node in ws.nodes { nodeViews[node.id]?.syncFromModel() }
         applyOrder(ws)
+        layoutGroups()
         needsDisplay = true
+    }
+
+    // MARK: 그룹 프레임·연결선
+
+    /// 팀마다 멤버 노드를 감싸는 프레임을 맞추고 연결선을 다시 그린다.
+    func layoutGroups() {
+        guard let ws = workspace else { return }
+        var live: Set<UUID> = []
+        for team in ws.teams {
+            let members = ws.nodes.filter { $0.teamID == team.id }
+            guard !members.isEmpty else { continue }
+            live.insert(team.id)
+            let v: GroupFrameView
+            if let existing = groupViews[team.id] { v = existing } else {
+                v = GroupFrameView(team: team)
+                v.canvas = self
+                addSubview(v, positioned: .above, relativeTo: linksView)
+                groupViews[team.id] = v
+            }
+            v.team = team
+            v.memberCount = members.count
+            let statuses = members.compactMap { model.sessions.status(of: $0.id) }
+            let running = statuses.filter { $0 == .working }.count
+            let waiting = statuses.filter { $0 == .waiting }.count
+            v.summary = running > 0 ? "\(running) running" : (waiting > 0 ? "\(waiting) need you" : "idle")
+            var box = NSRect.null
+            for m in members {
+                let r = nodeViews[m.id]?.frame ?? CanvasGeometry.viewRect(m.frame)
+                box = box.union(r)
+                nodeViews[m.id]?.isHidden = v.collapsed
+            }
+            let pad = GroupFrameView.pad, head = GroupFrameView.headerHeight
+            let target = v.collapsed
+                ? NSRect(x: box.minX - pad, y: box.minY - pad - head, width: 320, height: head + 52)
+                : NSRect(x: box.minX - pad, y: box.minY - pad - head, width: box.width + pad * 2, height: box.height + pad * 2 + head)
+            if v.frame != target { v.frame = target }
+            v.needsDisplay = true
+        }
+        for (id, v) in groupViews where !live.contains(id) {
+            v.removeFromSuperview()
+            groupViews[id] = nil
+        }
+        // 팀이 없어진 노드는 다시 보이게.
+        for n in ws.nodes where n.teamID == nil || !live.contains(n.teamID!) { nodeViews[n.id]?.isHidden = false }
+        layoutLinks()
+    }
+
+    /// 연결선 끝점: 노드면 노드 사각형, 팀이면 그룹 프레임 몸통.
+    func layoutLinks() {
+        guard let ws = workspace else { return }
+        func rect(_ id: UUID) -> NSRect? {
+            if let g = groupViews[id] { return g.collapsed ? g.frame : g.bodyRect }
+            guard let v = nodeViews[id], !v.isHidden else { return nil }
+            return v.frame
+        }
+        let segs = (ws.links ?? []).compactMap { l -> (UUID, NSRect, NSRect)? in
+            guard let a = rect(l.from), let b = rect(l.to) else { return nil }
+            return (l.id, a, b)
+        }
+        if segs.isEmpty && linksView.layer?.sublayers?.isEmpty ?? true { return }
+        linksView.update(segs)
+    }
+
+    func setGroup(_ teamID: UUID, collapsed: Bool) {
+        model.mutateWorkspace(workspaceID) { ws in
+            if let i = ws.teams.firstIndex(where: { $0.id == teamID }) { ws.teams[i].collapsed = collapsed }
+        }
+        layoutGroups()
     }
 
     /// 모델 배열 순서대로 겹침 순서를 맞춘다(뒤에 있을수록 위).

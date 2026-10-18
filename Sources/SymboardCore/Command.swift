@@ -67,3 +67,37 @@ public enum Projects {
         return seen
     }
 }
+
+/// 콘솔에 붙이는 짧은 사람 이름.
+public enum NamePool {
+    public static let names = ["Ada", "Pip", "Maya", "Iris", "Dax", "Rafa", "Kai", "Zoe", "Leo", "Nova", "Otto", "Juno",
+                               "Remy", "Tess", "Ivo", "Lena", "Bo", "Cleo", "Hugo", "Mira", "Nico", "Suki", "Theo", "Wren"]
+
+    /// 쓰지 않은 첫 이름. 다 쓰면 숫자를 붙인다.
+    public static func next(used: Set<String>) -> String {
+        if let n = names.first(where: { !used.contains($0) }) { return n }
+        var i = 2
+        while true {
+            for n in names where !used.contains("\(n)\(i)") { return "\(n)\(i)" }
+            i += 1
+        }
+    }
+}
+
+/// 권한 묻기를 끄는 실행 옵션이 들어 있는지(헤더 배지용).
+public enum PermissionMode {
+    public static let autoFlags = ["--dangerously-skip-permissions", "--yolo", "--dangerously-bypass-approvals-and-sandbox", "--full-auto"]
+
+    public static func label(for spec: TerminalSpec) -> String? {
+        if spec.extraArgs.contains(where: { autoFlags.contains($0) }) { return "AUTO" }
+        if let i = spec.extraArgs.firstIndex(of: "--permission-mode"), i + 1 < spec.extraArgs.count {
+            switch spec.extraArgs[i + 1] {
+            case "bypassPermissions": return "AUTO"
+            case "acceptEdits": return "EDITS"
+            case "plan": return "PLAN"
+            default: return nil
+            }
+        }
+        return nil
+    }
+}

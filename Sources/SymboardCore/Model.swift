@@ -161,9 +161,19 @@ public struct Team: Codable, Equatable, Sendable, Identifiable {
     public var id: UUID
     public var name: String
     public var colorHex: String
-    public init(id: UUID = UUID(), name: String, colorHex: String = "#5E5CE6") {
-        self.id = id; self.name = name; self.colorHex = colorHex
+    /// 그룹 프레임을 접었는지(접으면 노드를 숨기고 머리만 보인다).
+    public var collapsed: Bool?
+    public init(id: UUID = UUID(), name: String, colorHex: String = "#5E5CE6", collapsed: Bool? = nil) {
+        self.id = id; self.name = name; self.colorHex = colorHex; self.collapsed = collapsed
     }
+}
+
+/// 보드 위 두 노드를 잇는 곡선. to 가 팀이면 그룹 프레임으로 잇는다.
+public struct NodeLink: Codable, Equatable, Sendable, Identifiable {
+    public var id: UUID
+    public var from: UUID
+    public var to: UUID
+    public init(id: UUID = UUID(), from: UUID, to: UUID) { self.id = id; self.from = from; self.to = to }
 }
 
 public enum LoopTrigger: Codable, Equatable, Sendable {
@@ -203,6 +213,7 @@ public struct Workspace: Codable, Equatable, Sendable, Identifiable {
     public var loops: [LoopRule]
     /// 이 작업공간이 속한 프로젝트 폴더. 1차 상태 파일에는 없다.
     public var projectPath: String?
+    public var links: [NodeLink]?
 
     public init(id: UUID = UUID(), name: String, nodes: [BoardNode] = [], viewport: Viewport = Viewport(),
                 teams: [Team] = [], strokes: [Stroke] = [], loops: [LoopRule] = [], projectPath: String? = nil) {

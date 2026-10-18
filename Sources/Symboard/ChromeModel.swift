@@ -55,6 +55,8 @@ final class ChromeModel: ObservableObject {
     @Published var toast: String?
     @Published var loopBadge = 0
     @Published var resetText = "usage"
+    /// 확인을 기다리는 동작(여러 콘솔 닫기 등).
+    @Published var confirm: PendingConfirm?
     private var toastWork: DispatchWorkItem?
 
     func flash(_ text: String) {
@@ -64,4 +66,11 @@ final class ChromeModel: ObservableObject {
         toastWork = w
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.4, execute: w)
     }
+}
+
+struct PendingConfirm: Identifiable {
+    let id = UUID()
+    var message: String
+    var button: String
+    var action: () -> Void
 }

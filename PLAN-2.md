@@ -21,10 +21,10 @@ STATUS: IN_PROGRESS
 
 ## B. 터미널 노드와 그룹
 
-- [ ] B1. 노드 헤더: CLI 글리프+꺾쇠·상태 점·짧은 이름(자동)·상태 알약(모노 대문자)·권한 배지·다시 시작·복제·닫기 (agent1/resume-mid.jpg)
-- [ ] B2. 그룹 프레임: 색 점·이름·개수·"N running"·접기, 프레임째 이동 (agent1/board-0.jpg 오른쪽)
-- [ ] B3. 곡선 연결선과 흐르는 점 (board.jpg r2c2, r3c1)
-- [ ] B4. 여러 노드 닫기 전 확인 (voice.jpg r3c3)
+- [x] B1. 노드 헤더: CLI 글리프+꺾쇠·상태 점·짧은 이름(자동)·상태 알약(모노 대문자)·권한 배지·다시 시작·복제·닫기 (agent1/resume-mid.jpg)
+- [x] B2. 그룹 프레임: 색 점·이름·개수·"N running"·접기, 프레임째 이동 (agent1/board-0.jpg 오른쪽)
+- [x] B3. 곡선 연결선과 흐르는 점 (board.jpg r2c2, r3c1)
+- [x] B4. 여러 노드 닫기 전 확인 (voice.jpg r3c3)
 
 ## F. 이어하기
 
@@ -101,5 +101,8 @@ STATUS: IN_PROGRESS
   - 남은 차이: 설정 버튼은 아직 안내 문구만(설정 화면 없음). 사용량 알약은 재설정 시각 대신 "usage"(N 에서). 도형·다이어그램 버튼은 H6·S 전까지 임시 동작. 오른쪽 막대 스튜디오 입구는 O 전까지 별도 창. 원본 마이크 자리는 보내기 버튼으로 바꿈.
 - A8: 원본 agent1/board-0.jpg, board.jpg r1c1 / 내 것 `v2/A8-spawn-menu.png`, `v2/A8-drop-placeholder.png`. CLI 목록(로그인 셸 command -v 로 설치 확인, All agents 로 전체), 고르면 점선 자리표시가 마우스를 따라오고 누른 자리에 노드. 남은 차이: 로고 대신 글자 배지.
 - A9·A10: 원본 board.jpg r1c1, node-kanban.mp4 40초(속성 패널은 왼쪽 막대 옆에 붙음) / 내 것 `v2/A9-A10-title-text-panel.png`, `v2/A10-sticky-panel.png`. 글자·스티키·이미지는 헤더 없음, 몸통 끌어 이동, 두 번 눌러 편집, Delete 로 삭제. 패널: 색 6+사용자 색, 글꼴 4, S/M/L/XL, 정렬, 불투명도, 앞으로/뒤로/복제/삭제. 1차 확인: vim 열고 닫기, sleep 에 Ctrl-C 정상.
+- B1: 원본 agent1/resume-mid.jpg / 내 것 `v2/B1-node-headers.png`. 글자 배지+꺾쇠(메뉴), 상태 점, 짧은 이름(Ada, Pip... 자동, 이름 두 번 눌러 바꿈, 1차 "프로그램 - 폴더" 이름은 시작할 때 바꿈), 역할은 이름 옆 흐린 글씨, 모노 대문자 상태 알약(READY/RUNNING/NEEDS YOU/EXITED, 일시정지면 PAUSED), 권한 배지(실행 인자에 자동 승인 옵션이 있으면 AUTO), 다시 시작·복제·닫기. 남은 차이: 원본 글리프는 CLI 로고, 여기는 글자 배지.
+- B2·B3: 원본 agent1/board-0.jpg 오른쪽, voice.jpg r3c3, board.jpg r2c2 / 내 것 `v2/B2-B3-group-frame-links.png`, `v2/B2-group-collapsed.png`. 팀마다 둥근 프레임(색 점·이름·개수·"N running"/idle·꺾쇠), 머리를 끌면 멤버가 함께 이동(디버그 dragGroup 로 4개 노드 frame 이 +1100 이동 확인), 꺾쇠로 접기, 오른쪽 클릭 메뉴(이름 바꾸기·풀기·모두 닫기). 노드 메뉴 Link To 로 노드·그룹 사이 곡선, 선 위로 점이 흐름(CAKeyframeAnimation). 남은 차이: 연결선은 메뉴로만 만든다(원본은 오케스트레이터 Connect 로 생김, C 에서).
+- B4: 원본 voice.jpg r3c3 / 내 것 `v2/B4-close-confirm.png`. `/close @backend` 또는 그룹 메뉴 → 아래 바 위에 "이름들: about to close 4 consoles" + Close 4 / Cancel. 고친 것: 숨긴 홈 화면 호스팅 뷰가 클릭을 가로채던 문제(숨겨지면 hitTest nil).
 
 ## 막힌 것

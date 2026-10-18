@@ -298,6 +298,41 @@ final class DebugBridge {
         case "chrome":
             let ch = controller.chrome
             log.append("chrome tool=\(ch.tool) zoom=\(ch.zoomPercent) live=\(ch.liveCount) branch=\(ch.branch ?? "-") changes=\(ch.changeCount) home=\(ch.showingHome)")
+        case "link":
+            // from: 노드 번호, to: 노드 번호 또는 team: 팀 번호
+            if let i = cmd["from"] as? Int, i < nodes.count, let nv = controller.currentCanvas?.nodeViews[nodes[i].id] {
+                if let j = cmd["to"] as? Int, j < nodes.count { nv.link(to: nodes[j].id) }
+                if let t = cmd["team"] as? Int, t < model.selectedWorkspace.teams.count { nv.link(to: model.selectedWorkspace.teams[t].id) }
+                log.append("linked")
+            }
+        case "collapse":
+            if let t = cmd["team"] as? Int, t < model.selectedWorkspace.teams.count {
+                controller.currentCanvas?.setGroup(model.selectedWorkspace.teams[t].id, collapsed: cmd["on"] as? Bool ?? true)
+            }
+        case "dragGroup":
+            if let t = cmd["team"] as? Int, t < model.selectedWorkspace.teams.count, let canvas = controller.currentCanvas,
+               let g = canvas.groupViews[model.selectedWorkspace.teams[t].id] {
+                let local = NSPoint(x: g.frame.minX + 30, y: g.frame.minY + 14)
+                let dx = cmd["dx"] as? Double ?? 0, dy = cmd["dy"] as? Double ?? 0
+                for i in 0...6 {
+                    let tt = Double(min(i, 5)) / 5
+                    let p = canvas.convert(NSPoint(x: local.x + dx * tt, y: local.y + dy * tt), to: nil)
+                    let type: NSEvent.EventType = i == 0 ? .leftMouseDown : (i == 6 ? .leftMouseUp : .leftMouseDragged)
+                    if let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: controller.window?.windowNumber ?? 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                        controller.window?.sendEvent(e)
+                    }
+                }
+                let hp = canvas.convert(local, to: nil)
+                let hit = controller.window?.contentView?.hitTest(controller.window!.contentView!.convert(hp, from: nil))
+                log.append("dragGroup hit=\(hit.map { String(describing: type(of: $0)) } ?? "nil") frame=\(g.frame)")
+            }
+        case "confirm":
+            if let cf = controller.chrome.confirm {
+                controller.chrome.confirm = nil
+                if cmd["yes"] as? Bool ?? false { cf.action() }
+                log.append("confirm \(cf.message)")
+            } else { log.append("confirm: none") }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

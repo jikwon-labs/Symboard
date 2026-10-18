@@ -1,0 +1,221 @@
+import AppKit
+import QuartzCore
+import SymboardCore
+
+/// 팀(그룹)에 속한 노드들을 감싸는 둥근 프레임. 머리를 끌면 노드가 함께 움직이고, 꺾쇠로 접는다.
+/// 머리 밖의 몸통은 클릭을 받지 않아 보드 이동이 그대로 된다.
+final class GroupFrameView: NSView {
+    static let headerHeight: CGFloat = 30
+    static let pad: CGFloat = 14
+
+    let teamID: UUID
+    weak var canvas: CanvasView?
+    var team: Team
+    var memberCount = 0
+    var summary = ""
+    private var dragStart: (NSPoint, [UUID: NSPoint])?
+    private var moved = false
+    private var headerWidth: CGFloat = 200
+
+    init(team: Team) {
+        self.teamID = team.id
+        self.team = team
+        super.init(frame: .zero)
+        wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override var isFlipped: Bool { true }
+
+    var collapsed: Bool { team.collapsed ?? false }
+
+    /// 프레임 몸통(머리 아래)의 사각형. 연결선이 여기에 붙는다.
+    var bodyRect: NSRect { NSRect(x: frame.minX, y: frame.minY + Self.headerHeight, width: frame.width, height: frame.height - Self.headerHeight) }
+
+    private var titleAttr: NSAttributedString {
+        let s = NSMutableAttributedString(string: team.name.uppercased(), attributes: [
+            .font: NSFont.systemFont(ofSize: 13, weight: .bold), .kern: 1.0, .foregroundColor: Theme.text])
+        s.append(NSAttributedString(string: "   \(memberCount)", attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.textDim]))
+        s.append(NSAttributedString(string: "  ·  \(summary)", attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular), .foregroundColor: Theme.textDim]))
+        return s
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let color = NSColor(hex: team.colorHex)
+        let body = NSRect(x: 0.5, y: Self.headerHeight, width: bounds.width - 1, height: bounds.height - Self.headerHeight - 0.5)
+        let path = NSBezierPath(roundedRect: body, xRadius: 16, yRadius: 16)
+        color.withAlphaComponent(0.035).setFill()
+        path.fill()
+        color.withAlphaComponent(0.45).setStroke()
+        path.lineWidth = 1
+        path.stroke()
+
+        let dot = NSRect(x: 8, y: Self.headerHeight / 2 - 4, width: 8, height: 8)
+        color.setFill()
+        NSBezierPath(ovalIn: dot).fill()
+        let t = titleAttr
+        let sz = t.size()
+        t.draw(at: NSPoint(x: 24, y: (Self.headerHeight - sz.height) / 2))
+        let chevX = 24 + sz.width + 10
+        headerWidth = chevX + 18
+        if let img = NSImage(systemSymbolName: collapsed ? "chevron.right" : "chevron.down", accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 10, weight: .semibold)) {
+            let tinted = img.tinted(Theme.textDim)
+            tinted.draw(in: NSRect(x: chevX, y: Self.headerHeight / 2 - 5, width: 10, height: 10))
+        }
+        if collapsed {
+            let s = NSAttributedString(string: "\(memberCount) hidden · click the arrow to open", attributes: [
+                .font: NSFont.systemFont(ofSize: 12), .foregroundColor: Theme.textDim])
+            s.draw(at: NSPoint(x: 18, y: Self.headerHeight + 16))
+        }
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let sv = superview else { return nil }
+        let p = convert(point, from: sv)
+        if p.y <= Self.headerHeight && p.x <= headerWidth + 8 { return self }
+        // 접힌 프레임은 몸통 전체를 머리처럼 다룬다.
+        if collapsed && bounds.contains(p) { return self }
+        return nil
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let canvas else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        if p.x >= headerWidth - 20 && p.x <= headerWidth + 8 && p.y <= Self.headerHeight {
+            canvas.setGroup(teamID, collapsed: !collapsed)
+            return
+        }
+        if event.clickCount == 2 {
+            canvas.controller?.renameTeam(teamID)
+            return
+        }
+        var origins: [UUID: NSPoint] = [:]
+        for (id, v) in canvas.nodeViews where canvas.model.node(id)?.teamID == teamID { origins[id] = v.frame.origin }
+        origins[teamID] = frame.origin
+        moved = false
+        dragStart = (canvas.convert(event.locationInWindow, from: nil), origins)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let canvas, let (start, origins) = dragStart else { return }
+        let p = canvas.convert(event.locationInWindow, from: nil)
+        let dx = round(p.x - start.x), dy = round(p.y - start.y)
+        moved = true
+        for (id, o) in origins {
+            if id == teamID { setFrameOrigin(NSPoint(x: o.x + dx, y: o.y + dy)) }
+            else { canvas.nodeViews[id]?.setFrameOrigin(NSPoint(x: o.x + dx, y: o.y + dy)) }
+        }
+        canvas.layoutLinks()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard let canvas, let (_, origins) = dragStart else { return }
+        dragStart = nil
+        if moved {
+            for id in origins.keys where id != teamID { canvas.nodeViews[id]?.commitFrame() }
+            canvas.layoutGroups()
+        }
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        guard let canvas, let c = canvas.controller else { return }
+        let m = NSMenu()
+        m.addItem(ClosureMenuItem(title: "Rename Group...") { c.renameTeam(self.teamID) })
+        m.addItem(ClosureMenuItem(title: collapsed ? "Expand" : "Collapse") { canvas.setGroup(self.teamID, collapsed: !self.collapsed) })
+        m.addItem(ClosureMenuItem(title: "Ungroup") { c.ungroup(self.teamID) })
+        m.addItem(.separator())
+        m.addItem(ClosureMenuItem(title: "Close \(memberCount) Console\(memberCount == 1 ? "" : "s")...") { c.closeTeam(self.teamID) })
+        NSMenu.popUpContextMenu(m, with: event, for: self)
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(NSRect(x: 0, y: 0, width: headerWidth, height: Self.headerHeight), cursor: .openHand)
+    }
+}
+
+/// 노드·그룹 사이 곡선 연결선. 선 위로 점이 흐른다. 클릭은 받지 않는다.
+final class LinksView: NSView {
+    private var layers: [UUID: (CAShapeLayer, CALayer, CGPath)] = [:]
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    /// 두 사각형의 마주 보는 변 가운데를 잇는 곡선.
+    static func path(from a: NSRect, to b: NSRect) -> CGPath {
+        let p = CGMutablePath()
+        let dx = b.midX - a.midX, dy = b.midY - a.midY
+        if abs(dx) >= abs(dy) {
+            let s = CGPoint(x: dx >= 0 ? a.maxX : a.minX, y: a.midY)
+            let e = CGPoint(x: dx >= 0 ? b.minX : b.maxX, y: b.midY)
+            let k = max(abs(e.x - s.x) * 0.5, 40) * (dx >= 0 ? 1 : -1)
+            p.move(to: s)
+            p.addCurve(to: e, control1: CGPoint(x: s.x + k, y: s.y), control2: CGPoint(x: e.x - k, y: e.y))
+        } else {
+            let s = CGPoint(x: a.midX, y: dy >= 0 ? a.maxY : a.minY)
+            let e = CGPoint(x: b.midX, y: dy >= 0 ? b.minY : b.maxY)
+            let k = max(abs(e.y - s.y) * 0.5, 40) * (dy >= 0 ? 1 : -1)
+            p.move(to: s)
+            p.addCurve(to: e, control1: CGPoint(x: s.x, y: s.y + k), control2: CGPoint(x: e.x, y: e.y - k))
+        }
+        return p
+    }
+
+    func update(_ segments: [(UUID, NSRect, NSRect)]) {
+        guard let root = layer else { return }
+        let ids = Set(segments.map(\.0))
+        for (id, l) in layers where !ids.contains(id) {
+            l.0.removeFromSuperlayer(); l.1.removeFromSuperlayer()
+            layers[id] = nil
+        }
+        for (id, a, b) in segments {
+            let path = Self.path(from: a, to: b)
+            if let cur = layers[id], cur.2 == path { continue }
+            let shape = layers[id]?.0 ?? CAShapeLayer()
+            let dot = layers[id]?.1 ?? CALayer()
+            shape.path = path
+            shape.fillColor = nil
+            shape.strokeColor = Theme.accent.withAlphaComponent(0.55).cgColor
+            shape.lineWidth = 1.5
+            dot.bounds = CGRect(x: 0, y: 0, width: 7, height: 7)
+            dot.cornerRadius = 3.5
+            dot.backgroundColor = Theme.accent.cgColor
+            dot.shadowColor = Theme.accent.cgColor
+            dot.shadowOpacity = 0.9
+            dot.shadowRadius = 4
+            dot.shadowOffset = .zero
+            if shape.superlayer == nil { root.addSublayer(shape); root.addSublayer(dot) }
+            let anim = CAKeyframeAnimation(keyPath: "position")
+            anim.path = path
+            anim.calculationMode = .paced
+            let len = hypot(b.midX - a.midX, b.midY - a.midY)
+            anim.duration = max(1.6, Double(len) / 140)
+            anim.repeatCount = .infinity
+            dot.removeAnimation(forKey: "flow")
+            dot.add(anim, forKey: "flow")
+            layers[id] = (shape, dot, path)
+        }
+    }
+}
+
+extension NSImage {
+    func tinted(_ color: NSColor) -> NSImage {
+        let img = NSImage(size: size)
+        img.lockFocus()
+        draw(in: NSRect(origin: .zero, size: size))
+        color.set()
+        NSRect(origin: .zero, size: size).fill(using: .sourceAtop)
+        img.unlockFocus()
+        return img
+    }
+}

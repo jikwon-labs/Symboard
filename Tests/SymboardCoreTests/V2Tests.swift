@@ -50,3 +50,17 @@ import Testing
         #expect(Projects.paths(in: s.workspaces).isEmpty)
     }
 }
+
+@Suite struct NamePoolTests {
+    @Test func firstUnused() {
+        #expect(NamePool.next(used: []) == "Ada")
+        #expect(NamePool.next(used: ["Ada", "Pip"]) == "Maya")
+        #expect(NamePool.next(used: Set(NamePool.names)) == "Ada2")
+    }
+
+    @Test func permissionBadge() {
+        #expect(PermissionMode.label(for: TerminalSpec(agent: .claude, extraArgs: ["--dangerously-skip-permissions"], cwd: "/")) == "AUTO")
+        #expect(PermissionMode.label(for: TerminalSpec(agent: .claude, extraArgs: ["--permission-mode", "plan"], cwd: "/")) == "PLAN")
+        #expect(PermissionMode.label(for: TerminalSpec(agent: .codex, cwd: "/")) == nil)
+    }
+}

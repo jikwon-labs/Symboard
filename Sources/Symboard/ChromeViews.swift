@@ -428,7 +428,18 @@ struct BottomBar: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            if let s = chrome.suggestion {
+            if let cf = chrome.confirm {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.symAccent)
+                    Text(cf.message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
+                    Button(cf.button) { chrome.confirm = nil; cf.action() }
+                        .buttonStyle(PillButtonStyle(prominent: true))
+                    Button("Cancel") { chrome.confirm = nil }
+                        .buttonStyle(PillButtonStyle())
+                }
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .floatingCapsule(radius: 14)
+            } else if let s = chrome.suggestion {
                 HStack(spacing: 6) {
                     Button(s) { chrome.command = "@all git status"; focused = true }
                         .buttonStyle(.plain)

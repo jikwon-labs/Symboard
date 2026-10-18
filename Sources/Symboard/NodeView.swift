@@ -29,7 +29,6 @@ final class NodeView: NSView {
     let content: NodeContent
     let header = NodeHeaderView()
     private let resizeHandle = ResizeHandleView()
-    private let teamBadge = NSTextField(labelWithString: "")
 
     var isSelected = false {
         didSet {
@@ -82,11 +81,14 @@ final class NodeView: NSView {
         header.closeButton.action = #selector(closeClicked)
         header.menuButton.target = self
         header.menuButton.action = #selector(menuClicked(_:))
-        teamBadge.font = .systemFont(ofSize: 10, weight: .semibold)
-        teamBadge.textColor = .white
-        teamBadge.wantsLayer = true
-        teamBadge.layer?.cornerRadius = 4
-        header.addSubview(teamBadge)
+        header.chevron.target = self
+        header.chevron.action = #selector(menuClicked(_:))
+        header.restartButton.target = self
+        header.restartButton.action = #selector(restartClicked)
+        header.duplicateButton.target = self
+        header.duplicateButton.action = #selector(duplicateClicked)
+        header.isTerminal = node.kind == .terminal
+        header.kindIcon.image = NSImage(systemSymbolName: LayersList.symbol(node.kind), accessibilityDescription: nil)
         updateBorder()
         layoutParts()
         syncFromModel()
@@ -115,15 +117,16 @@ final class NodeView: NSView {
         guard let node = model.node(nodeID) else { return }
         let target = CanvasGeometry.viewRect(node.frame)
         if frame != target { frame = target }
-        header.titleLabel.stringValue = node.role.map { "\($0) - \(node.title)" } ?? node.title
-        if let teamID = node.teamID, let ws = canvas?.workspace, let team = ws.teams.first(where: { $0.id == teamID }) {
-            teamBadge.stringValue = " \(team.name) "
-            teamBadge.layer?.backgroundColor = NSColor(hex: team.colorHex).cgColor
-            teamBadge.isHidden = false
-        } else {
-            teamBadge.isHidden = true
+        header.titleLabel.stringValue = node.title
+        header.roleLabel.stringValue = node.role ?? ""
+        if let spec = node.terminal {
+            header.glyph.choice = AgentCatalog.choice(for: spec)
+            if let perm = PermissionMode.label(for: spec) {
+                header.permBadge.set(text: perm, color: Theme.accent, filled: true)
+                header.permBadge.isHidden = false
+            } else { header.permBadge.isHidden = true }
+            header.toolTip = "\(AgentCatalog.choice(for: spec).name) · \((spec.cwd as NSString).abbreviatingWithTildeInPath)"
         }
-        header.badgeView = teamBadge.isHidden ? nil : teamBadge
         header.needsLayout = true
         content.sync(node: node)
     }
@@ -165,6 +168,24 @@ final class NodeView: NSView {
         menu.addItem(ClosureMenuItem(title: "Rename...") { [weak self] in self?.rename() })
         menu.addItem(ClosureMenuItem(title: "Set Role...") { [weak self] in self?.setRole() })
         if let ws = canvas?.workspace {
+            let linkItem = NSMenuItem(title: "Link To", action: nil, keyEquivalent: "")
+            let lsub = NSMenu()
+            for t in ws.teams where ws.nodes.contains(where: { $0.teamID == t.id }) {
+                lsub.addItem(ClosureMenuItem(title: "Group: \(t.name)") { [weak self] in self?.link(to: t.id) })
+            }
+            for n in ws.nodes where n.id != nodeID {
+                lsub.addItem(ClosureMenuItem(title: n.title) { [weak self] in self?.link(to: n.id) })
+            }
+            if ws.links?.contains(where: { $0.from == nodeID || $0.to == nodeID }) == true {
+                lsub.addItem(.separator())
+                lsub.addItem(ClosureMenuItem(title: "Remove Links") { [weak self] in
+                    guard let self else { return }
+                    self.model.mutateWorkspace(ws.id) { $0.links?.removeAll { $0.from == self.nodeID || $0.to == self.nodeID } }
+                    self.canvas?.layoutLinks()
+                })
+            }
+            linkItem.submenu = lsub
+            menu.addItem(linkItem)
             let teamItem = NSMenuItem(title: "Team", action: nil, keyEquivalent: "")
             let sub = NSMenu()
             sub.addItem(ClosureMenuItem(title: "None") { [weak self] in self?.assignTeam(nil) })
@@ -177,7 +198,16 @@ final class NodeView: NSView {
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 2), in: sender)
     }
 
-    private func rename() {
+    @objc private func restartClicked() {
+        model.sessions.restart(nodeID)
+    }
+
+    @objc private func duplicateClicked() {
+        canvas?.select(nodeID)
+        canvas?.controller?.duplicateSelection()
+    }
+
+    func rename() {
         guard let node = model.node(nodeID) else { return }
         if let name = Prompt.text(title: "Rename node", value: node.title) {
             model.mutateNode(nodeID) { $0.title = name }
@@ -193,6 +223,15 @@ final class NodeView: NSView {
         }
     }
 
+    func link(to target: UUID) {
+        guard let ws = canvas?.workspace else { return }
+        model.mutateWorkspace(ws.id) { w in
+            if w.links?.contains(where: { $0.from == nodeID && $0.to == target }) == true { return }
+            w.links = (w.links ?? []) + [NodeLink(from: nodeID, to: target)]
+        }
+        canvas?.layoutLinks()
+    }
+
     private func newTeam() {
         guard let ws = canvas?.workspace,
               let name = Prompt.text(title: "New team", value: "Team \(ws.teams.count + 1)"), !name.isEmpty else { return }
@@ -204,6 +243,7 @@ final class NodeView: NSView {
     private func assignTeam(_ id: UUID?) {
         model.mutateNode(nodeID) { $0.teamID = id }
         syncFromModel()
+        canvas?.layoutGroups()
     }
 
     /// 편집 중이면 가림막을 치우고 본문에 입력 초점을 준다.
@@ -240,80 +280,122 @@ final class NodeView: NSView {
     }
 }
 
-/// 노드 헤더. 끌면 노드가 움직이고, 두 번 누르면 이름을 바꾼다.
+/// 노드 헤더. 왼쪽: CLI 글자 배지·꺾쇠(메뉴)·상태 점·이름, 오른쪽: 권한 배지·상태 알약·다시 시작·복제·닫기.
+/// 끌면 노드가 움직이고, 이름을 두 번 누르면 이름을 바꾼다.
 final class NodeHeaderView: NSView {
     weak var nodeView: NodeView?
+    let glyph = GlyphView()
+    let chevron = NSButton()
     let titleLabel = NSTextField(labelWithString: "")
+    let roleLabel = NSTextField(labelWithString: "")
     let statusDot = NSView()
-    let statusLabel = NSTextField(labelWithString: "")
+    let statusPill = PillLabel()
+    let permBadge = PillLabel()
+    let restartButton = NSButton()
+    let duplicateButton = NSButton()
     let closeButton = NSButton()
     let menuButton = NSButton()
-    weak var badgeView: NSView?
+    let kindIcon = NSImageView()
+    var isTerminal = false { didSet { applyKind() } }
     private var dragStart: (NSPoint, NSPoint)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.backgroundColor = Theme.surface.cgColor
-        titleLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        titleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         titleLabel.textColor = Theme.text
         titleLabel.lineBreakMode = .byTruncatingTail
-        statusLabel.font = .systemFont(ofSize: 10)
-        statusLabel.textColor = NSColor(calibratedWhite: 0.7, alpha: 1)
+        roleLabel.font = .systemFont(ofSize: 11)
+        roleLabel.textColor = Theme.textDim
+        roleLabel.lineBreakMode = .byTruncatingTail
         statusDot.wantsLayer = true
-        statusDot.layer?.cornerRadius = 4
+        statusDot.layer?.cornerRadius = 3.5
         statusDot.isHidden = true
-        for (b, sym, tip) in [(closeButton, "xmark", "Close"), (menuButton, "ellipsis", "More")] {
+        statusPill.isHidden = true
+        permBadge.isHidden = true
+        permBadge.set(text: "AUTO", color: Theme.accent, filled: true)
+        kindIcon.contentTintColor = Theme.textDim
+        for (b, sym, tip) in [(closeButton, "xmark", "Close"), (menuButton, "ellipsis", "More"),
+                              (restartButton, "arrow.clockwise", "Restart"), (duplicateButton, "plus.square.on.square", "Duplicate"),
+                              (chevron, "chevron.down", "Menu")] {
             b.bezelStyle = .inline
             b.isBordered = false
-            b.image = NSImage(systemSymbolName: sym, accessibilityDescription: tip)
-            b.contentTintColor = NSColor(calibratedWhite: 0.75, alpha: 1)
+            b.image = NSImage(systemSymbolName: sym, accessibilityDescription: tip)?
+                .withSymbolConfiguration(.init(pointSize: b === chevron ? 8 : 11, weight: .semibold))
+            b.contentTintColor = Theme.textDim
             b.toolTip = tip
         }
-        [statusDot, titleLabel, statusLabel, closeButton, menuButton].forEach(addSubview)
+        [glyph, chevron, statusDot, titleLabel, roleLabel, permBadge, statusPill, restartButton, duplicateButton,
+         closeButton, menuButton, kindIcon].forEach(addSubview)
+        applyKind()
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
     override var isFlipped: Bool { true }
 
+    private func applyKind() {
+        glyph.isHidden = !isTerminal
+        chevron.isHidden = !isTerminal
+        restartButton.isHidden = !isTerminal
+        duplicateButton.isHidden = !isTerminal
+        menuButton.isHidden = isTerminal
+        kindIcon.isHidden = isTerminal
+        needsLayout = true
+    }
+
     override func layout() {
         super.layout()
         let h = bounds.height
-        var x: CGFloat = 10
+        let mid = { (v: CGFloat) in (h - v) / 2 }
+        var x: CGFloat = 8
+        if isTerminal {
+            glyph.frame = NSRect(x: x, y: mid(18), width: 18, height: 18)
+            x += 19
+            chevron.frame = NSRect(x: x, y: mid(16), width: 12, height: 16)
+            x += 16
+        } else {
+            kindIcon.frame = NSRect(x: x + 2, y: mid(14), width: 14, height: 14)
+            x += 22
+        }
         if !statusDot.isHidden {
-            statusDot.frame = NSRect(x: x, y: (h - 8) / 2, width: 8, height: 8)
-            x += 14
+            statusDot.frame = NSRect(x: x, y: mid(7), width: 7, height: 7)
+            x += 13
         }
-        closeButton.frame = NSRect(x: bounds.width - 26, y: (h - 20) / 2, width: 20, height: 20)
-        menuButton.frame = NSRect(x: bounds.width - 48, y: (h - 20) / 2, width: 20, height: 20)
-        var right = bounds.width - 54
-        statusLabel.sizeToFit()
-        if !statusLabel.isHidden {
-            statusLabel.frame = NSRect(x: right - statusLabel.frame.width, y: (h - statusLabel.frame.height) / 2,
-                                       width: statusLabel.frame.width, height: statusLabel.frame.height)
-            right = statusLabel.frame.minX - 6
+        var right = bounds.width - 6
+        for b in [closeButton, duplicateButton, restartButton, menuButton] where !b.isHidden {
+            b.frame = NSRect(x: right - 22, y: mid(20), width: 22, height: 20)
+            right -= 23
         }
-        if let badge = badgeView as? NSTextField {
-            badge.sizeToFit()
-            badge.frame = NSRect(x: right - badge.frame.width, y: (h - 16) / 2, width: badge.frame.width, height: 16)
-            right = badge.frame.minX - 6
+        right -= 4
+        for pill in [statusPill, permBadge] where !pill.isHidden {
+            let w = pill.fittingWidth
+            pill.frame = NSRect(x: right - w, y: mid(16), width: w, height: 16)
+            right -= w + 6
         }
-        titleLabel.frame = NSRect(x: x, y: (h - 16) / 2, width: max(10, right - x), height: 16)
+        titleLabel.sizeToFit()
+        let tw = min(titleLabel.frame.width, max(10, right - x))
+        titleLabel.frame = NSRect(x: x, y: mid(16), width: tw, height: 16)
+        let rx = x + tw + 6
+        roleLabel.frame = NSRect(x: rx, y: mid(15), width: max(0, right - rx), height: 15)
     }
 
     func setStatus(_ status: NodeStatus?) {
         guard let status else {
             statusDot.isHidden = true
-            statusLabel.isHidden = true
+            statusPill.isHidden = true
             needsLayout = true
             return
         }
+        let paused = nodeView.flatMap { nv in nv.model.sessions.session(for: nv.nodeID)?.paused } ?? false
+        let wasHidden = statusPill.isHidden
         statusDot.isHidden = false
-        statusLabel.isHidden = false
+        statusPill.isHidden = false
         statusDot.layer?.backgroundColor = status.color.cgColor
-        if statusLabel.stringValue != status.label {
-            statusLabel.stringValue = status.label
+        let text = paused ? "PAUSED" : status.pillText
+        if statusPill.text != text || wasHidden {
+            statusPill.set(text: text, color: paused ? Theme.textDim : status.color, filled: false)
             needsLayout = true
         }
     }
@@ -323,6 +405,7 @@ final class NodeHeaderView: NSView {
         nv.beginInteraction()
         if event.clickCount == 2 {
             dragStart = nil
+            if titleLabel.frame.insetBy(dx: -4, dy: -4).contains(convert(event.locationInWindow, from: nil)) { nv.rename() }
             return
         }
         dragStart = (nv.superview!.convert(event.locationInWindow, from: nil), nv.frame.origin)
@@ -332,6 +415,7 @@ final class NodeHeaderView: NSView {
         guard let nv = nodeView, let (start, origin) = dragStart, let sv = nv.superview else { return }
         let p = sv.convert(event.locationInWindow, from: nil)
         nv.setFrameOrigin(NSPoint(x: round(origin.x + p.x - start.x), y: round(origin.y + p.y - start.y)))
+        nv.canvas?.layoutGroups()
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -341,6 +425,71 @@ final class NodeHeaderView: NSView {
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .openHand)
+    }
+}
+
+/// 모노 대문자 작은 알약(상태·권한 배지).
+final class PillLabel: NSView {
+    private(set) var text = ""
+    private var color = Theme.textDim
+    private var filled = false
+    private static let font = NSFont.monospacedSystemFont(ofSize: 9, weight: .bold)
+
+    var fittingWidth: CGFloat {
+        ceil((text as NSString).size(withAttributes: [.font: Self.font, .kern: 0.8]).width) + (filled ? 12 : 22)
+    }
+
+    func set(text: String, color: NSColor, filled: Bool) {
+        self.text = text; self.color = color; self.filled = filled
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let r = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let path = NSBezierPath(roundedRect: r, xRadius: r.height / 2, yRadius: r.height / 2)
+        if filled {
+            color.withAlphaComponent(0.9).setFill(); path.fill()
+        } else {
+            color.withAlphaComponent(0.10).setFill(); path.fill()
+            color.withAlphaComponent(0.35).setStroke(); path.lineWidth = 1; path.stroke()
+            let dot = NSRect(x: 7, y: bounds.midY - 2.5, width: 5, height: 5)
+            color.setFill(); NSBezierPath(ovalIn: dot).fill()
+        }
+        let attrs: [NSAttributedString.Key: Any] = [.font: Self.font, .kern: 0.8, .foregroundColor: filled ? NSColor.white : color]
+        let str = NSAttributedString(string: text, attributes: attrs)
+        let sz = str.size()
+        str.draw(at: NSPoint(x: filled ? (bounds.width - sz.width) / 2 : 15, y: (bounds.height - sz.height) / 2))
+    }
+}
+
+/// CLI 글자 배지(로고 대신).
+final class GlyphView: NSView {
+    var choice: AgentChoice? { didSet { needsDisplay = true } }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let c = choice else { return }
+        let col = NSColor(hex: c.colorHex)
+        let r = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let path = NSBezierPath(roundedRect: r, xRadius: 5, yRadius: 5)
+        col.withAlphaComponent(0.18).setFill(); path.fill()
+        col.withAlphaComponent(0.55).setStroke(); path.lineWidth = 1; path.stroke()
+        let font = NSFont.monospacedSystemFont(ofSize: c.glyph.count > 1 ? 7.5 : 10, weight: .bold)
+        let str = NSAttributedString(string: c.glyph, attributes: [.font: font, .foregroundColor: col])
+        let sz = str.size()
+        str.draw(at: NSPoint(x: (bounds.width - sz.width) / 2, y: (bounds.height - sz.height) / 2))
+    }
+}
+
+extension NodeStatus {
+    /// 헤더 상태 알약 문구.
+    var pillText: String {
+        switch self {
+        case .starting: return "STARTING"
+        case .working: return "RUNNING"
+        case .idle: return "READY"
+        case .waiting: return "NEEDS YOU"
+        case .exited: return "EXITED"
+        }
     }
 }
 
@@ -375,6 +524,7 @@ final class MoveShieldView: NSView {
         let p = sv.convert(event.locationInWindow, from: nil)
         moved = true
         nv.setFrameOrigin(NSPoint(x: round(origin.x + p.x - start.x), y: round(origin.y + p.y - start.y)))
+        nv.canvas?.layoutLinks()
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -412,6 +562,7 @@ final class ResizeHandleView: NSView {
         let p = sv.convert(event.locationInWindow, from: nil)
         nv.setFrameSize(NSSize(width: max(NodeView.minSize.width, round(s0.width + p.x - p0.x)),
                                height: max(NodeView.minSize.height, round(s0.height + p.y - p0.y))))
+        nv.canvas?.layoutGroups()
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -427,11 +578,11 @@ final class ResizeHandleView: NSView {
 extension NodeStatus {
     var color: NSColor {
         switch self {
-        case .starting: return .systemGray
-        case .working: return .systemGreen
-        case .idle: return .systemBlue
-        case .waiting: return .systemOrange
-        case .exited: return .systemRed
+        case .starting: return Theme.textDim
+        case .working: return Theme.accent
+        case .idle: return NSColor(hex: "#6FCF97")
+        case .waiting: return NSColor(hex: "#E9C46A")
+        case .exited: return NSColor(hex: "#B5524A")
         }
     }
 }
