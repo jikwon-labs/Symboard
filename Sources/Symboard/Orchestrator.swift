@@ -178,7 +178,8 @@ struct OrchestratorView: View {
                 }
                 .buttonStyle(.plainHit).tip(paused ? "Resume" : "Pause")
             }
-            StatusPill(text: paused ? "paused" : st.pillText.lowercased(), color: paused ? Theme.textDim : st.color)
+            let hold = model.sessions.pendingResume.contains(n.id)
+            StatusPill(text: paused ? "paused" : (hold ? "on hold" : st.pillText.lowercased()), color: paused || hold ? Theme.textDim : st.color)
         }
         .foregroundStyle(Color.symDim)
         .padding(.horizontal, 12).padding(.vertical, 5)

@@ -156,7 +156,11 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, /tmp/symv5-1): 같은 아이콘 → 같은 꼴 창(README 57 words, Reading/Source/Graph·Add to Board·Export PDF) → Source → Graph(Link graph · 5 notes) → architecture 노드 → architecture.md Reading → Add to Board → 카드 → 카드 오른쪽 위 펼치기 → 스튜디오 다시 열림(architecture.md) → Export PDF → 저장 시트(architecture.pdf, `v15-export-pdf.png`) → Cancel.
   - 쓰는 데 지장 있는 차이(고침): 그래프 노드를 눌러도 그 글이 열리지 않았다(20pt 투명 원에 onTapGesture — 이 패널에서 클릭을 받지 못함). 점과 이름을 덮는 단추로 바꿨다. 확인: architecture 클릭 → 디버그 상태 file=architecture.md, 화면 Architecture.
   - 모양 차이(남김): 원본 카드 바닥의 "Open in Studio · PDF" 글 단추(우리는 머리의 펼치기 아이콘).
-- [ ] V16. teams.mp4
+- [x] V16. teams.mp4
+  - 원본 조작: 위쪽 도구 메뉴 → Mission Map → 필터 칩·검색·오케스트레이터→팀→콘솔 그래프, 오른쪽 Fleet/Structure → 콘솔(Ren·Juno·Ada) 눌러 상세(Go to the console·Pause·Kill·Now·Belongs to) → 팀 → 오케스트레이터 → Cy → Go to the console → 보드가 그 콘솔로 → 다시 열어 스크롤 → Command center 아래 콘솔 → Go to.
+  - 우리(`env -i`, /tmp/symv5-6 30개): 도구 메뉴 → Mission Map(1 orchestrator · 4 teams · 30 consoles, 칩 All/Working/Needs you/Idle/Done, 검색, 팀→콘솔 곡선, 점선 Command bar only) → Juno → 상세(Go to the console·Pause·Kill·Status Idle·For 26s·Belongs to Backend·Orchestrator) → Ada → Go to the console → 보드가 Ada 로 옮겨 고름(`v16-goto-console.png`).
+  - 쓰는 데 지장 있는 차이(고침): 이어하기 답을 기다리는 claude(보드에서 ON HOLD)가 미션 맵에서 "Exited" 로 보이고 Done 칸에 세였다(Done 5). 오케스트레이터 목록도 "exited". 아직 띄우지 않은 대기라 Idle 칸에 세고 "On hold" 로 보이게 했다. 확인: Idle 30 · Done 0, Ada "On hold".
+  - 모양 차이(남김): 원본 오른쪽 기본 패널은 Fleet·Structure 두 카드(우리는 Overview 한 카드와 설명). 원본은 "Frame the team on the board" 단추가 팀 상세에.
 - [ ] V17. voice.mp4
 
 ## 막힌 것

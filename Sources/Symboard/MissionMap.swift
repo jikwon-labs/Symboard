@@ -24,7 +24,9 @@ struct MissionMapView: View {
     var teams: [Team] { ws.teams.filter { t in consoles.contains { $0.teamID == t.id } } }
     var links: [NodeLink] { ws.links ?? [] }
 
-    func status(_ id: UUID) -> NodeStatus { model.sessions.status(of: id) ?? .starting }
+    /// 이어하기 답을 기다리는(아직 띄우지 않은) 콘솔은 끝난 것이 아니라 대기다. Idle 칸에 세고 "On hold" 로 보인다.
+    func onHold(_ id: UUID) -> Bool { model.sessions.pendingResume.contains(id) }
+    func status(_ id: UUID) -> NodeStatus { onHold(id) ? .idle : (model.sessions.status(of: id) ?? .starting) }
 
     static func bucket(_ s: NodeStatus) -> String {
         switch s {
@@ -201,7 +203,7 @@ struct MissionMapView: View {
                         AgentBadge(choice: AgentCatalog.choice(for: n.terminal), size: 20)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(n.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
-                            Text(Self.bucket(st) == "Idle" ? "At the prompt" : st.label).font(.system(size: 10)).foregroundStyle(Color.symDim)
+                            Text(onHold(n.id) ? "On hold" : (Self.bucket(st) == "Idle" ? "At the prompt" : st.label)).font(.system(size: 10)).foregroundStyle(Color.symDim)
                         }
                         Spacer()
                         Circle().fill(Color(nsColor: st.color)).frame(width: 6, height: 6)
@@ -329,7 +331,7 @@ struct MissionMapView: View {
                     Circle().fill(Color(nsColor: st.color)).frame(width: 6, height: 6)
                     Text("Status").foregroundStyle(Color.symDim)
                     Spacer()
-                    Text(paused ? "Paused" : st.label).foregroundStyle(Color(nsColor: st.color))
+                    Text(paused ? "Paused" : (onHold(n.id) ? "On hold" : st.label)).foregroundStyle(Color(nsColor: st.color))
                 }
                 HStack {
                     Text("For").foregroundStyle(Color.symDim)
