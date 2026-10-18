@@ -403,7 +403,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         gitBusy = true
         let path = projectPath
         Task { @MainActor in
-            let out = await GitRunner.run(["status", "--porcelain=v2", "--branch"], cwd: path)
+            let out = await GitRunner.run(["status", "--porcelain=v2", "--branch", "-uall"], cwd: path)
             gitBusy = false
             if out.code == 0 {
                 let s = GitStatus.parse(out.out)

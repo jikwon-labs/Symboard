@@ -92,7 +92,11 @@ STATUS: IN_PROGRESS
   - 남은 것(사용자 결정이라 둠): codex 의 "Update available" 화면(Enter 기본값이 전역 업데이트)과 /tmp/symsample 폴더 신뢰 화면. 둘 다 NEEDS YOU 로 잘 보이고, 답하면 ~/.codex 를 바꾸거나 전역 설치가 되므로 시험에서는 답하지 않았다(Esc 로 업데이트 건너뛰기만 확인, codex 0.157.1 그대로).
   - 쓰는 데 지장 있는 차이(고침, 따라 하다 찾음): 다시 켜면 지금 보이는 탭의 콘솔만 돌고 다른 탭 콘솔은 그 탭을 열어야 떴다(live 12, Main 의 셸 24개 꺼짐). 켤 때 모든 작업공간의 콘솔을 띄운다. 확인: Workspace 2 가 보이는 채 Cmd+Q → 다시 띄움 → "28 live", 토스트 "14 consoles"(두 탭의 claude 전부).
   - 모양 차이: 원본 Fill all 줄의 CLI 아이콘 열두 개(우리는 이 맥에 깔린 것만: Claude·Codex·Shell). 원본 그룹 머리 "12 running", 우리는 "4 need you"(상태가 다름).
-- [ ] V4. node-git.mp4
+- [x] V4. node-git.mp4
+  - 원본 조작: 아래 왼쪽 "main 5" → git 팝오버(Reading changes… → Commit & Push 5 files) → 시계(히스토리) → 다시 변경 → 메시지 칸 "bugfix/payment-gateway-timeout" → Commit & Push → Committing… → Pushing… → "Working tree clean", "Committed 5 files · pushed", 칩 "main".
+  - 우리(`env -i`, /tmp/symsample, 원격 없음): main 칩 → 같은 꼴 팝오버(저장소·브랜치·synced, 시계·열기·새로고침·닫기, CHANGES 7/7 +25 −3, 파일별 체크·M/U, 메시지 칸 + 반짝임, Commit & Push 7 files, RECENT) → 시계 → 같은 메시지 타이핑 → 커밋 3d24c97, 칩 "main"(배지 없음).
+  - 쓰는 데 지장 있는 차이(고침): 칩 숫자(4)와 팝오버 변경 수(7)가 달랐다 — 칩은 추적 안 된 폴더를 한 줄로 셌다. 칩도 `-uall` 로 파일마다 센다. 확인: 새 폴더에 파일 둘 → 다시 띄움 → "main 2"(`v4-chip-count.png`).
+  - 모양 차이(남김): 커밋 뒤 원본은 팝오버가 열린 채 "Working tree clean · Committed · pushed" 를 보이고, 우리는 4차에서 닫고 알림으로 보인다(입력칸이 사라진 팝오버가 키 창으로 남아 Esc·Cmd+Q 가 먹지 않던 문제 때문, REPORT-4). 시계를 눌렀을 때 히스토리로 바뀌는 것은 0.8초 캡처에서 보이지 않았다(2차에서 확인된 기능, 이번엔 다시 보지 않음).
 - [ ] V5. node-ink.mp4
 - [ ] V6. node-kanban.mp4
 - [ ] V7. node-loops.mp4
