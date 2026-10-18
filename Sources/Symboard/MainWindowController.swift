@@ -748,7 +748,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let zoom = min((size.width - 200) / (maxX - minX + 80), (size.height - 240) / (maxY - minY + 80), 1.2)
         scrollView.center(on: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2), zoom: zoom)
     }
-    func openSettings() { chrome.flash("Settings: drag folders onto Home to add projects") }
+    func openSettings() { SettingsWindowController.shared.show(over: window) }
 
     /// 놓기 도구로 캔버스를 눌렀을 때.
     /// 막대들에 가리지 않는 보드 영역(캔버스 좌표). 위 70, 왼쪽·오른쪽 80, 아래 110 포인트를 뺀다.

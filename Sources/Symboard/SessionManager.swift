@@ -28,6 +28,14 @@ final class SessionManager {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
+        // 설정에서 터미널 글꼴을 바꾸면 떠 있는 콘솔 모두에 바로 적용한다.
+        NotificationCenter.default.addObserver(forName: .terminalFontChanged, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let font = TerminalFont.current
+                for s in self.sessions.values { s.view.font = font }
+            }
+        }
     }
 
     func session(for nodeID: UUID) -> TerminalSession? { sessions[nodeID] }

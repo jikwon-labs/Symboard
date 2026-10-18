@@ -53,7 +53,7 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         self.statusFile = statusDirectory.appendingPathComponent(nodeID.uuidString)
         super.init()
         view.processDelegate = self
-        view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        view.font = TerminalFont.current
         view.nativeBackgroundColor = Theme.terminalBackground
         view.nativeForegroundColor = Theme.text
         view.onOutput = { [weak self] slice in

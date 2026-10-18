@@ -9,3 +9,11 @@
    원래는 낮은 수위 1 바이트로 조각이 올 때마다(`done == false` 포함) 새 `io.read` 를 걸어서,
    끝나지 않은 `OS_dispatch_operation` 과 직렬 큐가 출력 양에 비례해 쌓였다.
    Symboard 5차 많이 띄우기 시험(셸 24개 × 3000줄 다섯 번)에서 14만 6천 개, 약 65MB 까지 늘었다.
+2. `MacTerminalView.FontSet` — 굵게·기울임 글꼴을 만들 때 기본 글꼴의 대체 글꼴 목록(cascade list)을 다시 붙인다.
+   `NSFontManager.convert` 가 글꼴 설명의 `cascadeList` 를 버려서, Symboard 7차 터미널 한글 글꼴 설정이
+   굵은 글자(claude 화면의 굵은 한글 등)에서는 적용되지 않고 macOS 기본 대체 글꼴로 돌아갔다.
+   대체 글꼴도 같은 굵기·기울임으로 바꾸고, 붙어 있던 글자 범위(characterSet) 제한은 그대로 둔다.
+3. `AppleTerminalView.resetFont` — 글꼴을 바꿀 때 창 크기가 바뀔 때와 같은 `processSizeChange` 로 칸 수를 다시 구한다.
+   원래는 스크롤 막대 폭을 빼지 않은 전체 폭으로 열 수를 구해(오른쪽 두 칸이 막대 밑으로 들어감) `resize(cols:rows:)` 를 불렀고,
+   그 안의 `softReset()` 이 돌고 있는 TUI(claude·codex)의 모드(커서 키 모드, 스크롤 영역 등)를 지웠다.
+   Symboard 7차에서 설정의 글꼴을 바꾸면 떠 있는 콘솔에 바로 적용하므로 이 길을 탄다.

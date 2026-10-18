@@ -72,10 +72,16 @@ extension TerminalView {
     {
         resetCaches()
         self.cellDimension = computeFontDimensions ()
-        let newCols = Int(frame.width / cellDimension.width)
-        let newRows = Int(frame.height / cellDimension.height)
-        resize(cols: newCols, rows: newRows)
+        // Symboard: go through the same path as a frame change. The original computed columns from the
+        // full frame width (ignoring the scroller) and called resize(cols:rows:), whose softReset()
+        // cleared modes of a running TUI (application cursor keys, scroll region) on every font change.
+        processSizeChange (newSize: frame.size)
         updateCaretView()
+        #if os(macOS)
+        needsDisplay = true
+        #else
+        setNeedsDisplay(frame)
+        #endif
     }
     
     func updateCaretView ()

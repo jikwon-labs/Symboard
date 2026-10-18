@@ -52,9 +52,28 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         
         public init(font baseFont: NSFont, fontSize: CGFloat? = nil) {
             self.normal = baseFont
-            self.bold = NSFontManager.shared.convert(baseFont, toHaveTrait: [.boldFontMask])
-            self.italic = NSFontManager.shared.convert(baseFont, toHaveTrait: [.italicFontMask])
-            self.boldItalic = NSFontManager.shared.convert(baseFont, toHaveTrait: [.italicFontMask, .boldFontMask])
+            self.bold = FontSet.convert(baseFont, [.boldFontMask])
+            self.italic = FontSet.convert(baseFont, [.italicFontMask])
+            self.boldItalic = FontSet.convert(baseFont, [.italicFontMask, .boldFontMask])
+        }
+
+        // Symboard: NSFontManager.convert drops the font descriptor's cascade list, so bold/italic
+        // text lost the user-chosen fallback font (e.g. a Hangul font). Re-attach the cascade list,
+        // converting each fallback to the same traits and keeping its character set limit.
+        static func convert(_ font: NSFont, _ traits: NSFontTraitMask) -> NSFont {
+            let converted = NSFontManager.shared.convert(font, toHaveTrait: traits)
+            guard let cascade = font.fontDescriptor.object(forKey: .cascadeList) as? [NSFontDescriptor], !cascade.isEmpty else {
+                return converted
+            }
+            let mapped: [NSFontDescriptor] = cascade.map { d in
+                guard let f = NSFont(descriptor: d, size: font.pointSize) else { return d }
+                var attrs = NSFontManager.shared.convert(f, toHaveTrait: traits).fontDescriptor.fontAttributes
+                attrs[.size] = nil
+                if let cs = d.object(forKey: .characterSet) { attrs[.characterSet] = cs }
+                return NSFontDescriptor(fontAttributes: attrs)
+            }
+            let d = converted.fontDescriptor.addingAttributes([.cascadeList: mapped])
+            return NSFont(descriptor: d, size: converted.pointSize) ?? converted
         }
 
         // Expected by the shared rendering code
