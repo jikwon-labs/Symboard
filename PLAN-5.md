@@ -134,7 +134,12 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, /tmp/symv5-web 을 python http.server :3000 으로 띄움): 지구 → 캔버스 클릭 → 같은 시작 화면 → :3000 → 페이지 → 모니터 → 24" 4K → 빨간 "24\" 4K · 1920 × 1080", 1920 폭으로 렌더 → 벌레 아이콘 → Inspector 타일(Elements·Console, DOM 트리).
   - 쓰는 데 지장 있는 차이(고침): ① 화면 크기를 골라도 타일 크기는 그대로라 페이지가 위아래 검은 띠 안에 작게 보였다 → 원본처럼 타일을 그 비율로(가로형은 폭 유지·높이 맞춤, 폰은 높이 유지·폭 맞춤). ② 타일 머리가 늘 "Web", 탭은 주소였다 → 페이지 제목(didFinish 뒤 늦게 오는 제목도 한 번 더 읽음). 확인 `v11-web-24in.png`.
   - 모양 차이(남김): 원본은 지구 도구로 끌어 크기를 정하고, 우리는 클릭해 기본 크기로 놓는다. 원본 인스펙터는 Styles·Computed·Box Model 이 있는 DevTools 꼴, 우리는 Elements·Console(공개 API 한계, 2차 DECISIONS). 원본 모니터 메뉴의 휴대폰 다섯 종, 우리는 셋(Phone·Phone Max·Tablet).
-- [ ] V12. studio-code.mp4
+- [x] V12. studio-code.mp4
+  - 원본 조작: 오른쪽 막대 폴더 아이콘 → Code 스튜디오(왼쪽 파일 나무, README.md 열림) → 폴더 여러 개 펼침 → src/app/submit/page.tsx → 문자열 끝에 글 더함("• Edited") → Save("✓ Saved") → Insert → 보드에 page.tsx 코드 카드.
+  - 우리(`env -i`): 폴더 아이콘 → Code 스튜디오 → src 펼침 → hello.py(경로·PY·8 lines) → 3줄 끝에 " Edited in the studio." 타이핑("• Edited") → Save(디스크에 저장 확인) → Insert → 패널이 카드로 줄어들며 hello.py 카드(chip "main 1"). 끝나고 `git checkout` 으로 되돌림.
+  - 쓰는 데 지장 있는 차이: 없음.
+  - 모양 차이(고침): 처음 열면 원본은 README.md, 우리는 빈 편집기("Pick a file on the left") → README 를 먼저 연다(`v12-code-readme.png`).
+  - 모양 차이(남김): 원본은 저장 뒤 단추가 "✓ Saved" 로 바뀐다(우리는 "Edited" 표시만 사라짐).
 - [ ] V13. studio-diagrams.mp4
 - [ ] V14. studio-documents.mp4
 - [ ] V15. studio-markdown.mp4

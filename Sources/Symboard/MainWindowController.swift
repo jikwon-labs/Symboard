@@ -509,8 +509,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if kind == "Markdown", studioState.selected?.pathExtension.lowercased() != "md" {
             studioState.selected = nil
             if let readme = studioState.markdownFiles().first(where: { $0.lastPathComponent.lowercased() == "readme.md" }) { studioState.open(readme) }
-        } else if kind == "Code", studioState.selected?.pathExtension.lowercased() == "md" {
-            studioState.selected = nil
+        } else if kind == "Code", studioState.selected == nil {
+            // 원본처럼 코드 스튜디오도 처음에는 README 를 연다.
+            if let readme = studioState.markdownFiles().first(where: { $0.lastPathComponent.lowercased() == "readme.md" }) { studioState.open(readme) }
         }
         // 탭은 코드 스튜디오 안에서만 쓴다. 다른 스튜디오에서 열었던 파일은 넘기지 않는다.
         if studioState.kind != kind { studioState.openFiles = studioState.selected.map { [$0] } ?? [] }
