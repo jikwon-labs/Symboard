@@ -71,10 +71,10 @@ import Testing
     @Test func codexResume() {
         var spec = TerminalSpec(agent: .codex, cwd: "/tmp/x", hasLaunched: true)
         var plan = LaunchPlanner.plan(for: spec, nodeID: node, statusFile: "/s", profile: nil, claudeSessionExists: false, defaultShell: "/bin/zsh")
-        #expect(plan.command == ["codex", "resume", "--last"])
+        #expect(plan.command == ["codex", "resume", "--last", "--no-daemon"])
         spec.sessionID = "u-1"
         plan = LaunchPlanner.plan(for: spec, nodeID: node, statusFile: "/s", profile: nil, claudeSessionExists: false, defaultShell: "/bin/zsh")
-        #expect(plan.command == ["codex", "resume", "u-1"])
+        #expect(plan.command == ["codex", "resume", "u-1", "--no-daemon"])
     }
 
     @Test func profileSetsConfigDir() {

@@ -194,3 +194,15 @@ import Testing
         #expect(AccountProfile.initials("") == "?")
     }
 }
+
+@Suite struct CodexDaemonTests {
+    @Test func freshCodexRunsWithoutSharedDaemonUnlessUserChose() {
+        let node = UUID()
+        var spec = TerminalSpec(agent: .codex, cwd: "/tmp/x")
+        var plan = LaunchPlanner.plan(for: spec, nodeID: node, statusFile: "/s", profile: nil, claudeSessionExists: false, defaultShell: "/bin/zsh")
+        #expect(plan.command == ["codex", "--no-daemon"])
+        spec.extraArgs = ["--remote-daemon"]
+        plan = LaunchPlanner.plan(for: spec, nodeID: node, statusFile: "/s", profile: nil, claudeSessionExists: false, defaultShell: "/bin/zsh")
+        #expect(plan.command == ["codex", "--remote-daemon"])
+    }
+}

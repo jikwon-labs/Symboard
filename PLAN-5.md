@@ -85,7 +85,12 @@ STATUS: IN_PROGRESS
   - 쓰는 데 지장 있는 차이: 없음.
   - 모양 차이(고침): 다른 계정으로 띄운 콘솔인지 머리에서 알 수 없었다 → 원본처럼 계정 머리글자 칩("5A")을 CLI 배지 옆에(`AccountProfile.initials`, 단위 테스트 1개, `v2-account-chip.png`).
   - 모양 차이(남김): 원본 팝오버 머리의 CLI 아이콘 다섯 개(우리는 claude·codex 둘), 프로필 카드의 Use·터미널·연필·× 줄은 우리도 있으나 이 상태 폴더엔 저장된 프로필이 없어 비교 못 함.
-- [ ] V3. node-composer.mp4
+- [x] V3. node-composer.mp4
+  - 원본 조작: Group 칩 → 컴포저(Team, 6 Claude) → + 로 12 → 셋째 줄 타일 넷을 눌러 Codex → Testers → Backend(Spawn 단추 색이 역할 색) → Spawn 12 → "BACKEND 12" 4×3 그룹, Claude 8 + Codex 4 가 부팅해 입력창.
+  - 우리(`env -i`, 새 작업공간 탭): 같은 순서(Group → + 여덟 번 → 셋째 줄 넷 → Testers → Backend → Spawn 12). 컴포저 모양·타일 색·단추 색이 원본과 같다(`compare/video-node-composer.png` 위). 4×3 "BACKEND" 그룹, Claude 8 READY(`v3-backend-12.png`).
+  - 쓰는 데 지장 있는 차이(고침): Codex 4개가 "Background server has incompatible feature settings" 메뉴에서 멈췄다(이 맥에서 다른 codex 화면이 띄운 공용 데몬과 설정이 다름). 콘솔 codex 를 `--no-daemon` 으로 띄운다(사용자가 인자로 데몬을 고르면 그대로, 단위 테스트 1개 + 기존 2개 고침, DECISIONS.md). 고친 뒤 메뉴 없이 codex 자체 화면으로 간다.
+  - 남은 것(사용자 결정이라 둠): codex 의 "Update available" 화면(Enter 기본값이 전역 업데이트)과 /tmp/symsample 폴더 신뢰 화면. 둘 다 NEEDS YOU 로 잘 보이고, 답하면 ~/.codex 를 바꾸거나 전역 설치가 되므로 시험에서는 답하지 않았다(Esc 로 업데이트 건너뛰기만 확인, codex 0.157.1 그대로).
+  - 모양 차이: 원본 Fill all 줄의 CLI 아이콘 열두 개(우리는 이 맥에 깔린 것만: Claude·Codex·Shell). 원본 그룹 머리 "12 running", 우리는 "4 need you"(상태가 다름).
 - [ ] V4. node-git.mp4
 - [ ] V5. node-ink.mp4
 - [ ] V6. node-kanban.mp4

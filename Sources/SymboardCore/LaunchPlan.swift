@@ -89,13 +89,16 @@ public enum LaunchPlanner {
                               environment: env, cwd: spec.cwd, isResume: false, sessionID: sid)
 
         case .codex:
+            // 다른 codex 화면(데스크톱 앱 등)이 띄운 공용 백그라운드 서버와 설정이 다르면 codex 가 시작 전에 메뉴를 띄우고 멈춘다(5차, 이 맥).
+            // 콘솔마다 따로 돌게 --no-daemon 을 붙인다. 사용자가 인자로 직접 데몬을 고르면 그대로 둔다.
+            let daemon = spec.extraArgs.contains { $0.contains("daemon") } ? [] : ["--no-daemon"]
             if spec.hasLaunched {
                 // codex 는 시작 전에 세션 id 를 정할 수 없다. 찾아 둔 id 가 있으면 그것을, 없으면 이 폴더의 마지막 세션을 잇는다.
                 let target = spec.sessionID.map { [$0] } ?? ["--last"]
-                return LaunchPlan(command: ["codex", "resume"] + target + spec.extraArgs,
+                return LaunchPlan(command: ["codex", "resume"] + target + daemon + spec.extraArgs,
                                   environment: env, cwd: spec.cwd, isResume: true, sessionID: spec.sessionID)
             }
-            return LaunchPlan(command: ["codex"] + spec.extraArgs, environment: env, cwd: spec.cwd, isResume: false, sessionID: nil)
+            return LaunchPlan(command: ["codex"] + daemon + spec.extraArgs, environment: env, cwd: spec.cwd, isResume: false, sessionID: nil)
         }
     }
 
