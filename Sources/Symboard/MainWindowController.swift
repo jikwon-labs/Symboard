@@ -949,7 +949,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         var text = chrome.command.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         // "/close @이름..." 은 보내지 않고 그 콘솔들을 닫는다(여럿이면 확인).
-        let closing = text.hasPrefix("/close")
+        let closing = text.hasPrefix("/close") && !text.lowercased().contains("group")
+        // 보드 명령(원본 음성 명령을 글로): @대상으로 시작하지 않고 보드 명령 꼴이면 고른 콘솔이 있어도 보드에 적용한다.
+        // 그런 글을 콘솔에 그대로 보내려면 "@이름 spawn …" 처럼 대상을 적는다(DECISIONS).
+        if !closing, !text.hasPrefix("@"), let cmd = BoardCommand.parse(text) {
+            chrome.command = ""
+            runBoardCommand(cmd)
+            return
+        }
         if closing { text = String(text.dropFirst(6)).trimmingCharacters(in: .whitespaces) + " _" }
         let ws = model.selectedWorkspace
         let cands = ws.nodes.filter { $0.kind == .terminal }.map { n in
@@ -971,6 +978,42 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         for id in targets { model.sessions.session(for: id)?.sendText(parsed.body, submit: true) }
         chrome.command = ""
         chrome.flash("Sent to \(targets.count) console\(targets.count == 1 ? "" : "s")")
+    }
+
+    /// 명령 바의 보드 명령을 실행하고 한 줄로 알린다.
+    func runBoardCommand(_ cmd: BoardCommand) {
+        let ws = model.selectedWorkspace
+        let groups = ws.teams.filter { t in ws.nodes.contains { $0.teamID == t.id } }
+        switch cmd {
+        case .spawn(let count, let agent):
+            guard let choice = AgentCatalog.choice(id: agent), AgentCatalog.shared.installed.contains(choice.id) else {
+                chrome.flash("\(agent) is not installed"); return
+            }
+            let name = "Group \(groups.count + 1)"
+            _ = launchTeam(spec: choice.spec(cwd: projectPath), count: count, teamName: name, roles: [])
+            chrome.flash("Spawned \(count) \(choice.name) console\(count == 1 ? "" : "s") · \(name)")
+        case .orchestrator(let g):
+            guard let i = BoardCommand.matchGroup(g, in: groups.map(\.name)) else { chrome.flash("No group named \(g)"); return }
+            let team = groups[i]
+            let members = ws.nodes.filter { $0.teamID == team.id }
+            let minX = members.map(\.frame.x).min() ?? 0, minY = members.map(\.frame.y).min() ?? 0
+            let size = Placement.orchestrator.size
+            addNode(kind: .orchestrator, size: size, title: "Orchestrator",
+                    at: Point(x: minX - size.width - 120, y: minY))
+            if let orch = currentCanvas?.selectedNodeID { toggleWire(orch, to: team.id) }
+            reveal(([model.selectedWorkspace.nodes.last?.frame].compactMap { $0 }) + members.map(\.frame))
+            chrome.flash("Orchestrator added for \(team.name), wired to \(members.count) consoles")
+        case .preset(let key):
+            let all = ComposerPreset.all
+            let pick = Int(key).flatMap { $0 >= 1 && $0 <= all.count ? all[$0 - 1] : nil }
+                ?? all.first { $0.name.lowercased().contains(key.lowercased()) }
+            guard let p = pick else { chrome.flash("No preset \(key)"); return }
+            spawnPreset(p)
+            chrome.flash("Deployed the \(p.name) preset")
+        case .closeGroup(let g):
+            guard let i = BoardCommand.matchGroup(g, in: groups.map(\.name)) else { chrome.flash("No group named \(g)"); return }
+            closeNodes(ws.nodes.filter { $0.teamID == groups[i].id }.map(\.id))
+        }
     }
 
     /// New console / Spawn N: 마지막으로 고른 CLI 를 화면 가운데 근처에 띄운다.

@@ -16,8 +16,9 @@ STATUS: IN_PROGRESS
 | 3 | 4번 다이어그램 움직임 | 다이어그램 Components(/tmp/symsample) | (템플릿 질문) |
 | 4 | V8 메모리 | Memory → Scan with Claude Code(/tmp/symsample) | (스캔 질문) |
 | 5 | V13 다이어그램 | 다이어그램 Components(Workspace 3, 노드 많은 보드) | (템플릿 질문) |
+| 6·7 | V17 (실수) | 명령 바 → 고른 콘솔 Dax(/tmp/symsample) | "Now spawn 2 codex agents", "Can you now put an orchestrator wire with group 1?" — 보드 명령이 고른 콘솔로 가 버림. 고친 뒤 다시 하지 않음 |
 
-합계: 5
+합계: 7
 
 ## 고칠 것
 
@@ -161,7 +162,12 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, /tmp/symv5-6 30개): 도구 메뉴 → Mission Map(1 orchestrator · 4 teams · 30 consoles, 칩 All/Working/Needs you/Idle/Done, 검색, 팀→콘솔 곡선, 점선 Command bar only) → Juno → 상세(Go to the console·Pause·Kill·Status Idle·For 26s·Belongs to Backend·Orchestrator) → Ada → Go to the console → 보드가 Ada 로 옮겨 고름(`v16-goto-console.png`).
   - 쓰는 데 지장 있는 차이(고침): 이어하기 답을 기다리는 claude(보드에서 ON HOLD)가 미션 맵에서 "Exited" 로 보이고 Done 칸에 세였다(Done 5). 오케스트레이터 목록도 "exited". 아직 띄우지 않은 대기라 Idle 칸에 세고 "On hold" 로 보이게 했다. 확인: Idle 30 · Done 0, Ada "On hold".
   - 모양 차이(남김): 원본 오른쪽 기본 패널은 Fleet·Structure 두 카드(우리는 Overview 한 카드와 설명). 원본은 "Frame the team on the board" 단추가 팀 상세에.
-- [ ] V17. voice.mp4
+- [x] V17. voice.mp4
+  - 원본 조작(음성 → 글로 바꿈): "spawn 5 claude code agents" → GROUP 1 다섯 → "spawn 2 codex agents" → GROUP 2 → "put an orchestrator wire with group 1" → 오케스트레이터가 Group 1 에 연결 → "preset 1" → 프리셋 배치 → "delete the group called backend" → "about to close 4 consoles, say confirm" → Confirm → 닫힘.
+  - 쓰는 데 지장 있는 차이(고침): 우리 명령 바는 콘솔에 글을 보내기만 해서 이 영상의 일을 하나도 할 수 없었다. `BoardCommand`(Core, 단위 테스트 4개)가 정해진 꼴(spawn N claude/codex/shell, orchestrator … group, preset N/이름, delete/close the group called X)을 알아듣고, 명령 바가 @대상으로 시작하지 않으면 보드 명령으로 실행한다(모델에 묻지 않음). 그룹 닫기는 기존 확인 띠를 쓴다. DECISIONS.md.
+  - 따라 하다 생긴 실수: 처음 판에서는 "고른 콘솔이 없을 때만" 보드 명령으로 봤는데, spawn 뒤 새 콘솔이 골라져 다음 두 명령이 claude 에게 질문으로 갔다(질문 6·7, 표에 적음). 고른 콘솔이 있어도 보드 명령이 먼저가 되게 고쳤다.
+  - 확인한 실제 입력(`env -i`, /tmp/symv5-17): 명령 바에 원본 말 그대로 타이핑 → "Can you spawn 5 claude code agents?" → GROUP 1 다섯, "Now spawn 2 codex agents"(Dax 를 고른 채) → GROUP 2 둘, "Can you now put an orchestrator wire with group 1?" → Group 1 왼쪽에 오케스트레이터, 5 agents 연결, "Please can you put me preset 1 in the board" → "Pair: 2 Claude", "…delete the group called group 2 for me" → "Rafa, Kai: about to close 2 consoles · Close 2"(`v17-close-group-confirm.png`) → Close 2 → 4 → 2 live.
+  - 모양 차이(남김): 원본은 명령 바 위로 펼쳐지는 THREAD(계획 줄·답·Confirm 단추)가 있고, 우리는 한 줄 알림과 확인 띠. 원본 프리셋 1 은 여러 그룹·웹 타일이 든 "DevHQ", 우리 프리셋은 콘솔 조합만.
 
 ## 막힌 것
 

@@ -206,3 +206,34 @@ import Testing
         #expect(plan.command == ["codex", "--remote-daemon"])
     }
 }
+
+@Suite struct BoardCommandTests {
+    @Test func parsesSpokenSpawnAndSlashForm() {
+        #expect(BoardCommand.parse("Can you spawn 5 claude code agents?") == .spawn(count: 5, agent: "claude"))
+        #expect(BoardCommand.parse("Now spawn 2 codex agents") == .spawn(count: 2, agent: "codex"))
+        #expect(BoardCommand.parse("/spawn three shells") == .spawn(count: 3, agent: "shell"))
+        #expect(BoardCommand.parse("spawn") == nil)
+    }
+
+    @Test func parsesOrchestratorPresetAndClose() {
+        #expect(BoardCommand.parse("Can you now put an orchestrator wire with group 1?") == .orchestrator(group: "group 1"))
+        #expect(BoardCommand.parse("add an orchestrator wired to backend group") == .orchestrator(group: "backend"))
+        #expect(BoardCommand.parse("Please can you put me preset 1 in the board") == .preset("1"))
+        #expect(BoardCommand.parse("deploy the mixed preset") == .preset("mixed"))
+        #expect(BoardCommand.parse("Thanks you very much. Can you delete the group called backend for me") == .closeGroup("backend"))
+    }
+
+    @Test func leavesOrdinaryMessagesAlone() {
+        #expect(BoardCommand.parse("run the tests and tell me which one fails") == nil)
+        #expect(BoardCommand.parse("fix the bug, then close the file") == nil)
+        #expect(BoardCommand.parse("delete the temp file") == nil)
+    }
+
+    @Test func matchesGroups() {
+        let g = ["Frontend", "Backend", "Testers"]
+        #expect(BoardCommand.matchGroup("backend", in: g) == 1)
+        #expect(BoardCommand.matchGroup("group 1", in: g) == 0)
+        #expect(BoardCommand.matchGroup("test", in: g) == 2)
+        #expect(BoardCommand.matchGroup("group 9", in: g) == nil)
+    }
+}
