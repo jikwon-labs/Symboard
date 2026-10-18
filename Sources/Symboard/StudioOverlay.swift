@@ -188,6 +188,7 @@ struct StudioOverlay: View {
                 let w = Markdown.wordCount(studio.text)
                 if studio.selected != nil {
                     Text("\(w.words) words · ~\(w.minutes) min").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                    if studio.dirty { Text("• Edited").font(.system(size: 11, weight: .medium)).foregroundStyle(Color(hex: "#E9C46A")) }
                 }
                 Spacer()
                 HStack(spacing: 2) {
@@ -195,6 +196,13 @@ struct StudioOverlay: View {
                         Button(m) { studio.mdMode = m }.buttonStyle(ChipStyle(on: studio.mdMode == m))
                     }
                 }
+                // 코드 스튜디오와 같은 Save → "✓ Saved"(원본 studio-code). 마크다운도 Source 에서 고친 것을 저장한다.
+                let justSaved = !studio.dirty && studio.note == "Saved"
+                Button { studio.save() } label: {
+                    Label(justSaved ? "Saved" : "Save", systemImage: justSaved ? "checkmark" : "square.and.arrow.down")
+                }
+                .buttonStyle(PillButtonStyle()).axName(justSaved ? "Saved" : "Save")
+                .keyboardShortcut("s", modifiers: .command).disabled(!studio.dirty)
                 Button { c.studioAddToBoard() } label: { Label("Add to Board", systemImage: "rectangle.on.rectangle") }.buttonStyle(PillButtonStyle())
                 Button { c.studioExportPDF() } label: { Label("Export PDF", systemImage: "arrow.down.doc") }.buttonStyle(PillButtonStyle(prominent: true))
             } else {

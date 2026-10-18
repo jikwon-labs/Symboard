@@ -246,6 +246,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             MainActor.assumeIsolated {
                 guard let self, event.window === self.window,
                       let hit = self.window?.contentView?.hitTest(event.locationInWindow) else { return event }
+                // 보드(캔버스·노드)를 누르면 THREAD 카드를 접어 그 밑을 쓸 수 있게 한다. 꺾쇠나 다음 보드 명령으로 다시 열린다.
+                if event.type == .leftMouseDown, self.chrome.threadOpen, hit.isDescendant(of: self.scrollView) {
+                    self.chrome.threadOpen = false
+                }
                 var v: NSView? = hit
                 while let cur = v, !(cur is NodeView) { v = cur.superview }
                 guard let nodeView = v as? NodeView else { return event }
@@ -1147,6 +1151,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func addNode(kind: NodeKind, size: CGSize, title: String, at point: Point? = nil, configure: (inout BoardNode) -> Void = { _ in }) {
         var frame = model.suggestedFrame(size: size, near: scrollView.visibleCenter)
         if let point { frame.x = point.x; frame.y = point.y }
+        else {
+            // 자리를 정해 주지 않은 카드(스튜디오 Add to Board·문서·메모리)도 1번 규칙으로 겹치지 않게.
+            let ws = model.selectedWorkspace
+            frame = CanvasLayout.nearestFree(frame, avoiding: CanvasLayout.obstacles(nodes: ws.nodes, teams: ws.teams))
+        }
         var node = BoardNode(kind: kind, frame: frame, title: title)
         configure(&node)
         model.addNode(node)
