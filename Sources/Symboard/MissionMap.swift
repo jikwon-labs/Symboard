@@ -31,7 +31,7 @@ struct MissionMapView: View {
         case .working: return "Working"
         case .waiting: return "Needs you"
         case .idle, .starting: return "Idle"
-        case .exited: return "Done"
+        case .done, .exited: return "Done"
         }
     }
 
@@ -131,7 +131,7 @@ struct MissionMapView: View {
         case "Working": return Color(nsColor: NodeStatus.working.color)
         case "Needs you": return Color(nsColor: NodeStatus.waiting.color)
         case "Idle": return Color(nsColor: NodeStatus.idle.color)
-        default: return Color(nsColor: NodeStatus.exited.color)
+        default: return Color(nsColor: NodeStatus.done.color)
         }
     }
 

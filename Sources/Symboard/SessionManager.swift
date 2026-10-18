@@ -103,7 +103,7 @@ final class SessionManager {
     private func tick() {
         let now = Date()
         for (id, s) in sessions {
-            let st = s.currentStatus(now: now)
+            let st = s.resolveStatus(now: now)
             if statuses[id] != st { statusSince[id] = now }
             statuses[id] = st
         }

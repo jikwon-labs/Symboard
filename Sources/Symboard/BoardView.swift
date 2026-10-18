@@ -182,7 +182,12 @@ final class CanvasView: NSView {
             let statuses = members.compactMap { model.sessions.status(of: $0.id) }
             let running = statuses.filter { $0 == .working }.count
             let waiting = statuses.filter { $0 == .waiting }.count
-            v.summary = running > 0 ? "\(running) running" : (waiting > 0 ? "\(waiting) need you" : "idle")
+            let done = statuses.filter { $0 == .done }.count
+            var parts: [String] = []
+            if running > 0 { parts.append("\(running) running") }
+            if waiting > 0 { parts.append("\(waiting) need\(waiting == 1 ? "s" : "") you") }
+            if done > 0 { parts.append("\(done) done") }
+            v.summary = parts.isEmpty ? "idle" : parts.joined(separator: " · ")
             var box = NSRect.null
             for m in members {
                 let r = nodeViews[m.id]?.frame ?? CanvasGeometry.viewRect(m.frame)
@@ -281,6 +286,8 @@ final class CanvasView: NSView {
         }
         selectedNodeID = id
         for (nid, v) in nodeViews { v.isSelected = nid == id }
+        // 골라서 봤으면 Done 표시를 푼다.
+        if let id { model.sessions.session(for: id)?.acknowledge() }
         // 글자·스티키·이미지는 레이어 순서를 지킨다. 콘솔 같은 창형 노드만 누르면 앞으로 온다.
         if let id, let v = nodeViews[id], !v.headerless { bringToFront(v) }
         onSelect?(id)

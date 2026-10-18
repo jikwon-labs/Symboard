@@ -103,7 +103,7 @@ struct MissionListView: View {
     var focus: (UUID) -> Void
 
     private var counts: [(NodeStatus, Int)] {
-        [NodeStatus.working, .waiting, .idle, .exited].map { s in (s, state.rows.filter { $0.status == s }.count) }
+        [NodeStatus.working, .waiting, .idle, .done, .exited].map { s in (s, state.rows.filter { $0.status == s }.count) }
     }
 
     var body: some View {

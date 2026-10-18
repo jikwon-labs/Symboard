@@ -122,6 +122,22 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         return tracker.status(now: now, shellAtPrompt: isPlainShell ? shellAtPrompt() : nil)
     }
 
+    /// 1초마다 부르는 최종 판정. 화면 끝 글자로 선택 대기를 잡고, 끝낸 일을 Done 으로 남긴다.
+    func resolveStatus(now: Date = Date()) -> NodeStatus {
+        pollStatusFile()
+        if isPlainShell { return tracker.resolve(now: now, shellAtPrompt: shellAtPrompt()) }
+        if view.window?.firstResponder === view { tracker.acknowledge() }
+        let st = tracker.resolve(now: now, screen: running ? screenText() : nil)
+        lastResolved = st
+        return st
+    }
+
+    /// 마지막 최종 판정(넘겨주기·디버그용).
+    private(set) var lastResolved: NodeStatus?
+
+    /// 사용자가 이 노드를 봤다(선택·Go to). Done 을 푼다.
+    func acknowledge() { tracker.acknowledge() }
+
     /// 터미널의 앞 프로세스 그룹이 셸 자신이면 프롬프트에서 입력을 기다리는 중이다.
     private func shellAtPrompt() -> Bool? {
         let fd = view.process.childfd, pid = view.process.shellPid
@@ -139,7 +155,8 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         var lines: [String] = []
         for row in 0..<term.rows {
             guard let line = term.getLine(row: row) else { continue }
-            lines.append(line.translateToString(trimRight: true))
+            // 한 번도 쓰지 않은 칸은 NUL 로 나온다. 글자 사이 빈칸이므로 공백으로 바꾼다.
+            lines.append(line.translateToString(trimRight: true).replacingOccurrences(of: "\u{0}", with: " "))
         }
         return lines.joined(separator: "\n")
     }

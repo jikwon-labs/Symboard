@@ -132,8 +132,15 @@ final class NodeView: NSView {
         content.sync(node: node)
     }
 
+    /// 마지막으로 받은 상태. 사용자 답을 기다리면 테두리로 눈에 띄게 한다.
+    private var lastStatus: NodeStatus?
+
     func setStatus(_ status: NodeStatus?) {
         header.setStatus(status)
+        if status != lastStatus {
+            lastStatus = status
+            updateBorder()
+        }
     }
 
     private func updateBorder() {
@@ -141,6 +148,11 @@ final class NodeView: NSView {
             layer?.borderColor = Theme.accent.cgColor
             layer?.borderWidth = isSelected ? 1.5 : 0
             resizeHandle.isHidden = !isSelected
+            return
+        }
+        if lastStatus == .waiting {
+            layer?.borderColor = NodeStatus.waiting.color.cgColor
+            layer?.borderWidth = 2
             return
         }
         layer?.borderColor = (isSelected ? Theme.accent : Theme.nodeBorder).cgColor
@@ -490,6 +502,7 @@ extension NodeStatus {
         case .working: return "RUNNING"
         case .idle: return "READY"
         case .waiting: return "NEEDS YOU"
+        case .done: return "DONE"
         case .exited: return "EXITED"
         }
     }
@@ -584,6 +597,7 @@ extension NodeStatus {
         case .working: return Theme.accent
         case .idle: return NSColor(hex: "#6FCF97")
         case .waiting: return NSColor(hex: "#E9C46A")
+        case .done: return NSColor(hex: "#7AA7E8")
         case .exited: return NSColor(hex: "#B5524A")
         }
     }

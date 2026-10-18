@@ -93,7 +93,7 @@ final class DebugBridge {
             }
         case "screen":
             if let n = node(cmd), let s = model.sessions.session(for: n.id) {
-                log.append("--- screen \(n.title) status=\(s.currentStatus().rawValue)\n\(s.screenText())\n---")
+                log.append("--- screen \(n.title) status=\(model.sessions.status(of: n.id)?.rawValue ?? "-")\n\(s.screenText())\n---")
             }
         case "state":
             for (i, n) in nodes.enumerated() {
