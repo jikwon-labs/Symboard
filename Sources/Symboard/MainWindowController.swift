@@ -462,7 +462,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
                 DispatchQueue.main.async { [weak self] in self?.currentCanvas?.nodeViews[id]?.setEditing(true) }
             }
         case .sticky:
-            addNode(kind: .sticky, size: s, title: "Note", at: origin) { $0.text = ""; $0.colorHex = "#E9C46A" }
+            addNode(kind: .sticky, size: s, title: "Note", at: origin) { $0.text = ""; $0.colorHex = "#C9A227" }
         case .checklist:
             addNode(kind: .checklist, size: s, title: "Checklist", at: origin) { $0.checklist = [] }
         case .kanban:

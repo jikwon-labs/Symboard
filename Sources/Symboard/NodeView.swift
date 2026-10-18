@@ -71,6 +71,7 @@ final class NodeView: NSView {
         if headerless {
             header.isHidden = true
             layer?.backgroundColor = NSColor.clear.cgColor
+            layer?.cornerRadius = 4
             shield.nodeView = self
             addSubview(shield)
         }

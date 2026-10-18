@@ -58,17 +58,67 @@ final class HostedContent: NodeContent {
 
 // MARK: 스티키·텍스트
 
+/// 스티키: 헤더 없는 종이. 줄무늬·접힌 모서리·그림자, 손글씨.
 struct StickyView: View {
     @ObservedObject var box: NodeBox
     var isSticky: Bool
 
+    var paper: Color { Color(hex: box.node.colorHex ?? "#C9A227") }
+    var ink: Color { (box.node.colorHex ?? "").uppercased() == "#2B2926" ? Color.symText : Color(hex: "#FFF8EC") }
+
     var body: some View {
-        TextEditor(text: Binding(get: { box.node.text ?? "" }, set: { v in box.update { $0.text = v } }))
-            .font(.system(size: isSticky ? 15 : 13, design: isSticky ? .rounded : .default))
-            .scrollContentBackground(.hidden)
-            .foregroundStyle(isSticky ? Color.black.opacity(0.85) : Color.white)
-            .padding(8)
-            .background(isSticky ? Color(nsColor: NSColor(hex: box.node.colorHex ?? "#FFD60A")) : Color(white: 0.12))
+        GeometryReader { geo in
+            let fold: CGFloat = 22
+            ZStack(alignment: .topLeading) {
+                PaperShape(fold: fold)
+                    .fill(LinearGradient(colors: [paper.opacity(0.92), paper], startPoint: .top, endPoint: .bottom))
+                    .shadow(color: .black.opacity(0.45), radius: 6, x: 0, y: 4)
+                // 줄무늬
+                Path { p in
+                    var y: CGFloat = 34
+                    while y < geo.size.height - 8 {
+                        p.move(to: CGPoint(x: 10, y: y)); p.addLine(to: CGPoint(x: geo.size.width - 14, y: y))
+                        y += 24
+                    }
+                }
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                .clipShape(PaperShape(fold: fold))
+                // 접힌 모서리
+                Path { p in
+                    let w = geo.size.width - 6, h = geo.size.height - 8
+                    p.move(to: CGPoint(x: w - fold, y: h)); p.addLine(to: CGPoint(x: w - fold, y: h - fold)); p.addLine(to: CGPoint(x: w, y: h - fold)); p.closeSubpath()
+                }
+                .fill(Color.black.opacity(0.28))
+                TextEditor(text: Binding(get: { box.node.text ?? "" }, set: { v in box.update { $0.text = v } }))
+                    .font(Font(Theme.handwriting(size: 17)))
+                    .scrollContentBackground(.hidden)
+                    .scrollIndicators(.never)
+                    .foregroundStyle(ink)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 10).padding(.top, 12).padding(.bottom, fold)
+                    .frame(width: geo.size.width - 6, height: geo.size.height - 8)
+            }
+            .padding(.leading, 0).padding(.top, 0)
+        }
+    }
+}
+
+/// 오른쪽 아래가 접힌 종이 모양. 그림자 자리를 남기려고 오른쪽·아래를 조금 줄인다.
+struct PaperShape: Shape {
+    var fold: CGFloat
+    func path(in r: CGRect) -> Path {
+        let w = r.width - 6, h = r.height - 8
+        var p = Path()
+        p.move(to: CGPoint(x: 4, y: 0))
+        p.addLine(to: CGPoint(x: w - 4, y: 0))
+        p.addQuadCurve(to: CGPoint(x: w, y: 4), control: CGPoint(x: w, y: 0))
+        p.addLine(to: CGPoint(x: w, y: h - fold))
+        p.addLine(to: CGPoint(x: w - fold, y: h))
+        p.addLine(to: CGPoint(x: 4, y: h))
+        p.addQuadCurve(to: CGPoint(x: 0, y: h - 4), control: CGPoint(x: 0, y: h))
+        p.addLine(to: CGPoint(x: 0, y: 4))
+        p.addQuadCurve(to: CGPoint(x: 4, y: 0), control: CGPoint(x: 0, y: 0))
+        return p
     }
 }
 
