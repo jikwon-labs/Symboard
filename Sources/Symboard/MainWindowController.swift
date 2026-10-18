@@ -876,7 +876,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     /// 오케스트레이터 Connect/Done.
     func toggleConnect(_ orch: UUID) {
         chrome.connectingOrchestrator = chrome.connectingOrchestrator == orch ? nil : orch
-        if chrome.connectingOrchestrator != nil { chrome.flash("Click consoles to wire them · Done when finished") }
+        if chrome.connectingOrchestrator != nil { chrome.flash("Click consoles or a group's pill to wire them · Done when finished") }
+        currentCanvas?.layoutGroups()
     }
 
     /// 오케스트레이터와 그룹·콘솔 사이 연결을 켜거나 끈다.
@@ -888,7 +889,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             else { links.append(NodeLink(from: orch, to: target)) }
             ws.links = links
         }
-        currentCanvas?.layoutLinks()
+        currentCanvas?.layoutGroups()
     }
 
     func renameTeam(_ id: UUID) {

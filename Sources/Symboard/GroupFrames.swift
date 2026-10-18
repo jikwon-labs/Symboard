@@ -16,12 +16,36 @@ final class GroupFrameView: NSView {
     private var dragStart: (NSPoint, [UUID: NSPoint])?
     private var moved = false
     private var headerWidth: CGFloat = 200
+    /// 오케스트레이터 Connect 중일 때 테두리 위 알약. 원본 board 장면의 "Click to wire group" / "Group wired".
+    enum WireState { case none, offer, wired }
+    var wireState: WireState = .none {
+        didSet {
+            guard wireState != oldValue else { return }
+            pill.state = wireState
+            pill.isHidden = wireState == .none
+            needsLayout = true
+            needsDisplay = true
+        }
+    }
+    private let pill = WirePillView()
 
     init(team: Team) {
         self.teamID = team.id
         self.team = team
         super.init(frame: .zero)
         wantsLayer = true
+        pill.isHidden = true
+        pill.onClick = { [weak self] in
+            guard let self, let c = self.canvas?.controller, let orch = c.chrome.connectingOrchestrator else { return }
+            c.toggleWire(orch, to: self.teamID)
+        }
+        addSubview(pill)
+    }
+
+    override func layout() {
+        super.layout()
+        let sz = pill.intrinsicContentSize
+        pill.frame = NSRect(x: round((bounds.width - sz.width) / 2), y: Self.headerHeight - sz.height / 2, width: sz.width, height: sz.height)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -49,8 +73,18 @@ final class GroupFrameView: NSView {
         let path = NSBezierPath(roundedRect: body, xRadius: 16, yRadius: 16)
         color.withAlphaComponent(0.035).setFill()
         path.fill()
-        color.withAlphaComponent(0.45).setStroke()
-        path.lineWidth = 1
+        switch wireState {
+        case .none:
+            color.withAlphaComponent(0.45).setStroke()
+            path.lineWidth = 1
+        case .offer:
+            Theme.accent.withAlphaComponent(0.85).setStroke()
+            path.lineWidth = 1.5
+            path.setLineDash([5, 4], count: 2, phase: 0)
+        case .wired:
+            Theme.accent.setStroke()
+            path.lineWidth = 1.5
+        }
         path.stroke()
 
         let dot = NSRect(x: 8, y: Self.headerHeight / 2 - 4, width: 8, height: 8)
@@ -77,6 +111,7 @@ final class GroupFrameView: NSView {
         guard let sv = superview else { return nil }
         let p = convert(point, from: sv)
         guard bounds.contains(p) else { return nil }
+        if !pill.isHidden, pill.frame.contains(p) { return pill }
         if p.y <= Self.headerHeight && p.x <= headerWidth + 8 { return self }
         // 접힌 프레임은 몸통 전체를 머리처럼 다룬다.
         if collapsed { return self }
@@ -277,4 +312,48 @@ extension NSImage {
         img.unlockFocus()
         return img
     }
+}
+
+/// 그룹 테두리 위에 뜨는 작은 알약. offer 는 테두리색 글자의 어두운 알약, wired 는 강조색으로 채운 알약.
+final class WirePillView: NSView {
+    var state: GroupFrameView.WireState = .offer { didSet { invalidateIntrinsicContentSize(); needsDisplay = true; setAccessibilityLabel(title) } }
+    var onClick: (() -> Void)?
+
+    override var isFlipped: Bool { true }
+
+    var title: String { state == .wired ? "Group wired" : "Click to wire group" }
+
+    private var attr: NSAttributedString {
+        NSAttributedString(string: title, attributes: [
+            .font: NSFont.systemFont(ofSize: 12, weight: .semibold),
+            .foregroundColor: state == .wired ? NSColor.white : Theme.accent])
+    }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: ceil(attr.size().width) + 40, height: 22)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let r = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let path = NSBezierPath(roundedRect: r, xRadius: r.height / 2, yRadius: r.height / 2)
+        if state == .wired {
+            Theme.accent.setFill(); path.fill()
+        } else {
+            Theme.canvas.setFill(); path.fill()
+            Theme.accent.withAlphaComponent(0.6).setStroke(); path.lineWidth = 1; path.stroke()
+        }
+        let icon = NSImage(systemSymbolName: state == .wired ? "link" : "plus.circle.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 11, weight: .semibold))?.tinted(state == .wired ? .white : Theme.accent)
+        icon?.draw(in: NSRect(x: 9, y: 5, width: 12, height: 12))
+        let a = attr
+        a.draw(at: NSPoint(x: 27, y: (bounds.height - a.size().height) / 2))
+    }
+
+    override func mouseDown(with event: NSEvent) { onClick?() }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { title }
+    override func accessibilityPerformPress() -> Bool { onClick?(); return true }
 }

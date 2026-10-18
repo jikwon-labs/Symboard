@@ -228,6 +228,11 @@ final class CanvasView: NSView {
             }
             v.team = team
             v.memberCount = members.count
+            if let orch = controller?.chrome.connectingOrchestrator {
+                v.wireState = (ws.links ?? []).contains { $0.from == orch && $0.to == team.id } ? .wired : .offer
+            } else {
+                v.wireState = .none
+            }
             let statuses = members.compactMap { model.sessions.status(of: $0.id) }
             let running = statuses.filter { $0 == .working }.count
             let waiting = statuses.filter { $0 == .waiting }.count
