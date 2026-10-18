@@ -16,3 +16,21 @@ import Testing
         #expect(p.x == 15 && p.y == 25)
     }
 }
+
+@Suite struct ComposerResizeTests {
+    @Test func growUsesLastFillChoice() {
+        // Fill all Shell 뒤 마지막 타일만 Claude 로 돌렸어도 새 타일은 Shell.
+        let t = Composer.resize(tiles: ["shell", "shell", "shell", "claude"], to: 6, fill: "shell", fallback: "claude")
+        #expect(t == ["shell", "shell", "shell", "claude", "shell", "shell"])
+    }
+
+    @Test func growWithoutFillUsesPreviousTile() {
+        #expect(Composer.resize(tiles: ["codex"], to: 3, fill: nil, fallback: "claude") == ["codex", "codex", "codex"])
+    }
+
+    @Test func shrinkAndClamp() {
+        #expect(Composer.resize(tiles: ["a", "b", "c"], to: 0, fill: nil, fallback: "x") == ["a"])
+        #expect(Composer.resize(tiles: [], to: 2, fill: nil, fallback: "x") == ["x", "x"])
+        #expect(Composer.resize(tiles: ["a"], to: 99, fill: nil, fallback: "x").count == Composer.maxNodes)
+    }
+}

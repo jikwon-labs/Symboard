@@ -22,6 +22,8 @@ final class ComposerState: ObservableObject {
     @Published var role = roles.last!
     /// 타일마다 CLI id.
     @Published var tiles: [String] = Array(repeating: "claude", count: 4)
+    /// 마지막으로 누른 Fill all 값. 개수를 늘릴 때 새 타일이 이 값을 따른다.
+    private(set) var fillChoice: String?
 
     var count: Int { tiles.count }
 
@@ -29,12 +31,16 @@ final class ComposerState: ObservableObject {
         teamName = "Team"
         role = Self.roles.last!
         tiles = Array(repeating: id, count: 4)
+        fillChoice = nil
     }
 
     func setCount(_ n: Int) {
-        let n = max(1, min(Composer.maxNodes, n))
-        if n > tiles.count { tiles += Array(repeating: tiles.last ?? "claude", count: n - tiles.count) }
-        else { tiles = Array(tiles.prefix(n)) }
+        tiles = Composer.resize(tiles: tiles, to: n, fill: fillChoice, fallback: AgentCatalog.shared.lastChoiceID)
+    }
+
+    func fillAll(_ id: String) {
+        fillChoice = id
+        tiles = Array(repeating: id, count: count)
     }
 
     func pick(role r: Role) {
@@ -110,7 +116,7 @@ struct ComposerCard: View {
             HStack(spacing: 6) {
                 Text("Fill all").font(.system(size: 12)).foregroundStyle(Color.symDim)
                 ForEach(choices) { c in
-                    Button { state.tiles = Array(repeating: c.id, count: state.count) } label: { AgentBadge(choice: c, size: 24) }
+                    Button { state.fillAll(c.id) } label: { AgentBadge(choice: c, size: 24) }
                         .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(state.tiles.allSatisfy { $0 == c.id } ? Color.symAccent : .clear, lineWidth: 1.5).padding(-3))
                         .help(c.name)

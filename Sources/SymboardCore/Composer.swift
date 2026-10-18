@@ -24,5 +24,12 @@ public enum Composer {
         return (0..<count).map { $0 < parts.count ? parts[$0] : nil }
     }
 
+    /// 타일 개수를 n 으로 맞춘다. 늘어나는 타일은 마지막으로 고른 Fill all 값, 없으면 바로 앞 타일 값, 그것도 없으면 fallback.
+    public static func resize(tiles: [String], to n: Int, fill: String?, fallback: String) -> [String] {
+        let n = max(1, min(maxNodes, n))
+        if n <= tiles.count { return Array(tiles.prefix(n)) }
+        return tiles + Array(repeating: fill ?? tiles.last ?? fallback, count: n - tiles.count)
+    }
+
     public static let teamColors = ["#5E5CE6", "#30B0C7", "#FF9F0A", "#FF375F", "#34C759", "#BF5AF2"]
 }
