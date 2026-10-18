@@ -10,6 +10,7 @@ enum Placement: Equatable {
     case checklist
     case kanban
     case web
+    case orchestrator
 
     var size: CGSize {
         switch self {
@@ -19,6 +20,7 @@ enum Placement: Equatable {
         case .checklist: return CGSize(width: 300, height: 320)
         case .kanban: return CGSize(width: 900, height: 420)
         case .web: return CGSize(width: 760, height: 520)
+        case .orchestrator: return CGSize(width: 380, height: 500)
         }
     }
 
@@ -57,6 +59,8 @@ final class ChromeModel: ObservableObject {
     @Published var resetText = "usage"
     /// 이어하기 답을 기다리는 콘솔 수와 토스트를 닫았는지.
     @Published var resumeCount = 0
+    /// Connect 를 누른 오케스트레이터. 이때 보드의 콘솔을 누르면 연결/해제된다.
+    @Published var connectingOrchestrator: UUID?
     @Published var resumeDismissed = false
     /// 확인을 기다리는 동작(여러 콘솔 닫기 등).
     @Published var confirm: PendingConfirm?

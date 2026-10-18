@@ -229,6 +229,11 @@ final class CanvasView: NSView {
     }
 
     func select(_ id: UUID?) {
+        // 오케스트레이터 Connect 중에 콘솔을 누르면 선택 대신 연결/해제.
+        if let id, let orch = controller?.chrome.connectingOrchestrator, id != orch, model.node(id)?.kind == .terminal {
+            controller?.toggleWire(orch, to: id)
+            return
+        }
         selectedNodeID = id
         for (nid, v) in nodeViews { v.isSelected = nid == id }
         // 글자·스티키·이미지는 레이어 순서를 지킨다. 콘솔 같은 창형 노드만 누르면 앞으로 온다.

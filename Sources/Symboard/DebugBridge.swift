@@ -269,6 +269,7 @@ final class DebugBridge {
             case "checklist": tool = .place(.checklist)
             case "kanban": tool = .place(.kanban)
             case "web": tool = .place(.web)
+            case "orchestrator": tool = .place(.orchestrator)
             default: tool = t.hasPrefix("agent:") ? .place(.agent(String(t.dropFirst(6)))) : .select
             }
             controller.setTool(tool)
@@ -287,7 +288,8 @@ final class DebugBridge {
                         if type == .mouseMoved { canvas.mouseMoved(with: e) } else { controller.window?.sendEvent(e) }
                     }
                 }
-                log.append("mouse")
+                let hit = controller.window?.contentView?.hitTest(p)
+                log.append("mouse hit=\(hit.map { String(describing: type(of: $0)) } ?? "nil")")
             }
         case "select":
             if let n = node(cmd) { controller.currentCanvas?.select(n.id) }
@@ -348,6 +350,18 @@ final class DebugBridge {
             if let name = cmd["name"] as? String { cs.teamName = name }
             if cmd["spawn"] as? Bool ?? false { controller.spawnComposer() }
             log.append("composer \(cs.teamName) \(cs.tiles)")
+        case "wire":
+            // orch: 노드 번호, team: 팀 번호 또는 to: 노드 번호
+            if let o = cmd["orch"] as? Int, o < nodes.count {
+                if let t = cmd["team"] as? Int, t < model.selectedWorkspace.teams.count { controller.toggleWire(nodes[o].id, to: model.selectedWorkspace.teams[t].id) }
+                if let j = cmd["to"] as? Int, j < nodes.count { controller.toggleWire(nodes[o].id, to: nodes[j].id) }
+                if let on = cmd["connect"] as? Bool { controller.chrome.connectingOrchestrator = on ? nodes[o].id : nil }
+                log.append("wire")
+            }
+        case "orchSend":
+            if let o = cmd["orch"] as? Int, o < nodes.count {
+                log.append("orchSend \(controller.orchestratorSend(nodes[o].id, text: cmd["text"] as? String ?? ""))")
+            }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

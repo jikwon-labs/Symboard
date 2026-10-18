@@ -77,22 +77,31 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         view.terminate()
     }
 
+    /// 앞서 보낸 입력의 Enter 가 끝나는 시각. 연달아 보낸 입력이 섞이지 않게 뒤로 미룬다.
+    private var busyUntil = Date.distantPast
+
     /// 사용자가 친 것처럼 문자열을 보낸다. submit 이면 Enter 까지 보낸다.
     func sendText(_ text: String, submit: Bool) {
         guard running else { return }
-        // 여러 줄은 bracketed paste 로 감싸서 CLI 가 한 번에 받게 한다. 프로그램이 그 모드를 켰을 때만.
-        if text.contains("\n") && view.getTerminal().bracketedPasteMode {
-            view.send(txt: "\u{1b}[200~" + text + "\u{1b}[201~")
-        } else {
-            view.send(txt: text)
-        }
-        tracker.noteInput()
-        if submit {
-            // CLI 가 붙여넣기를 처리할 시간을 조금 준 뒤 Enter.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-                self?.view.send(txt: "\r")
+        let wait = max(0, busyUntil.timeIntervalSinceNow)
+        busyUntil = Date().addingTimeInterval(wait + (submit ? 0.35 : 0.05))
+        let deliver = { [weak self] in
+            guard let self, self.running else { return }
+            // 여러 줄은 bracketed paste 로 감싸서 CLI 가 한 번에 받게 한다. 프로그램이 그 모드를 켰을 때만.
+            if text.contains("\n") && self.view.getTerminal().bracketedPasteMode {
+                self.view.send(txt: "\u{1b}[200~" + text + "\u{1b}[201~")
+            } else {
+                self.view.send(txt: text)
+            }
+            self.tracker.noteInput()
+            if submit {
+                // CLI 가 붙여넣기를 처리할 시간을 조금 준 뒤 Enter.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                    self?.view.send(txt: "\r")
+                }
             }
         }
+        if wait > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + wait, execute: deliver) } else { deliver() }
     }
 
     /// 자식 프로세스 그룹에 신호를 보낸다(일시정지 SIGSTOP, 재개 SIGCONT).

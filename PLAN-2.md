@@ -38,10 +38,10 @@ STATUS: IN_PROGRESS
 
 ## C. 오케스트레이터와 일괄 명령
 
-- [ ] C1. Orchestrator 노드: 헤더·진행·"N agents · M groups"·Connect·빈 상태 (board.jpg r1c3)
-- [ ] C2. Connect → 그룹 칩 → Done → 그룹으로 곡선 연결 (board.jpg r2c1~r2c3)
-- [ ] C3. 그룹별 섹션·행(아이콘·이름·CLI·상태 알약)·마우스 올리면 펼치기/일시정지 (board.jpg r3c1)
-- [ ] C4. 하단 "Command N agents · @ to direct" 일괄 입력, 아래 명령 바의 @ 대상 지정 (board.jpg r3c3)
+- [x] C1. Orchestrator 노드: 헤더·진행·"N agents · M groups"·Connect·빈 상태 (board.jpg r1c3)
+- [x] C2. Connect → 그룹 칩 → Done → 그룹으로 곡선 연결 (board.jpg r2c1~r2c3)
+- [x] C3. 그룹별 섹션·행(아이콘·이름·CLI·상태 알약)·마우스 올리면 펼치기/일시정지 (board.jpg r3c1)
+- [x] C4. 하단 "Command N agents · @ to direct" 일괄 입력, 아래 명령 바의 @ 대상 지정 (board.jpg r3c3)
 
 ## D. 미션 맵
 
@@ -106,5 +106,8 @@ STATUS: IN_PROGRESS
 - B4: 원본 voice.jpg r3c3 / 내 것 `v2/B4-close-confirm.png`. `/close @backend` 또는 그룹 메뉴 → 아래 바 위에 "이름들: about to close 4 consoles" + Close 4 / Cancel. 고친 것: 숨긴 홈 화면 호스팅 뷰가 클릭을 가로채던 문제(숨겨지면 hitTest nil).
 - F1·F2: 원본 agent1/resume-top.jpg, node-resume.jpg / 내 것 `v2/F1-F2-resume-toast.png`, `v2/F2-resumed.png`. 한 번 실행됐고 세션 id 가 있는 claude·codex 콘솔은 다시 열 때 띄우지 않고 기다린다(헤더 ON HOLD, 본문 위 "Resume last conversation? Yes/No" 말풍선). 오른쪽 위 토스트 Yes → 0.35초 간격으로 차례로 "Restored - picking up the last conversation..." 을 찍고 이어 띄운 뒤 전체 보기, No → 세션 id 를 지우고 새로 시작, × → 토스트만 닫고 노드별로 답. 확인은 /tmp/symsample 에 claude 노드 2개(세션 id 만 넣고 대화는 보내지 않음)로 했다: 대기 2 → Yes → 대기 0, 두 노드 claude 실행. 남은 차이: 원본은 기다리는 동안에도 CLI 가 새로 떠 있다가 Yes 에 이어 가지만, 여기는 답할 때까지 띄우지 않는다(같은 대화가 두 번 열리지 않게).
 - E1·E2: 원본 node-composer.jpg, agent1/comp.jpg / 내 것 `v2/E1-composer-card.png`, `v2/E2-composer-booting.png`, `v2/E2-composer-group.png`. 아래 바 Group → 바 위 카드 팝오버: 편집 가능한 팀 이름, 역할 칩 8개(고르면 팀 이름·Spawn 색이 역할 색), 4열 타일(누르면 그 타일만 다음 CLI), Fill all(설치된 CLI 배지), − N + (1~12, 타일 즉시 늘고 줆), Spawn N. 결과는 역할 색 그룹 프레임 + 0.18초 간격으로 노드가 차례로 생김, 비어 있는 자리(기존 노드 오른쪽)에 놓고 전체 보기. 6개 셸로 확인. 남은 차이: 원본 Fill all 줄에는 CLI 가 더 많다(여기는 이 맥에 깔린 것만).
+- C1~C4: 원본 board.jpg r1c3~r3c3, board.mp4 7~16초 / 내 것 `v2/C1-orchestrator-empty.png`, `v2/C2-orchestrator-connect.png`, `v2/C2-orchestrator-wired-links.png`, `v2/C3-C4-orchestrator-rows.png`. 오른쪽 막대 삽입 메뉴 Orchestrator → 캔버스에 놓기. 빈 상태 "No agents wired"+Spawn agent, Connect → 그룹 칩(누르면 강조색)·콘솔 칩, 보드의 콘솔을 누르면 연결/해제, Done. 연결은 작업공간 links 에 저장되고 그룹 프레임·콘솔로 점 흐르는 곡선. 행: 배지·이름·CLI·상태 알약, 마우스를 올리면 보드에서 보기·일시정지. 아래 "Command N agents · @ to direct": 그룹 2개+콘솔 1개 연결 후 전체 11개 전송, "@testers ..." 는 6개만. 재실행 후에도 연결 유지.
+  - 고친 것: 같은 콘솔에 연달아 보내면 앞의 Enter 전에 다음 글이 섞였다 → 콘솔마다 보내기를 줄 세움("echo one"/"echo two" 따로 실행 확인). 그룹 프레임 hitTest 가 프레임 밖(왼쪽·위)의 클릭까지 가로채던 문제.
+  - 남은 차이: 원본은 오케스트레이터를 어디서 만드는지 영상에 안 나와 삽입 메뉴에 넣었다. 진행 표시는 READY 수/전체.
 
 ## 막힌 것

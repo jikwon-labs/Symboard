@@ -76,9 +76,10 @@ final class GroupFrameView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard let sv = superview else { return nil }
         let p = convert(point, from: sv)
+        guard bounds.contains(p) else { return nil }
         if p.y <= Self.headerHeight && p.x <= headerWidth + 8 { return self }
         // 접힌 프레임은 몸통 전체를 머리처럼 다룬다.
-        if collapsed && bounds.contains(p) { return self }
+        if collapsed { return self }
         return nil
     }
 

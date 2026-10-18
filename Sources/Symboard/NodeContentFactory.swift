@@ -20,6 +20,8 @@ enum NodeContentFactory {
             return WebContent(node: node, model: model)
         case .git:
             return GitContent(node: node, model: model)
+        case .orchestrator:
+            return OrchestratorContent(node: node, model: model)
         case .file:
             return FileContent(node: node)
         default:

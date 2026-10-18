@@ -349,6 +349,7 @@ struct InsertMenu: View {
             row("checklist", "Checklist", "Objectives with a progress counter") { pick(.checklist) }
             row("rectangle.split.3x1", "Board", "Kanban columns with cards") { pick(.kanban) }
             row("note.text", "Sticky note", "A paper note") { pick(.sticky) }
+            row("point.3.connected.trianglepath.dotted", "Orchestrator", "Watch and command many consoles") { pick(.orchestrator) }
         }
         .padding(6)
         .frame(width: 250)
@@ -415,6 +416,7 @@ struct LayersList: View {
         case .web: return "globe"
         case .git: return "arrow.triangle.branch"
         case .file: return "doc"
+        case .orchestrator: return "point.3.connected.trianglepath.dotted"
         }
     }
 }

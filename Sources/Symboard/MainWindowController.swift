@@ -273,6 +273,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         }
         sidePanel.refreshStatuses()
         currentCanvas?.layoutGroups()
+        StatusBeat.shared.tick &+= 1
         let pending = model.sessions.pendingResume.count
         if chrome.resumeCount != pending { chrome.resumeCount = pending }
         let live = model.sessions.liveCount
@@ -430,6 +431,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             }
         case .web:
             addNode(kind: .web, size: s, title: "Web", at: origin) { $0.text = "http://localhost:3000" }
+        case .orchestrator:
+            addNode(kind: .orchestrator, size: s, title: "Orchestrator", at: origin)
         }
         setTool(.select)
     }
@@ -464,6 +467,46 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             guard yes else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.zoomToFit(nil) }
         }
+    }
+
+    /// 오케스트레이터에 연결된 콘솔(그룹 멤버 포함).
+    func orchestratorTargets(_ orch: UUID) -> [BoardNode] {
+        guard let wsID = model.workspaceID(containing: orch), let ws = model.workspace(wsID) else { return [] }
+        let to = Set((ws.links ?? []).filter { $0.from == orch }.map(\.to))
+        return ws.nodes.filter { $0.kind == .terminal && (to.contains($0.id) || ($0.teamID.map(to.contains) ?? false)) }
+    }
+
+    /// 연결된 콘솔 전부에, 또는 앞에 쓴 @이름 대상에만 보낸다. 보낸 수를 돌려준다.
+    @discardableResult
+    func orchestratorSend(_ orch: UUID, text: String) -> Int {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let targets = orchestratorTargets(orch)
+        let ws = model.selectedWorkspace
+        let cands = targets.map { n in CommandTargets.Candidate(id: n.id, name: n.title, team: n.teamID.flatMap { id in ws.teams.first { $0.id == id }?.name }) }
+        let parsed = CommandTargets.parse(text, candidates: cands)
+        let ids = parsed.implicit ? targets.map(\.id) : parsed.nodeIDs
+        guard !parsed.body.isEmpty, !ids.isEmpty else { return 0 }
+        for id in ids { model.sessions.session(for: id)?.sendText(parsed.body, submit: true) }
+        chrome.flash("Sent to \(ids.count) agent\(ids.count == 1 ? "" : "s")")
+        return ids.count
+    }
+
+    /// 오케스트레이터 Connect/Done.
+    func toggleConnect(_ orch: UUID) {
+        chrome.connectingOrchestrator = chrome.connectingOrchestrator == orch ? nil : orch
+        if chrome.connectingOrchestrator != nil { chrome.flash("Click consoles to wire them · Done when finished") }
+    }
+
+    /// 오케스트레이터와 그룹·콘솔 사이 연결을 켜거나 끈다.
+    func toggleWire(_ orch: UUID, to target: UUID) {
+        guard let wsID = model.workspaceID(containing: orch) else { return }
+        model.mutateWorkspace(wsID) { ws in
+            var links = ws.links ?? []
+            if let i = links.firstIndex(where: { $0.from == orch && $0.to == target }) { links.remove(at: i) }
+            else { links.append(NodeLink(from: orch, to: target)) }
+            ws.links = links
+        }
+        currentCanvas?.layoutLinks()
     }
 
     func renameTeam(_ id: UUID) {
