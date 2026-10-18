@@ -94,10 +94,25 @@ final class LoopRunner: ObservableObject {
 
     private func workspace(of id: UUID) -> Workspace? { model.state.workspaces.first { $0.loops.contains { $0.id == id } } }
 
-    /// 지금 바로 한 번 보낸다(목록의 ▶).
+    /// 지금 바로 한 번 보낸다(목록의 ▶). 명령·에이전트 목표가 있으면 타이머 때와 같이 먼저 판정한다.
     func runNow(_ id: UUID) {
-        guard let r = rule(id), let ws = workspace(of: id) else { return }
-        deliver(r, to: r.targets(in: ws), at: Date())
+        guard let r = rule(id), let ws = workspace(of: id), !checking.contains(id) else { return }
+        let targets = r.targets(in: ws)
+        switch r.goalMode ?? "text" {
+        case "command", "agent":
+            check(r, ws: ws) { [weak self] met in
+                guard let self else { return }
+                if met {
+                    self.mutate(id) { $0.enabled = false }
+                    self.notes[id] = "goal met at \(Self.time(Date()))"
+                } else {
+                    self.deliver(r, to: targets, at: Date())
+                }
+                self.refreshRows()
+            }
+        default:
+            deliver(r, to: targets, at: Date())
+        }
     }
 
     // MARK: 실행

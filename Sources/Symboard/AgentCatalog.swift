@@ -65,27 +65,14 @@ final class AgentCatalog: ObservableObject {
         }
     }
 
-    /// 로그인 셸로 command -v 를 한 번 돌려 깔린 CLI 를 찾는다.
+    /// 앱 PATH(시작할 때 로그인 셸에서 얻은 것)에서 깔린 CLI 를 찾는다.
     func detect() {
         let names = Self.known.compactMap { $0.agent == .shell ? nil : ($0.command ?? $0.id) }
-        let shell = ProcessEnvironment.userShell
-        Task.detached {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: shell)
-            p.arguments = ["-lc", names.map { "command -v \($0) >/dev/null 2>&1 && echo \($0)" }.joined(separator: "; ") + "; true"]
-            let pipe = Pipe()
-            p.standardOutput = pipe
-            p.standardError = FileHandle.nullDevice
-            try? p.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            p.waitUntilExit()
-            let found = Set(String(decoding: data, as: UTF8.self).split(separator: "\n").map(String.init))
-            await MainActor.run {
-                var ids: Set<String> = ["shell"]
-                for c in Self.known where found.contains(c.command ?? c.id) { ids.insert(c.id) }
-                self.installed = ids
-            }
-        }
+        let path = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        let found = Set(names.filter { LoginPath.which($0, path: path, isExecutable: FileManager.default.isExecutableFile(atPath:)) != nil })
+        var ids: Set<String> = ["shell"]
+        for c in Self.known where found.contains(c.command ?? c.id) { ids.insert(c.id) }
+        installed = ids
     }
 }
 
