@@ -196,7 +196,7 @@ struct LeftRail: View {
                 .popover(isPresented: $chrome.shapeOpen, arrowEdge: .trailing) {
                     ShapePicker { k in chrome.shapeOpen = false; c.setTool(.place(.shape(k))) }
                 }
-            toolButton("point.3.connected.trianglepath.dotted", "Diagram", active: false) { c.openDiagram() }
+            DiagramRailButton(maker: c.diagrams)
             toolButton("globe", "Web tile", active: chrome.tool == .place(.web)) { c.setTool(.place(.web)) }
             toolButton("photo", "Image", active: false) { c.addImageFromPanel() }
             Divider().frame(width: 24).overlay(Color.symBorder)
@@ -693,5 +693,15 @@ struct HomeView: View {
         .padding(.horizontal, 90).padding(.top, 90)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.symCanvas)
+    }
+}
+
+struct DiagramRailButton: View {
+    @ObservedObject var maker: DiagramMaker
+    var body: some View {
+        Button { maker.open.toggle() } label: { Image(systemName: "point.3.connected.trianglepath.dotted") }
+            .buttonStyle(RailToolStyle(active: maker.open || maker.drawing != nil))
+            .help("Diagram")
+            .popover(isPresented: $maker.open, arrowEdge: .trailing) { DiagramPopover(maker: maker) }
     }
 }

@@ -533,6 +533,17 @@ final class DebugBridge {
             if let out = cmd["pdf"] as? String { controller.exportPDF(markdown: d.url(for: d.selected), to: URL(fileURLWithPath: out)) }
             d.reload()
             log.append("docs selected=\(d.selected) generating=\(d.generating ?? "-") live=\(d.live.count) library=\(d.library.keys.sorted()) error=\(d.error ?? "-") activity=\(d.activity)")
+        case "diagram":
+            // open, agent, style, generate(종류 id, 실제 CLI), starter, json(가짜 결과로 그리기)
+            let d = controller.diagrams
+            if let o = cmd["open"] as? Bool { d.open = o }
+            if let a = cmd["agent"] as? String { d.agent = a }
+            if let s = cmd["style"] as? String { d.style = s }
+            if let g = cmd["generate"] as? String { d.generate(kind: g) }
+            if let s = cmd["starter"] as? String { d.placeStarter(s, at: controller.scrollView.visibleCenter) }
+            if let j = cmd["json"] as? String, let spec = DiagramSpec.parse(j) { d.draw(spec, center: controller.scrollView.visibleCenter) }
+            if cmd["fakeDrawing"] as? Bool == true { d.drawing = "Claude Code"; _ = d.placeStarter("Flow", at: controller.scrollView.visibleCenter, empty: true) }
+            log.append("diagram drawing=\(d.drawing ?? "-") error=\(d.error ?? "-") nodes=\(model.selectedWorkspace.nodes.count) links=\(model.selectedWorkspace.links?.count ?? 0)")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

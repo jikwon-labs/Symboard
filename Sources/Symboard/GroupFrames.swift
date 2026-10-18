@@ -140,6 +140,7 @@ final class GroupFrameView: NSView {
 
 /// 노드·그룹 사이 곡선 연결선. 선 위로 점이 흐른다. 클릭은 받지 않는다.
 final class LinksView: NSView {
+    var isArrowLayer = false
     private var layers: [UUID: (CAShapeLayer, CALayer, CGPath)] = [:]
 
     override init(frame frameRect: NSRect) {
@@ -170,6 +171,63 @@ final class LinksView: NSView {
             p.addCurve(to: e, control1: CGPoint(x: s.x, y: s.y + k), control2: CGPoint(x: e.x, y: e.y - k))
         }
         return p
+    }
+
+    /// 다이어그램 화살표: 두 사각형 가운데를 잇는 직선이 각 테두리와 만나는 점 사이.
+    static func arrowPath(from a: NSRect, to b: NSRect) -> (CGPath, CGPoint) {
+        func clip(_ r: NSRect, toward p: CGPoint) -> CGPoint {
+            let c = CGPoint(x: r.midX, y: r.midY)
+            let dx = p.x - c.x, dy = p.y - c.y
+            guard dx != 0 || dy != 0 else { return c }
+            let sx = dx == 0 ? .infinity : (r.width / 2 + 6) / abs(dx)
+            let sy = dy == 0 ? .infinity : (r.height / 2 + 6) / abs(dy)
+            let s = min(sx, sy)
+            return CGPoint(x: c.x + dx * s, y: c.y + dy * s)
+        }
+        let s = clip(a, toward: CGPoint(x: b.midX, y: b.midY))
+        let e = clip(b, toward: CGPoint(x: a.midX, y: a.midY))
+        let p = CGMutablePath()
+        let mid = CGPoint(x: (s.x + e.x) / 2 + (e.y - s.y) * 0.03, y: (s.y + e.y) / 2 - (e.x - s.x) * 0.03)
+        p.move(to: s)
+        p.addQuadCurve(to: e, control: mid)
+        let ang = atan2(e.y - mid.y, e.x - mid.x)
+        for d in [CGFloat.pi * 0.82, -CGFloat.pi * 0.82] {
+            p.move(to: e)
+            p.addLine(to: CGPoint(x: e.x + 14 * cos(ang + d), y: e.y + 14 * sin(ang + d)))
+        }
+        return (p, mid)
+    }
+
+    private var arrows: [UUID: (CAShapeLayer, CATextLayer?)] = [:]
+
+    func updateArrows(_ segments: [(UUID, NSRect, NSRect, String?, String)]) {
+        guard let root = layer else { return }
+        let ids = Set(segments.map(\.0))
+        for (id, l) in arrows where !ids.contains(id) { l.0.removeFromSuperlayer(); l.1?.removeFromSuperlayer(); arrows[id] = nil }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (id, a, b, label, color) in segments {
+            let (path, mid) = Self.arrowPath(from: a, to: b)
+            let shape = arrows[id]?.0 ?? CAShapeLayer()
+            shape.path = path
+            shape.fillColor = nil
+            shape.strokeColor = NSColor(hex: color).cgColor
+            shape.lineWidth = 2
+            shape.lineCap = .round
+            shape.lineJoin = .round
+            if shape.superlayer == nil { root.addSublayer(shape) }
+            var text = arrows[id]?.1
+            if let label, !label.isEmpty {
+                let t = text ?? CATextLayer()
+                t.string = NSAttributedString(string: label, attributes: [.font: Theme.handwriting(size: 15), .foregroundColor: Theme.text])
+                t.contentsScale = 2
+                let size = (label as NSString).size(withAttributes: [.font: Theme.handwriting(size: 15)])
+                t.frame = CGRect(x: mid.x + 8, y: mid.y - size.height / 2, width: size.width + 4, height: size.height + 2)
+                if t.superlayer == nil { root.addSublayer(t) }
+                text = t
+            }
+            arrows[id] = (shape, text)
+        }
+        CATransaction.commit()
     }
 
     func update(_ segments: [(UUID, NSRect, NSRect)]) {

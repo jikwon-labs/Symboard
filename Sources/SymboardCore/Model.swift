@@ -235,7 +235,13 @@ public struct NodeLink: Codable, Equatable, Sendable, Identifiable {
     public var id: UUID
     public var from: UUID
     public var to: UUID
-    public init(id: UUID = UUID(), from: UUID, to: UUID) { self.id = id; self.from = from; self.to = to }
+    /// "arrow" 이면 다이어그램용 손그림 화살표(흐르는 점 없음).
+    public var style: String?
+    public var label: String?
+    public var colorHex: String?
+    public init(id: UUID = UUID(), from: UUID, to: UUID, style: String? = nil, label: String? = nil, colorHex: String? = nil) {
+        self.id = id; self.from = from; self.to = to; self.style = style; self.label = label; self.colorHex = colorHex
+    }
 }
 
 public enum LoopTrigger: Codable, Equatable, Sendable {

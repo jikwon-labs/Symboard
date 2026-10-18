@@ -128,9 +128,13 @@ struct ShapeNodeView: View {
         }
     }
 
+    /// 줄바꿈까지 어림해서 글 높이를 정한다(가운데 정렬용).
     func textHeight(_ size: CGSize) -> CGFloat {
-        let lines = max(1, (box.node.text ?? "").split(separator: "\n", omittingEmptySubsequences: false).count)
-        return min(size.height * 0.8, CGFloat(lines) * CGFloat(style.fontSize ?? 20) * 1.45 + 8)
+        let fs = CGFloat(style.fontSize ?? 20)
+        let perLine = max(4, Int(size.width * (spec.kind == "rect" ? 0.86 : 0.68) / (fs * 0.55)))
+        let lines = (box.node.text ?? "").split(separator: "\n", omittingEmptySubsequences: false)
+            .reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / Double(perLine)))) }
+        return min(size.height * 0.86, CGFloat(max(lines, 1)) * fs * 1.4 + 10)
     }
 
     func fillShape(_ size: CGSize) -> Path {

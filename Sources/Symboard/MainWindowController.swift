@@ -9,6 +9,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let composer = ComposerState()
     let loopDraft = LoopDraft()
     lazy var studioState = StudioState(root: URL(fileURLWithPath: projectPath))
+    lazy var diagrams = DiagramMaker(c: self)
     lazy var docStudio: DocStudioState = { let d = DocStudioState(model: model); d.c = self; return d }()
     lazy var memoryHub: MemoryHub = { let h = MemoryHub(model: model); h.c = self; return h }()
     let scrollView = BoardScrollView(frame: .zero)
@@ -108,6 +109,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let selection = host(SelectionPanel(model: model, chrome: chrome, c: self))
         let pen = host(PenPanel(chrome: chrome))
         content.addSubview(pen)
+        let drawingChip = host(DrawingChip(maker: diagrams))
+        content.addSubview(drawingChip)
         let resume = host(ResumeToast(chrome: chrome, c: self))
         for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume] as [NSView] { content.addSubview(v) }
         let mission = HiddenAwareHostingView(rootView: MissionHost(model: model, chrome: chrome, c: self))
@@ -188,6 +191,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             hint.topAnchor.constraint(equalTo: content.topAnchor, constant: 56),
             resume.topAnchor.constraint(equalTo: topRight.bottomAnchor, constant: 10),
             resume.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
+            drawingChip.topAnchor.constraint(equalTo: content.topAnchor, constant: 96),
+            drawingChip.centerXAnchor.constraint(equalTo: content.centerXAnchor),
             pen.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 10),
             pen.centerYAnchor.constraint(equalTo: left.centerYAnchor, constant: -80),
             selection.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 10),
@@ -546,10 +551,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
 
-    func openDiagram() {
-        showStudio(root: URL(fileURLWithPath: projectPath))
-        studio?.studio.tab = "Diagram"
-    }
+    func openDiagram() { diagrams.open.toggle() }
 
     func showPanel(tab: String) {
         sidePanel.state.tab = tab

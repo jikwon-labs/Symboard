@@ -309,3 +309,39 @@ import Testing
         #expect(Markdown.bodyHTML("# A").contains("<h1>A</h1>"))
     }
 }
+
+@Suite struct DiagramSpecTests {
+    let json = """
+    Here you go:
+    ```json
+    {"title":"T","groups":[{"id":"c","label":"CLIENT"}],
+     "nodes":[{"id":"a","label":"Browser","shape":"ellipse","group":"c"},{"id":"b","label":"Server"},{"id":"d","label":"DB"},{"id":"x","label":"Cache"}],
+     "edges":[{"from":"a","to":"b","label":"calls"},{"from":"b","to":"d"},{"from":"b","to":"x"},{"from":"d","to":"b"},{"from":"a","to":"zzz"}]}
+    ```
+    """
+
+    @Test func parseDropsUnknownEdges() {
+        let s = DiagramSpec.parse(json)!
+        #expect(s.nodes.count == 4)
+        #expect(s.edges.count == 4)
+    }
+
+    @Test func layeredLayoutGoesDownward() {
+        let s = DiagramSpec.parse(json)!
+        let l = s.layout(origin: Point(x: 0, y: 0))
+        #expect(l.nodes["a"]!.y < l.nodes["b"]!.y)
+        #expect(l.nodes["b"]!.y < l.nodes["d"]!.y)
+        #expect(l.nodes["d"]!.y == l.nodes["x"]!.y)
+        #expect(l.groups["c"]!.y < l.nodes["a"]!.y && l.groups["c"]!.h > l.nodes["a"]!.h)
+        // 같은 층의 노드는 겹치지 않는다.
+        let d = l.nodes["d"]!, x = l.nodes["x"]!
+        #expect(abs(d.x - x.x) >= d.w)
+    }
+
+    @Test func groupBoxesDoNotOverlap() {
+        let j = #"{"title":"T","groups":[{"id":"g1","label":"A"},{"id":"g2","label":"B"}],"nodes":[{"id":"a","label":"a","group":"g1"},{"id":"b","label":"b","group":"g2"},{"id":"c","label":"c","group":"g1"},{"id":"d","label":"d","group":"g2"}],"edges":[{"from":"a","to":"d"},{"from":"b","to":"c"}]}"#
+        let l = DiagramSpec.parse(j)!.layout(origin: Point(x: 0, y: 0))
+        let g1 = l.groups["g1"]!, g2 = l.groups["g2"]!
+        #expect(g1.x + g1.w <= g2.x || g2.x + g2.w <= g1.x)
+    }
+}

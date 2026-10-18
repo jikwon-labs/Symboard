@@ -94,6 +94,12 @@ final class CanvasView: NSView {
         addSubview(v)
         return v
     }()
+    /// 다이어그램 화살표는 도형 위에 보이도록 펜 층 바로 아래에 둔다.
+    private lazy var arrowsView: LinksView = {
+        let v = LinksView(frame: bounds)
+        addSubview(v, positioned: .below, relativeTo: inkView)
+        return v
+    }()
     private lazy var linksView: LinksView = {
         let v = LinksView(frame: bounds)
         addSubview(v, positioned: .below, relativeTo: nil)
@@ -148,6 +154,8 @@ final class CanvasView: NSView {
     /// 펜 획 층을 맨 위에 두고 모델과 맞춘다.
     func syncInk() {
         if subviews.last !== inkView { addSubview(inkView, positioned: .above, relativeTo: nil) }
+        arrowsView.isArrowLayer = true
+        if subviews.dropLast().last !== arrowsView { addSubview(arrowsView, positioned: .below, relativeTo: inkView) }
         inkView.sync(workspace?.strokes ?? [])
     }
 
@@ -204,12 +212,17 @@ final class CanvasView: NSView {
             guard let v = nodeViews[id], !v.isHidden else { return nil }
             return v.frame
         }
-        let segs = (ws.links ?? []).compactMap { l -> (UUID, NSRect, NSRect)? in
+        let segs = (ws.links ?? []).filter { $0.style != "arrow" }.compactMap { l -> (UUID, NSRect, NSRect)? in
             guard let a = rect(l.from), let b = rect(l.to) else { return nil }
             return (l.id, a, b)
         }
-        if segs.isEmpty && linksView.layer?.sublayers?.isEmpty ?? true { return }
+        let arrows = (ws.links ?? []).filter { $0.style == "arrow" }.compactMap { l -> (UUID, NSRect, NSRect, String?, String)? in
+            guard let a = rect(l.from), let b = rect(l.to) else { return nil }
+            return (l.id, a, b, l.label, l.colorHex ?? Theme.text.hexString)
+        }
+        if segs.isEmpty && arrows.isEmpty && linksView.layer?.sublayers?.isEmpty ?? true { return }
         linksView.update(segs)
+        arrowsView.updateArrows(arrows)
     }
 
     func setGroup(_ teamID: UUID, collapsed: Bool) {
@@ -228,8 +241,12 @@ final class CanvasView: NSView {
         let box = Unmanaged.passRetained(RankBox(rank))
         sortSubviews({ a, b, ctx in
             let r = Unmanaged<RankBox>.fromOpaque(ctx!).takeUnretainedValue().rank
-            let ra = a is InkOverlayView ? Int.max : (r[ObjectIdentifier(a)] ?? -1)
-            let rb = b is InkOverlayView ? Int.max : (r[ObjectIdentifier(b)] ?? -1)
+            func rk(_ v: NSView) -> Int {
+                if v is InkOverlayView { return Int.max }
+                if let l = v as? LinksView, l.isArrowLayer { return Int.max - 1 }
+                return r[ObjectIdentifier(v)] ?? -1
+            }
+            let ra = rk(a), rb = rk(b)
             return ra < rb ? .orderedAscending : (ra > rb ? .orderedDescending : .orderedSame)
         }, context: box.toOpaque())
         box.release()
@@ -242,6 +259,8 @@ final class CanvasView: NSView {
             let front = Unmanaged<NSView>.fromOpaque(ctx!).takeUnretainedValue()
             if a is InkOverlayView { return .orderedDescending }
             if b is InkOverlayView { return .orderedAscending }
+            if a === front, b is LinksView, (b as! LinksView).isArrowLayer { return .orderedAscending }
+            if b === front, a is LinksView, (a as! LinksView).isArrowLayer { return .orderedDescending }
             if a === front { return .orderedDescending }
             if b === front { return .orderedAscending }
             return .orderedSame

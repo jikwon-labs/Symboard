@@ -84,8 +84,8 @@ STATUS: IN_PROGRESS
 - [x] K2. 레포 스캔(CLI 백그라운드)·단계 표시·제안 검토 (agent2/m-review.jpg)
 - [x] R1. 문서 스튜디오 왼쪽(CLI·깊이·템플릿)·빈 상태 (agent3/documents-2.6.png)
 - [x] R2. 생성 중 칩·Stop·실시간 종이·결과 종이·보드 문서 카드 (agent3/doc-gen.png, documents-19.png)
-- [ ] S1. 다이어그램 팝오버(CLI·스타일·유형 6·자유 설명·시작 도형) (agent3/diag-pop-1.2.png)
-- [ ] S2. 생성 중 칩·자리표시→등장·결과 보드 직접 손그림·서식 팝오버 (agent3/diagrams-2.5.png, diagrams-12.5.png)
+- [x] S1. 다이어그램 팝오버(CLI·스타일·유형 6·자유 설명·시작 도형) (agent3/diag-pop-1.2.png)
+- [x] S2. 생성 중 칩·자리표시→등장·결과 보드 직접 손그림·서식 팝오버 (agent3/diagrams-2.5.png, diagrams-12.5.png)
 
 ## G. 계정 프로필
 
@@ -144,5 +144,8 @@ STATUS: IN_PROGRESS
 - R1·R2: 원본 studio-documents.jpg, agent3/documents-2.6.png, agent3/doc-gen.png, agent3/documents-19.png / 내 것 `v2/R1-documents-empty.png`, `v2/R2-documents-writing.png`, `v2/R2-documents-result-real.png`, `v2/R2-document-card.png`. 오른쪽 막대 문서 버튼 → 패널. 왼쪽: 부제, CLI 배지 줄(Claude/Codex), Quick/Balanced/Thorough 와 지난 소요 시간("0:17"/"not timed"), 문서 종류 7개(이름·설명은 직접 씀: Overview, Getting started, Architecture, README, API guide, Data model, Security notes) + 다 되면 초록 체크·생성 중 점, 아래 자유 요청 입력. 빈 상태: 아이콘·제목·설명·"Generate with <CLI>"·라이브러리 저장 안내. 생성 중: "Writing with Claude Code · 15s" 칩, Stop, 흰 종이 카드에 스켈레톤 줄 → 본문이 0.25초마다 바뀌어 들어감(innerHTML 교체), 종이 아래 CLI 상태줄. 결과: 흰 종이+그림자, 강조색 밑줄 제목, 강조색 인라인 코드, NOTE/TIP 콜아웃, 카드형 표, "331 words · ~2 min read"·종이/원문 보기·재생성·보드로 보내기·Export PDF(저장 시트). 보드 카드: DOCUMENT 라벨+CLI 배지+제목+단어 수+종이 미리보기. 라이브러리는 ~/Library/Application Support/Symboard/docs/<레포>-<해시>/<종류>.md (사용자 레포에 파일을 만들지 않음).
   - 실제 호출: /tmp/symsample 에서 claude Quick Overview 1회, 17초, 331낱말 문서 저장, PDF 76KB 생성 확인. `v2/R2-documents-writing.png` 는 글이 3초 안에 다 들어와 중간 화면을 잡지 못해 디버그로 앞부분 글을 넣어 찍은 것이다(그리는 경로는 같음).
   - 남은 차이: 원본은 종이 아래에 CLI 터미널 화면이 비치지만 여기는 진행 한 줄만 보인다. CLI 배지 옆 "+"(다른 CLI 추가)는 없다.
+- S1·S2: 원본 studio-diagrams.jpg, agent3/diag-pop-1.2.png, agent3/diagrams-2.5.png, agent3/diagrams-12.5.png / 내 것 `v2/S1-diagram-popover.png`, `v2/S2-claude-is-drawing.png`, `v2/S2-diagram-real-ink.png`, `v2/S2-diagram-colorful-bands.png`, `v2/S2-diagram-node-format.png`. 왼쪽 막대 다이어그램 버튼 → 팝오버: MODEL(Claude/Codex), STYLE Ink/Colorful, FROM YOUR PROJECT 6개(Architecture, User flow, Data flow, Components, Request lifecycle, State flow), Describe + Generate, STARTER SHAPES(Flow/Steps/Branch/Mind map, 에이전트 없이 바로 놓음). 생성: 위쪽 "Claude Code is drawing ×" 칩 + 흐린 빈 상자·화살표 자리표시 → 에이전트가 낸 JSON(제목·그룹·노드·간선, DiagramSpec 파서·층 배치 단위 테스트) → 자리표시를 지우고 그룹 상자 → 제목 → 노드 → 화살표 순서로 0.09초 간격 등장 → 전체 보기. 결과는 보드의 진짜 객체: 손그림 둥근 사각형(제목+부제), 바깥 요소는 타원, 점선 그룹 상자+라벨, 라벨 달린 손그림 화살표(도형 위 층), 손글씨 제목. 노드를 고르면 H6 서식 패널(선·배경·굵기·선 모양·거칠기·모서리·글자 크기·글꼴·불투명도·레이어/복제/삭제).
+  - 실제 호출: /tmp/symsample 에서 claude Architecture 1회(약 40초), 노드 9·그룹 3·간선 9 의 다이어그램이 그려짐(`v2/S2-diagram-real-ink.png`). 그때 그룹 상자끼리 겹치고 일부 글이 잘려서, 그룹마다 세로 띠를 주는 배치로 고치고(단위 테스트 groupBoxesDoNotOverlap) 같은 내용을 손으로 옮긴 JSON 으로 다시 그려 확인(`v2/S2-diagram-colorful-bands.png`, 추가 CLI 호출 없음). 색 채움 그룹 아래에 화살표가 묻혀서 화살표를 도형 위 층으로 옮김.
+  - 남은 차이: 원본 서식 패널은 글꼴 8종, 여기는 4종. 원본은 노드가 나타난 뒤 층 배치로 미끄러지듯 정리되는 움직임이 있는데 여기는 처음부터 제자리에 나타난다.
 
 ## 막힌 것

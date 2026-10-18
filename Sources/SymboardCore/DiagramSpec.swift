@@ -1,0 +1,155 @@
+import Foundation
+
+/// 에이전트가 JSON 으로 내는 다이어그램. 앱이 보드 위에 손그림풍으로 그린다.
+public struct DiagramSpec: Codable, Equatable, Sendable {
+    public struct Node: Codable, Equatable, Sendable {
+        public var id: String
+        public var label: String
+        public var sub: String?
+        /// "box" 또는 "ellipse"(바깥 요소).
+        public var shape: String?
+        public var group: String?
+        public init(id: String, label: String, sub: String? = nil, shape: String? = nil, group: String? = nil) {
+            self.id = id; self.label = label; self.sub = sub; self.shape = shape; self.group = group
+        }
+    }
+    public struct Edge: Codable, Equatable, Sendable {
+        public var from: String
+        public var to: String
+        public var label: String?
+        public init(from: String, to: String, label: String? = nil) { self.from = from; self.to = to; self.label = label }
+    }
+    public struct Group: Codable, Equatable, Sendable {
+        public var id: String
+        public var label: String
+        public init(id: String, label: String) { self.id = id; self.label = label }
+    }
+
+    public var title: String
+    public var nodes: [Node]
+    public var edges: [Edge]
+    public var groups: [Group]?
+
+    public init(title: String, nodes: [Node], edges: [Edge], groups: [Group]? = nil) {
+        self.title = title; self.nodes = nodes; self.edges = edges; self.groups = groups
+    }
+
+    /// 글 속에서 첫 JSON 객체를 찾아 푼다(코드 울타리·앞뒤 말 무시). 모르는 노드를 가리키는 간선은 뺀다.
+    public static func parse(_ text: String) -> DiagramSpec? {
+        guard let a = text.firstIndex(of: "{"), let b = text.lastIndex(of: "}"), a < b,
+              var spec = try? JSONDecoder().decode(DiagramSpec.self, from: Data(text[a...b].utf8)) else { return nil }
+        let ids = Set(spec.nodes.map(\.id))
+        spec.edges = spec.edges.filter { ids.contains($0.from) && ids.contains($0.to) && $0.from != $0.to }
+        return spec.nodes.isEmpty ? nil : spec
+    }
+
+    public struct Layout: Equatable, Sendable {
+        public var nodes: [String: Rect]
+        public var groups: [String: Rect]
+        public var title: Point
+    }
+
+    /// 위에서 아래로 층을 나눈 배치. 층 = 순환을 끊은 뒤 가장 긴 경로 길이, 층 안에서는 그룹끼리 모으고 앞 층 평균 위치로 정렬.
+    public func layout(origin: Point, nodeW: Double = 230, nodeH: Double = 110, gapX: Double = 70, gapY: Double = 120) -> Layout {
+        let ids = nodes.map(\.id)
+        var out: [String: [String]] = [:], inc: [String: [String]] = [:]
+        for e in edges { out[e.from, default: []].append(e.to); inc[e.to, default: []].append(e.from) }
+        // 순환 끊기: DFS 로 되돌아가는 간선 제외.
+        var state: [String: Int] = [:]
+        var dag: [String: [String]] = [:]
+        func dfs(_ v: String) {
+            state[v] = 1
+            for w in out[v] ?? [] {
+                if state[w] == 1 { continue }
+                dag[v, default: []].append(w)
+                if state[w] == nil { dfs(w) }
+            }
+            state[v] = 2
+        }
+        for v in ids where state[v] == nil { dfs(v) }
+        var rank: [String: Int] = [:]
+        func depth(_ v: String, _ seen: inout Set<String>) -> Int {
+            if let r = rank[v] { return r }
+            var best = 0
+            for (u, ws) in dag where ws.contains(v) && !seen.contains(u) {
+                seen.insert(u); best = max(best, depth(u, &seen) + 1); seen.remove(u)
+            }
+            rank[v] = best
+            return best
+        }
+        for v in ids { var s: Set<String> = [v]; _ = depth(v, &s) }
+        let maxRank = rank.values.max() ?? 0
+        _ = maxRank
+        var rows: [[String]] = Array(repeating: [], count: maxRank + 1)
+        for v in ids { rows[rank[v] ?? 0].append(v) }
+        // 그룹마다 세로 띠를 따로 준다(그룹 상자끼리 겹치지 않게). 그룹 없는 노드는 마지막 띠.
+        let groupOrder = (groups ?? []).map(\.id) + [""]
+        let groupOf = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, ($0.group.flatMap { g in groupOrder.contains(g) ? g : nil }) ?? "") })
+        var bandWidth: [String: Int] = [:]
+        for row in rows {
+            var counts: [String: Int] = [:]
+            for v in row { counts[groupOf[v] ?? "", default: 0] += 1 }
+            for (g, c) in counts { bandWidth[g] = max(bandWidth[g] ?? 0, c) }
+        }
+        let bands = groupOrder.filter { (bandWidth[$0] ?? 0) > 0 }
+        let bandGap = gapX + 40
+        var bandX: [String: Double] = [:]
+        var cursor = origin.x
+        for g in bands {
+            bandX[g] = cursor
+            cursor += Double(bandWidth[g]!) * nodeW + Double(bandWidth[g]! - 1) * gapX + bandGap
+        }
+        var xpos: [String: Double] = [:]
+        var result: [String: Rect] = [:]
+        for (r, row) in rows.enumerated() {
+            for g in bands {
+                let members = row.filter { (groupOf[$0] ?? "") == g }.sorted { a, b in
+                    func bary(_ v: String) -> Double {
+                        let ps = (inc[v] ?? []).compactMap { xpos[$0] }
+                        return ps.isEmpty ? Double(ids.firstIndex(of: v) ?? 0) * 1000 : ps.reduce(0, +) / Double(ps.count)
+                    }
+                    return bary(a) < bary(b)
+                }
+                guard !members.isEmpty else { continue }
+                let full = Double(bandWidth[g]!) * nodeW + Double(bandWidth[g]! - 1) * gapX
+                let used = Double(members.count) * nodeW + Double(members.count - 1) * gapX
+                var x = bandX[g]! + (full - used) / 2
+                for v in members {
+                    result[v] = Rect(x: x, y: origin.y + 90 + Double(r) * (nodeH + gapY), w: nodeW, h: nodeH)
+                    xpos[v] = x
+                    x += nodeW + gapX
+                }
+            }
+        }
+        var groupRects: [String: Rect] = [:]
+        for g in groups ?? [] {
+            let rs = nodes.filter { $0.group == g.id }.compactMap { result[$0.id] }
+            guard !rs.isEmpty else { continue }
+            let minX = rs.map(\.x).min()!, minY = rs.map(\.y).min()!
+            let maxX = rs.map { $0.x + $0.w }.max()!, maxY = rs.map { $0.y + $0.h }.max()!
+            groupRects[g.id] = Rect(x: minX - 28, y: minY - 52, w: maxX - minX + 56, h: maxY - minY + 80)
+        }
+        return Layout(nodes: result, groups: groupRects, title: Point(x: origin.x, y: origin.y - 10))
+    }
+
+    public static let kinds: [(id: String, title: String, icon: String, ask: String)] = [
+        ("architecture", "Architecture", "square.3.layers.3d", "the system architecture: main components, external services and how they connect"),
+        ("userflow", "User flow", "figure.walk", "the main user journey through the product, step by step"),
+        ("dataflow", "Data flow", "arrow.left.arrow.right", "how data moves from inputs through processing to storage and outputs"),
+        ("components", "Components", "square.grid.2x2", "the main modules or UI components and their dependencies"),
+        ("request", "Request lifecycle", "clock.arrow.circlepath", "what happens to a single request from the caller to the response"),
+        ("state", "State flow", "arrow.triangle.branch", "the important states and the transitions between them"),
+    ]
+
+    public static func prompt(kind: String?, describe: String?, repoName: String) -> String {
+        let ask = kinds.first { $0.id == kind }?.ask ?? (describe ?? "the project")
+        return """
+        Look at this repository and draw a diagram of \(ask). Keep it readable: 5 to 12 nodes, short labels.
+        Reply with ONLY one JSON object and nothing else, in this shape:
+        {"title": "\(repoName) ...", "groups": [{"id": "g1", "label": "CLIENT"}],
+         "nodes": [{"id": "n1", "label": "Browser", "sub": "two to four words", "shape": "box or ellipse", "group": "g1"}],
+         "edges": [{"from": "n1", "to": "n2", "label": "short verb"}]}
+        Use "ellipse" only for things outside the repository (users, browsers, third-party services). Groups are optional.
+        """
+    }
+}
