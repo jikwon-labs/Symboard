@@ -36,6 +36,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
         if !window.setFrameUsingName("SymboardMain") { window.center() }
         model.assignProjects(fallback: NewTerminalDialog.lastCwd)
+        // 상태 틱(1초)은 콘솔이 없어도 돌아야 한다(사용량 알약·루프·미션 맵).
+        _ = model.sessions
+        _ = model.loops
         buildUI()
         observe()
         sidePanel.addTab("Memory", view: AnyView(MemoryPanelView(memory: model.memory, panel: sidePanel.state)))
@@ -43,7 +46,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             self?.addTerminal(spec: TerminalSpec(agent: p.agent, cwd: self?.projectPath ?? NewTerminalDialog.lastCwd, profileID: p.id), at: nil,
                               title: "\(p.agent.displayName) (\(p.name))")
         }))
-        sidePanel.addTab("Usage", view: AnyView(UsagePanelView(store: model.usage)))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.model.usage.refresh() }
         showWorkspace(model.selectedWorkspace.id)
         refreshGit()
         gitTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
@@ -307,6 +310,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         sidePanel.refreshStatuses()
         currentCanvas?.layoutGroups()
         StatusBeat.shared.tick &+= 1
+        let reset = model.usage.resetText ?? "usage"
+        if chrome.resetText != reset { chrome.resetText = reset }
         let pending = model.sessions.pendingResume.count
         if chrome.resumeCount != pending { chrome.resumeCount = pending }
         let live = model.sessions.liveCount
@@ -434,7 +439,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         } else { showPanel(tab: tab) }
     }
 
-    func openUsage() { togglePanel(tab: "Usage") }
+    func openUsage() { chrome.usageOpen.toggle() }
     func openProfiles() { togglePanel(tab: "Profiles") }
     func openLoops() { chrome.loopsPage = chrome.loopsPage == nil ? "list" : nil }
     func openMemory() { togglePanel(tab: "Memory") }

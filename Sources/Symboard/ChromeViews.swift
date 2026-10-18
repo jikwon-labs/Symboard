@@ -113,14 +113,17 @@ struct TopRightBar: View {
             .floatingCapsule(radius: 10)
             .help("Running consoles")
 
-            Button { c.openUsage() } label: {
+            Button { chrome.usageOpen.toggle() } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Color.symDim)
                     Text(chrome.resetText)
                 }
             }
-            .buttonStyle(PillButtonStyle())
+            .buttonStyle(PillButtonStyle(active: chrome.usageOpen))
             .help("Usage")
+            .popover(isPresented: $chrome.usageOpen, arrowEdge: .bottom) {
+                UsagePopover(store: c.model.usage) { chrome.usageOpen = false }
+            }
 
             HStack(spacing: 2) {
                 iconButton("person.crop.circle", "Accounts") { c.openProfiles() }

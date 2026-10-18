@@ -2,20 +2,14 @@ import Charts
 import SwiftUI
 import SymboardCore
 
-/// 로컬 로그를 훑어 날짜별·에이전트별 토큰 사용량을 모은다.
+/// 로컬 로그를 훑어 에이전트별 토큰 사용량과 통계를 모은다. 로그는 이 맥 밖으로 나가지 않는다.
 @MainActor
 final class UsageStore: ObservableObject {
-    struct Row: Identifiable, Equatable {
-        var day: String
-        var claude: TokenCounts
-        var codex: TokenCounts
-        var id: String { day }
-    }
-
-    @Published var rows: [Row] = []
+    @Published var records: [AgentKind: [UsageRecord]] = [:]
+    @Published var stats: [AgentKind: UsageStats] = [:]
     @Published var scanning = false
     @Published var note = ""
-    @Published var days = 14
+    @Published var scannedAt: Date?
     unowned let model: AppModel
 
     init(model: AppModel) { self.model = model }
@@ -35,19 +29,24 @@ final class UsageStore: ObservableObject {
         guard !scanning else { return }
         scanning = true
         let r = roots()
-        let days = days
         let started = Date()
         Task.detached(priority: .utility) {
-            let result = Self.scan(claudeRoots: r.claude, codexRoots: r.codex, days: days)
+            let result = Self.scan(claudeRoots: r.claude, codexRoots: r.codex, days: 365)
+            var grouped: [AgentKind: [UsageRecord]] = [:]
+            for rec in result.records { grouped[rec.agent, default: []].append(rec) }
+            var stats: [AgentKind: UsageStats] = [:]
+            for (k, v) in grouped { stats[k] = UsageStats.compute(v) }
             await MainActor.run {
-                self.rows = result.rows
-                self.note = "\(result.files) log files, \(String(format: "%.1f", Date().timeIntervalSince(started)))s"
+                self.records = grouped
+                self.stats = stats
+                self.note = "\(result.files) log files · \(String(format: "%.1f", Date().timeIntervalSince(started)))s"
+                self.scannedAt = Date()
                 self.scanning = false
             }
         }
     }
 
-    nonisolated static func scan(claudeRoots: [String], codexRoots: [String], days: Int) -> (rows: [Row], files: Int) {
+    nonisolated static func scan(claudeRoots: [String], codexRoots: [String], days: Int) -> (records: [UsageRecord], files: Int) {
         let cutoff = Calendar.current.startOfDay(for: Date()).addingTimeInterval(Double(-(days - 1)) * 86400)
         let fm = FileManager.default
         func files(under root: String) -> [(String, Date)] {
@@ -76,89 +75,353 @@ final class UsageStore: ObservableObject {
             for (path, m) in files(under: root + "/sessions") {
                 guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
                 count += 1
-                records += UsageParser.codex(jsonl: text, fallbackDay: fmt.string(from: m))
+                records += UsageParser.codex(jsonl: text, fallbackDay: fmt.string(from: m), session: path)
             }
         }
-        let agg = UsageParser.aggregate(records)
-        let cutoffDay = fmt.string(from: cutoff)
-        let rows = agg.keys.filter { $0 >= cutoffDay }.sorted(by: >).map { d in
-            Row(day: d, claude: agg[d]?[.claude] ?? TokenCounts(), codex: agg[d]?[.codex] ?? TokenCounts())
-        }
-        return (rows, count)
+        return (records, count)
+    }
+
+    /// 위쪽 알약 문구: 가장 가까운 5시간 묶음 끝.
+    var resetText: String? {
+        let ends = stats.values.compactMap(\.blockEnd).filter { $0 > Date() }
+        guard let e = ends.min() else { return nil }
+        let f = DateFormatter(); f.dateFormat = "h:mma"; f.amSymbol = "am"; f.pmSymbol = "pm"; f.locale = Locale(identifier: "en_US_POSIX")
+        return "resets " + f.string(from: e)
     }
 }
 
-func formatTokens(_ n: Int) -> String {
-    if n >= 1_000_000_000 { return String(format: "%.2fB", Double(n) / 1e9) }
-    if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1e6) }
-    if n >= 1_000 { return String(format: "%.1fK", Double(n) / 1e3) }
-    return "\(n)"
-}
-
-struct UsagePanelView: View {
+/// 위쪽 사용량 알약에서 여는 팝오버.
+struct UsagePopover: View {
     @ObservedObject var store: UsageStore
+    var close: () -> Void
+    @State private var agent: AgentKind = .claude
+    @State private var page = "overview"
+    @State private var metric = "All tokens"
+    @State private var allTime = false
+
+    var stats: UsageStats { store.stats[agent] ?? UsageStats() }
+    var choice: AgentChoice { AgentCatalog.choice(for: TerminalSpec(agent: agent, cwd: "/")) }
+    var tint: Color { Color(hex: choice.colorHex) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            Divider().overlay(Color.symBorder)
+            if store.scanning && store.stats.isEmpty {
+                loading
+            } else if page == "tokens" {
+                tokens
+            } else {
+                overview
+            }
+            Divider().overlay(Color.symBorder)
+            HStack(spacing: 6) {
+                Circle().fill(tint).frame(width: 6, height: 6)
+                Text("local session logs").font(.system(size: 10, design: .monospaced))
+                Spacer()
+                Text(store.note).font(.system(size: 10))
+            }
+            .foregroundStyle(Color.symDim)
+            .padding(.horizontal, 14).padding(.vertical, 8)
+        }
+        .frame(width: 420)
+        .background(Color.symSurface)
+        .environment(\.locale, Locale(identifier: "en_US"))
+        .onReceive(NotificationCenter.default.publisher(for: .usagePage)) { n in if let p = n.object as? String { page = p } }
+        .onAppear { if store.stats.isEmpty || (store.scannedAt.map { Date().timeIntervalSince($0) > 120 } ?? true) { store.refresh() } }
+    }
+
+    var header: some View {
+        HStack(spacing: 8) {
+            if page == "tokens" {
+                Button { page = "overview" } label: { Image(systemName: "chevron.left") }.buttonStyle(.plain)
+                Text("tokens").font(.system(size: 15, weight: .semibold))
+            } else {
+                Text("usage").font(.system(size: 15, weight: .semibold))
+                ForEach([AgentKind.claude, .codex], id: \.self) { a in
+                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }
+                        .buttonStyle(.plain)
+                        .opacity(agent == a ? 1 : 0.45)
+                        .overlay(alignment: .bottom) { if agent == a { Circle().fill(Color.symAccent).frame(width: 4, height: 4).offset(y: 6) } }
+                }
+            }
+            Spacer()
+            Button { page = page == "tokens" ? "overview" : "tokens" } label: { Image(systemName: "chart.bar.fill") }
+                .buttonStyle(.plain).help("Token details")
+            Button { store.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("Rescan logs")
+            Button(action: close) { Image(systemName: "xmark") }.buttonStyle(.plain)
+        }
+        .foregroundStyle(Color.symText)
+        .padding(14)
+    }
+
+    var loading: some View {
+        VStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text("Reading local session logs").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
+            Text("Counting tokens straight from each agent's own transcripts on this Mac. Nothing leaves your machine.")
+                .font(.system(size: 11)).foregroundStyle(Color.symDim).multilineTextAlignment(.center)
+        }
+        .padding(30).frame(maxWidth: .infinity, minHeight: 300)
+    }
+
+    func label(_ t: String) -> some View {
+        Text(t).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+    }
+
+    var overview: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle().stroke(Color.symBorder, lineWidth: 5)
+                        Circle().trim(from: 0, to: 0.02).stroke(tint, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
+                        VStack(spacing: 0) {
+                            Text("?").font(.system(size: 16, weight: .bold)).foregroundStyle(Color.symText)
+                            Text("limit").font(.system(size: 9)).foregroundStyle(Color.symDim)
+                        }
+                    }
+                    .frame(width: 62, height: 62)
+                    .help("Plan limits are not written to local logs, so the percentage is unknown.")
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Current session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
+                        if let end = stats.blockEnd {
+                            Text("\(UsageStats.short(stats.blockTokens)) tokens · resets \(end.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Self.en))) (estimated)")
+                                .font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                        } else {
+                            Text("No activity in the last 5 hours").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                        }
+                        Text("Limit % is not in local logs").font(.system(size: 10)).foregroundStyle(Color.symDim.opacity(0.7))
+                    }
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Last 7 days").font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
+                        Spacer()
+                        Text(UsageStats.short(stats.weekTokens)).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
+                    }
+                    GeometryReader { g in
+                        let frac = stats.totalTokens > 0 ? min(1, Double(stats.weekTokens) / Double(max(stats.byDay.values.max() ?? 1, 1) * 7)) : 0
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.symRaised)
+                            Capsule().fill(tint).frame(width: g.size.width * frac)
+                        }
+                    }
+                    .frame(height: 5)
+                }
+                label("ACTIVITY")
+                Heatmap(byDay: stats.byDay, tint: tint)
+                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 7) {
+                    GridRow { stat("Favorite model", stats.favoriteModel.map(Self.prettyModel) ?? "-"); stat("Total tokens", UsageStats.short(stats.totalTokens)) }
+                    GridRow { stat("Sessions", "\(stats.sessions)"); stat("Active days", "\(stats.activeDays)/365") }
+                    GridRow { stat("Most active day", stats.mostActiveDay.map(Self.prettyDay) ?? "-"); stat("Longest session", Self.duration(stats.longestSession)) }
+                    GridRow { stat("Longest streak", "\(stats.longestStreak) days"); stat("Current streak", "\(stats.currentStreak) days") }
+                }
+                label("LAST 30D")
+                shareBar("At >150k context", stats.bigContextShare, "Long sessions cost more per message.")
+                shareBar("While 4+ sessions ran in parallel", stats.parallelShare, "Several busy sessions at once use limits faster.")
+            }
+            .padding(14)
+        }
+        .frame(height: 560)
+    }
+
+    func stat(_ k: String, _ v: String) -> some View {
+        HStack {
+            Text(k).foregroundStyle(Color.symDim)
+            Spacer()
+            Text(v).foregroundStyle(Color.symText).font(.system(size: 11, weight: .semibold, design: .monospaced))
+        }
+        .font(.system(size: 11))
+        .frame(maxWidth: .infinity)
+    }
+
+    func shareBar(_ title: String, _ v: Double, _ sub: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
+                Spacer()
+                Text("\(Int((v * 100).rounded()))%").font(.system(size: 12, design: .monospaced)).foregroundStyle(tint)
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.symRaised)
+                    Capsule().fill(tint).frame(width: g.size.width * v)
+                }
+            }
+            .frame(height: 5)
+            Text(sub).font(.system(size: 10)).foregroundStyle(Color.symDim)
+        }
+    }
+
+    // MARK: 토큰 상세
 
     struct Bar: Identifiable {
-        var day: String
+        var day: Date
         var agent: String
         var tokens: Int
-        var id: String { day + agent }
+        var id: String { "\(day.timeIntervalSince1970)\(agent)" }
+    }
+
+    func value(_ c: TokenCounts) -> Int {
+        switch metric {
+        case "In + out": return c.input + c.output
+        case "Output": return c.output
+        default: return c.total
+        }
     }
 
     var bars: [Bar] {
-        store.rows.reversed().flatMap { r in
-            [Bar(day: String(r.day.suffix(5)), agent: "Claude Code", tokens: r.claude.total),
-             Bar(day: String(r.day.suffix(5)), agent: "Codex", tokens: r.codex.total)]
+        let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM-dd"
+        let cutoff = Calendar.current.startOfDay(for: Date()).addingTimeInterval(-29 * 86400)
+        var out: [Bar] = []
+        for (a, recs) in store.records {
+            var byDay: [String: Int] = [:]
+            for r in recs { byDay[r.day, default: 0] += value(r.counts) }
+            for (d, v) in byDay { if let date = fmt.date(from: d), date >= cutoff { out.append(Bar(day: date, agent: a.displayName, tokens: v)) } }
+        }
+        return out
+    }
+
+    var tokens: some View {
+        let b = bars
+        let total = b.reduce(0) { $0 + $1.tokens }
+        var dayTotals: [Date: Int] = [:]
+        for x in b { dayTotals[x.day, default: 0] += x.tokens }
+        let peak = dayTotals.max { $0.value < $1.value }
+        let perAgent: [(AgentKind, Int)] = [AgentKind.claude, .codex].map { a in
+            let recs = store.records[a] ?? []
+            let cutoff = Date().addingTimeInterval(-30 * 86400)
+            return (a, recs.filter { allTime || ($0.time.map { $0 >= cutoff } ?? false) }.reduce(0) { $0 + value($1.counts) })
+        }
+        let agentSum = max(perAgent.reduce(0) { $0 + $1.1 }, 1)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 18) {
+                    kpi("Last 30 days", UsageStats.short(total))
+                    kpi("Busiest day", peak.map { $0.key.formatted(Date.FormatStyle().month(.abbreviated).day().locale(Self.en)) } ?? "-")
+                    kpi("Top agent", perAgent.max { $0.1 < $1.1 }.map { "\($0.0.displayName) · \(Int(Double($0.1) / Double(agentSum) * 100))%" } ?? "-")
+                }
+                HStack {
+                    label("LAST 30 DAYS")
+                    Spacer()
+                    ForEach(["All tokens", "In + out", "Output"], id: \.self) { m in
+                        Button(m) { metric = m }.buttonStyle(ChipStyle(on: metric == m))
+                    }
+                }
+                Chart(b) { x in
+                    BarMark(x: .value("Day", x.day, unit: .day), y: .value("Tokens", x.tokens))
+                        .foregroundStyle(by: .value("Agent", x.agent))
+                }
+                .chartForegroundStyleScale(["Claude Code": Color(hex: "#E8704A"), "Codex": Color(hex: "#6C7BFF")])
+                .chartXAxis { AxisMarks(values: .stride(by: .day, count: 7)) { _ in AxisValueLabel(format: Date.FormatStyle().month(.abbreviated).day().locale(Self.en)) } }
+                .chartYAxis { AxisMarks { v in AxisValueLabel { Text(UsageStats.short(v.as(Int.self) ?? 0)) } } }
+                .frame(height: 150)
+                HStack {
+                    label("BY AGENT")
+                    Spacer()
+                    Button("Last 30 days") { allTime = false }.buttonStyle(ChipStyle(on: !allTime))
+                    Button("All time") { allTime = true }.buttonStyle(ChipStyle(on: allTime))
+                }
+                ForEach(perAgent, id: \.0) { a, v in
+                    let c = AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/"))
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            AgentBadge(choice: c, size: 18)
+                            Text(c.name).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
+                            Spacer()
+                            Text(UsageStats.short(v)).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
+                            Text("\(Int(Double(v) / Double(agentSum) * 100))%").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                        }
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.symRaised)
+                                Capsule().fill(Color(hex: c.colorHex)).frame(width: g.size.width * Double(v) / Double(agentSum))
+                            }
+                        }
+                        .frame(height: 5)
+                    }
+                }
+                Text("Read from each agent's local session logs. Agents that do not keep token counts on disk are not shown.")
+                    .font(.system(size: 10)).foregroundStyle(Color.symDim)
+            }
+            .padding(14)
+        }
+        .frame(height: 560)
+    }
+
+    func kpi(_ k: String, _ v: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(k).font(.system(size: 10)).foregroundStyle(Color.symDim)
+            Text(v).font(.system(size: 14, weight: .semibold, design: .monospaced)).foregroundStyle(Color.symText)
         }
     }
+
+    static let en = Locale(identifier: "en_US")
+
+    static func prettyModel(_ m: String) -> String {
+        var t = m.replacingOccurrences(of: "claude-", with: "")
+        // "opus-5-5" → "opus 5.5", 날짜 꼬리(-20250101)는 뺀다.
+        t = t.replacingOccurrences(of: "-\\d{8}$", with: "", options: .regularExpression)
+        t = t.replacingOccurrences(of: "-(\\d+)-(\\d+)$", with: " $1.$2", options: .regularExpression)
+        return t.replacingOccurrences(of: "-", with: " ").capitalized
+    }
+
+    static func prettyDay(_ d: String) -> String {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+        guard let date = f.date(from: d) else { return d }
+        return date.formatted(Date.FormatStyle().month(.abbreviated).day().locale(en))
+    }
+
+    static func duration(_ t: TimeInterval) -> String {
+        let m = Int(t / 60)
+        if m < 60 { return "\(m)m" }
+        let h = m / 60
+        if h < 24 { return "\(h)h \(m % 60)m" }
+        return "\(h / 24)d \(h % 24)h"
+    }
+}
+
+extension Notification.Name {
+    /// 디버그 통로가 사용량 팝오버 쪽을 바꿀 때. object 는 "overview" 또는 "tokens".
+    static let usagePage = Notification.Name("symboard.usagePage")
+}
+
+/// 지난 12개월 하루 단위 활동 칸.
+struct Heatmap: View {
+    var byDay: [String: Int]
+    var tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Picker("", selection: $store.days) {
-                    Text("7 days").tag(7)
-                    Text("14 days").tag(14)
-                    Text("30 days").tag(30)
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let weeks = 52
+        let start = cal.date(byAdding: .day, value: -(weeks * 7 - 1) - (cal.component(.weekday, from: today) - 1), to: today)!
+        let fmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f }()
+        let maxV = max(byDay.values.max() ?? 1, 1)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 2) {
+                ForEach(0..<(weeks + 1), id: \.self) { w in
+                    VStack(spacing: 2) {
+                        ForEach(0..<7, id: \.self) { d in
+                            let day = cal.date(byAdding: .day, value: w * 7 + d, to: start)!
+                            let v = byDay[fmt.string(from: day)] ?? 0
+                            let level = v == 0 ? 0 : min(4, 1 + Int(4 * Double(v) / Double(maxV)))
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(day > today ? Color.clear : (level == 0 ? Color.symRaised : tint.opacity(0.25 + 0.19 * Double(level))))
+                                .frame(width: 5.5, height: 5.5)
+                        }
+                    }
                 }
-                .labelsHidden()
-                .frame(width: 100)
-                .onChange(of: store.days) { _, _ in store.refresh() }
+            }
+            HStack(spacing: 3) {
                 Spacer()
-                if store.scanning { ProgressView().controlSize(.small) }
-                Button("Refresh") { store.refresh() }.controlSize(.small)
-            }
-            Chart(bars) { b in
-                BarMark(x: .value("Day", b.day), y: .value("Tokens", b.tokens))
-                    .foregroundStyle(by: .value("Agent", b.agent))
-            }
-            .chartForegroundStyleScale(["Claude Code": Color.orange, "Codex": Color.teal])
-            .chartYAxis { AxisMarks { v in AxisValueLabel { Text(formatTokens(v.as(Int.self) ?? 0)) }; AxisGridLine() } }
-            .chartXAxis { AxisMarks { _ in AxisValueLabel().font(.system(size: 8)) } }
-            .frame(height: 150)
-            Text("Tokens include cache reads and writes. Read from local session logs only.")
-                .font(.system(size: 9)).foregroundStyle(.secondary)
-            List(store.rows) { r in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(r.day).font(.system(size: 11, weight: .semibold))
-                    usageLine("Claude", r.claude)
-                    usageLine("Codex", r.codex)
+                Text("Less").font(.system(size: 9)).foregroundStyle(Color.symDim)
+                ForEach(0..<5, id: \.self) { l in
+                    RoundedRectangle(cornerRadius: 1.5).fill(l == 0 ? Color.symRaised : tint.opacity(0.25 + 0.19 * Double(l))).frame(width: 7, height: 7)
                 }
+                Text("More").font(.system(size: 9)).foregroundStyle(Color.symDim)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            Text(store.note).font(.system(size: 9)).foregroundStyle(.secondary)
         }
-        .padding(8)
-        .onAppear { if store.rows.isEmpty { store.refresh() } }
-    }
-
-    private func usageLine(_ name: String, _ c: TokenCounts) -> some View {
-        HStack(spacing: 6) {
-            Text(name).frame(width: 44, alignment: .leading)
-            Text(formatTokens(c.total)).bold().frame(width: 52, alignment: .trailing)
-            Text("out \(formatTokens(c.output))").foregroundStyle(.secondary).lineLimit(1)
-        }
-        .font(.system(size: 10, design: .monospaced))
-        .help("input \(c.input), output \(c.output), cache read \(c.cacheRead), cache write \(c.cacheWrite)")
     }
 }

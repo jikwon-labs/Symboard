@@ -24,6 +24,17 @@ public struct UsageRecord: Equatable, Sendable {
     public var day: String
     public var agent: AgentKind
     public var counts: TokenCounts
+    /// 2차에서 더한 값(통계용). 없을 수 있다.
+    public var time: Date? = nil
+    public var model: String? = nil
+    public var session: String? = nil
+
+    public init(day: String, agent: AgentKind, counts: TokenCounts, time: Date? = nil, model: String? = nil, session: String? = nil) {
+        self.day = day; self.agent = agent; self.counts = counts; self.time = time; self.model = model; self.session = session
+    }
+
+    /// 이 응답이 받은 문맥 크기(입력 + 캐시).
+    public var context: Int { counts.input + counts.cacheRead + counts.cacheWrite }
 }
 
 /// 형식은 디스크에서 직접 확인했다.
@@ -40,11 +51,19 @@ public enum UsageParser {
     }()
 
     static func day(fromISO s: String?, fallback: String) -> String {
-        guard let s else { return fallback }
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = iso.date(from: s) ?? ISO8601DateFormatter().date(from: s) { return dayFormatter.string(from: d) }
-        return fallback
+        date(fromISO: s).map { dayFormatter.string(from: $0) } ?? fallback
+    }
+
+    nonisolated(unsafe) static let isoFrac: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    nonisolated(unsafe) static let isoPlain = ISO8601DateFormatter()
+
+    static func date(fromISO s: String?) -> Date? {
+        guard let s else { return nil }
+        return isoFrac.date(from: s) ?? isoPlain.date(from: s)
     }
 
     public static func claude(jsonl: String, fallbackDay: String, seen: inout Set<String>) -> [UsageRecord] {
@@ -85,7 +104,9 @@ public enum UsageParser {
                 let c = TokenCounts(input: usage["input_tokens"] as? Int ?? 0, output: usage["output_tokens"] as? Int ?? 0,
                                     cacheRead: usage["cache_read_input_tokens"] as? Int ?? 0,
                                     cacheWrite: usage["cache_creation_input_tokens"] as? Int ?? 0)
-                out.append(UsageRecord(day: day(fromISO: field(text, "\"timestamp\":\""), fallback: fallbackDay), agent: .claude, counts: c))
+                let t = date(fromISO: field(text, "\"timestamp\":\""))
+                out.append(UsageRecord(day: t.map { dayFormatter.string(from: $0) } ?? fallbackDay, agent: .claude, counts: c, time: t,
+                                       model: field(text, "\"model\":\""), session: field(text, "\"sessionId\":\"")))
             }
         }
         return out
@@ -104,10 +125,15 @@ public enum UsageParser {
         return field(text, "\"id\":\"", from: m.upperBound)
     }
 
-    public static func codex(jsonl: String, fallbackDay: String) -> [UsageRecord] {
+    public static func codex(jsonl: String, fallbackDay: String, session: String? = nil) -> [UsageRecord] {
         var out: [UsageRecord] = []
         var prev = TokenCounts()
-        for line in jsonl.split(separator: "\n") where line.contains("token_count") {
+        var model: String?
+        for line in jsonl.split(separator: "\n") {
+            if model == nil, line.contains("\"turn_context\""), let r = line.range(of: "\"model\":\"") {
+                model = line[r.upperBound...].split(separator: "\"").first.map(String.init)
+            }
+            guard line.contains("token_count") else { continue }
             guard let obj = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
                   let p = obj["payload"] as? [String: Any], p["type"] as? String == "token_count",
                   let info = p["info"] as? [String: Any], let t = info["total_token_usage"] as? [String: Any] else { continue }
@@ -119,7 +145,9 @@ public enum UsageParser {
                                     cacheRead: max(0, cur.cacheRead - prev.cacheRead), cacheWrite: max(0, cur.cacheWrite - prev.cacheWrite))
             if cur.total >= prev.total { prev = cur }
             if delta.total > 0 {
-                out.append(UsageRecord(day: day(fromISO: obj["timestamp"] as? String, fallback: fallbackDay), agent: .codex, counts: delta))
+                let t = date(fromISO: obj["timestamp"] as? String)
+                out.append(UsageRecord(day: t.map { dayFormatter.string(from: $0) } ?? fallbackDay, agent: .codex, counts: delta,
+                                       time: t, model: model, session: session))
             }
         }
         return out
@@ -130,5 +158,102 @@ public enum UsageParser {
         var out: [String: [AgentKind: TokenCounts]] = [:]
         for r in records { out[r.day, default: [:]][r.agent, default: TokenCounts()] = out[r.day, default: [:]][r.agent, default: TokenCounts()] + r.counts }
         return out
+    }
+}
+
+/// 사용량 팝오버 통계. 모두 로컬 로그에서 계산한다(한도 % 는 로그에 없다).
+public struct UsageStats: Equatable, Sendable {
+    public var totalTokens = 0
+    public var sessions = 0
+    public var activeDays = 0
+    public var favoriteModel: String?
+    public var mostActiveDay: String?
+    public var longestSession: TimeInterval = 0
+    public var longestStreak = 0
+    public var currentStreak = 0
+    /// 최근 30일 응답 중 문맥이 150k 를 넘은 비율(0~1).
+    public var bigContextShare = 0.0
+    /// 최근 30일 응답 중 4개 이상 세션이 함께 돌던 때의 비율(0~1).
+    public var parallelShare = 0.0
+    /// 날짜(yyyy-MM-dd) → 토큰 합.
+    public var byDay: [String: Int] = [:]
+    /// 지금 5시간 묶음의 시작과 끝(활동이 없으면 nil).
+    public var blockStart: Date?
+    public var blockEnd: Date?
+    public var blockTokens = 0
+    /// 최근 7일 토큰.
+    public var weekTokens = 0
+
+    public init() {}
+
+    public static func compute(_ records: [UsageRecord], now: Date = Date(), calendar: Calendar = .current) -> UsageStats {
+        var s = UsageStats()
+        guard !records.isEmpty else { return s }
+        let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM-dd"; fmt.calendar = calendar; fmt.timeZone = calendar.timeZone
+        var modelOut: [String: Int] = [:]
+        var sessionSpan: [String: (Date, Date)] = [:]
+        for r in records {
+            let t = r.counts.total
+            s.totalTokens += t
+            s.byDay[r.day, default: 0] += t
+            if let m = r.model, !m.isEmpty, !m.hasPrefix("<") { modelOut[m, default: 0] += r.counts.output }
+            if let sid = r.session, let time = r.time {
+                let cur = sessionSpan[sid] ?? (time, time)
+                sessionSpan[sid] = (min(cur.0, time), max(cur.1, time))
+            }
+            if let time = r.time, now.timeIntervalSince(time) <= 7 * 86400 { s.weekTokens += t }
+        }
+        s.sessions = sessionSpan.count
+        s.longestSession = sessionSpan.values.map { $0.1.timeIntervalSince($0.0) }.max() ?? 0
+        s.activeDays = s.byDay.filter { $0.value > 0 }.count
+        s.mostActiveDay = s.byDay.max { $0.value < $1.value }?.key
+        s.favoriteModel = modelOut.max { $0.value < $1.value }?.key
+        // 연속 활동일
+        let days = Set(s.byDay.keys)
+        var longest = 0, run = 0
+        var prev: Date?
+        for d in days.sorted() {
+            guard let date = fmt.date(from: d) else { continue }
+            if let p = prev, calendar.dateComponents([.day], from: p, to: date).day == 1 { run += 1 } else { run = 1 }
+            longest = max(longest, run); prev = date
+        }
+        s.longestStreak = longest
+        var cur = 0
+        var day = calendar.startOfDay(for: now)
+        if !days.contains(fmt.string(from: day)) { day = calendar.date(byAdding: .day, value: -1, to: day)! }
+        while days.contains(fmt.string(from: day)) { cur += 1; day = calendar.date(byAdding: .day, value: -1, to: day)! }
+        s.currentStreak = cur
+        // 최근 30일 비율들
+        let recent = records.filter { ($0.time.map { now.timeIntervalSince($0) <= 30 * 86400 }) ?? false }
+        if !recent.isEmpty {
+            s.bigContextShare = Double(recent.filter { $0.context > 150_000 }.count) / Double(recent.count)
+            let spans = sessionSpan.values.filter { now.timeIntervalSince($0.1) <= 31 * 86400 }
+            let parallel = recent.filter { r in spans.filter { $0.0 <= r.time! && r.time! <= $0.1 }.count >= 4 }.count
+            s.parallelShare = Double(parallel) / Double(recent.count)
+        }
+        // 5시간 묶음: 활동 사이가 5시간 넘게 비면 새 묶음, 시작은 정시로 내림.
+        let times = records.compactMap(\.time).filter { now.timeIntervalSince($0) <= 2 * 86400 && $0 <= now }.sorted()
+        var start: Date?
+        var last: Date?
+        for t in times {
+            if let st = start, let l = last, t.timeIntervalSince(l) < 5 * 3600, t.timeIntervalSince(st) < 5 * 3600 { last = t; continue }
+            start = calendar.dateInterval(of: .hour, for: t)?.start ?? t
+            last = t
+        }
+        if let st = start, now.timeIntervalSince(st) < 5 * 3600 {
+            s.blockStart = st
+            s.blockEnd = st.addingTimeInterval(5 * 3600)
+            s.blockTokens = records.filter { ($0.time.map { $0 >= st && $0 <= now }) ?? false }.reduce(0) { $0 + $1.counts.total }
+        }
+        return s
+    }
+
+    /// 3.2K, 12.4M, 1.1B 처럼 줄인 수.
+    public static func short(_ n: Int) -> String {
+        let d = Double(n)
+        if d >= 1e9 { return String(format: "%.1fB", d / 1e9) }
+        if d >= 1e6 { return String(format: "%.1fM", d / 1e6) }
+        if d >= 1e3 { return String(format: "%.0fK", d / 1e3) }
+        return "\(n)"
     }
 }

@@ -69,7 +69,7 @@ STATUS: IN_PROGRESS
 - [x] L1. git 카드 헤더·변경 목록 체크·None·메시지 생성·Commit & Push·완료 상태·히스토리 (node-git.jpg, agent2/g-end.jpg)
 - [x] M1. 웹 타일 탭·뒤/앞/새로고침·주소줄·시작 화면 포트 칩 (node-webtiles.jpg, agent2/w-open.jpg)
 - [x] M2. 표시 크기 프리셋·기기 배지·인스펙터 별도 타일+연결선 (agent2/w-end.jpg)
-- [ ] N1. 사용량 팝오버: 링·주간 막대·히트맵·통계·토큰 상세 (node-usage.jpg, agent2/u-1.jpg)
+- [x] N1. 사용량 팝오버: 링·주간 막대·히트맵·통계·토큰 상세 (node-usage.jpg, agent2/u-1.jpg)
 
 ## O·P·Q. 스튜디오
 
@@ -130,5 +130,9 @@ STATUS: IN_PROGRESS
 - M1·M2: 원본 node-webtiles.jpg, agent2/w-open.jpg, agent2/w-end.jpg / 내 것 `v2/M1-web-start-page.png`, `v2/M2-web-device-inspector.png`. 탭 줄(탭마다 WKWebView, 제목, 닫기, +), 뒤로·앞으로·새로고침, 주소줄(":3000"·"5173" 처럼 포트만 써도 localhost, WebAddress 단위 테스트). 빈 탭은 시작 화면: localhost 입력 + 포트 칩 :3000/:3001/:4200/:5173/:8000/:8080 + 빠른 열기 카드 3개. 표시 크기 메뉴: Fit to tile + 모니터 24/27/32" 4K·노트북·휴대폰·태블릿 → 그 해상도로 배치하고 pageZoom 으로 타일에 맞춤(인스펙터로 본 본문 폭 1918px), 위에 기기 배지 "24\" 4K 1920 × 1080". 탭·고른 탭·크기는 저장되어 재실행 후 유지.
   - 인스펙터: 별도 타일로 뜨고 웹 타일과 점 흐르는 연결선으로 이어짐. WKWebView 내장 인스펙터를 타일에 넣는 공개 API 가 없어서 페이지에 JS 를 돌려 직접 만들었다: Elements(DOM 나무, 누르면 페이지에 강조 테두리 + 상자 모델·margin/padding/display), Console(console.log/warn/error 와 오류를 메시지 처리기로 받아 표시, 아래 입력으로 식 실행). /tmp/symweb 를 python http.server 8765 로 띄워 확인("page ready 8765", "demo warning" 수집).
   - 남은 차이: 원본 인스펙터는 Safari 웹 인스펙터 전체(Network·Sources·Timelines 등)이고 여기는 Elements·Console 두 가지뿐이다.
+- N1: 원본 node-usage.jpg, agent2/u-1.jpg / 내 것 `v2/N1-usage-overview.png`, `v2/N1-usage-tokens.png`. 위쪽 알약 "resets 5:00pm"(지금 5시간 묶음 끝 추정) → 팝오버. CLI 탭(Claude/Codex), 링(한도 % 는 "?"), 현재 세션 토큰·재설정 시각(추정), 최근 7일, 지난 12개월 활동 칸, 통계(자주 쓴 모델·총 토큰·세션·활동일·가장 활발한 날·가장 긴 세션·연속일 최장/지금), 최근 30일 150k 넘는 문맥 비율·4개 이상 동시 세션 비율. 막대 버튼 → tokens: 30일 합계·가장 바쁜 날·상위 에이전트, All tokens/In + out/Output 막대 그래프(날짜 라벨 겹치지 않게 7일 간격), 에이전트별 비율(최근 30일/전체), 읽는 중이면 "Reading local session logs". 통계 계산은 SymboardCore UsageStats(단위 테스트: 묶음 시작 정시 내림·연속일·세션 수·문맥 비율).
+  - 이 맥 로그 898개를 15~17초에 읽음(백그라운드). 숫자는 3.2K/1.9B 처럼 줄여 표시.
+  - 남은 차이: 원본의 한도 %(현재 세션·주간 모델별)는 로그에 없어 표시하지 못한다. CLI 의 /usage 화면을 숨은 터미널로 긁는 방법은 시도하지 않았다(사용 중인 세션 화면을 건드릴 위험). 주간 막대는 한도 대신 최근 7일 토큰.
+  - 고친 것: 콘솔이 하나도 없으면 1초 상태 틱이 돌지 않아 알약·루프가 멈추던 문제(시작할 때 세션 관리자 생성). 날짜 표시를 영어 형식으로 고정.
 
 ## 막힌 것

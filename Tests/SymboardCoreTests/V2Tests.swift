@@ -226,3 +226,37 @@ import Testing
         #expect(f.w == 960 && f.h == 540 && f.y == 130)
     }
 }
+
+@Suite struct UsageStatsTests {
+    var cal: Calendar { var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone(identifier: "UTC")!; return c }
+
+    func rec(_ t: Date, _ tokens: Int, session: String, model: String = "m1", context: Int = 0) -> UsageRecord {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.timeZone = TimeZone(identifier: "UTC")
+        return UsageRecord(day: f.string(from: t), agent: .claude, counts: TokenCounts(input: context, output: tokens), time: t, model: model, session: session)
+    }
+
+    @Test func blockStreakAndSessions() {
+        let now = cal.date(from: DateComponents(year: 2026, month: 10, day: 18, hour: 14, minute: 30))!
+        let recs = [
+            rec(now.addingTimeInterval(-86400 * 2), 100, session: "a"),
+            rec(now.addingTimeInterval(-86400), 100, session: "a"),
+            rec(now.addingTimeInterval(-3600 * 9), 50, session: "b"),
+            rec(now.addingTimeInterval(-3600 * 2.2), 70, session: "c", model: "m2"),
+            rec(now.addingTimeInterval(-600), 30, session: "c", model: "m2", context: 200_000),
+        ]
+        let s = UsageStats.compute(recs, now: now, calendar: cal)
+        #expect(s.sessions == 3)
+        #expect(s.currentStreak == 3)
+        // 9시간 전 활동 뒤 5시간 넘게 비었으니 새 묶음은 2.2시간 전(12:18)을 정시로 내린 12:00 에 시작.
+        #expect(s.blockStart == cal.date(from: DateComponents(year: 2026, month: 10, day: 18, hour: 12)))
+        #expect(s.blockEnd == cal.date(from: DateComponents(year: 2026, month: 10, day: 18, hour: 17)))
+        #expect(s.favoriteModel == "m1")
+        #expect(s.bigContextShare > 0.19 && s.bigContextShare < 0.21)
+    }
+
+    @Test func shortNumbers() {
+        #expect(UsageStats.short(753_000) == "753K")
+        #expect(UsageStats.short(22_800_000_000) == "22.8B")
+        #expect(UsageStats.short(42) == "42")
+    }
+}

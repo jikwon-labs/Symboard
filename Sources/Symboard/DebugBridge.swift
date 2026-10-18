@@ -483,6 +483,12 @@ final class DebugBridge {
                 if let e = cmd["eval"] as? String { m.expr = e; m.evaluate() }
                 log.append("inspect root=\(m.root?.tag ?? "-") box=\(m.box)")
             }
+        case "usage":
+            controller.chrome.usageOpen = cmd["open"] as? Bool ?? true
+            if cmd["refresh"] as? Bool == true { model.usage.refresh() }
+            if let pg = cmd["page"] as? String { NotificationCenter.default.post(name: .usagePage, object: pg) }
+            let st = model.usage.stats
+            log.append("usage scanning=\(model.usage.scanning) \(model.usage.note) " + st.map { "\($0.key.rawValue): total=\($0.value.totalTokens) sessions=\($0.value.sessions) block=\(String(describing: $0.value.blockEnd))" }.joined(separator: "; "))
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }
