@@ -13,7 +13,8 @@ struct CalendarNodeView: View {
     @State private var hoverCell: Int?
     @State private var gridSize: CGSize = .zero
 
-    static let colors = ["#F05A38", "#E9C46A", "#6FCF97", "#56A8F5", "#B48CF2", "#F28AB2"]
+    /// 원본 node-kanban 일정 창과 같은 순서(호박·초록·파랑·보라·분홍·청록). 첫 색이 기본값.
+    static let colors = ["#D99A45", "#7DB36A", "#5E9BEA", "#B48CF2", "#E07F8C", "#5FC4C4"]
     var cal: Calendar { var c = Calendar.current; c.firstWeekday = 2; return c }
     var events: [CalendarEvent] { box.node.events ?? [] }
 

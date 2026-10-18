@@ -567,18 +567,23 @@ struct CardEditor: View {
             TextField("", text: $notes, prompt: Text("Notes (optional)").foregroundColor(Color.symDim), axis: .vertical)
                 .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText).lineLimit(2...4)
                 .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
+            // 원본처럼 날짜를 고르기 전에는 빠른 칩, 고른 뒤에는 그 자리가 고칠 수 있는 날짜 칸과 지우기 단추가 된다.
             HStack(spacing: 6) {
                 Image(systemName: "calendar").foregroundStyle(Color.symDim)
-                ForEach([("Today", 0), ("Tomorrow", 1), ("Next week", 7)], id: \.1) { item in
-                    let d = Calendar.current.startOfDay(for: Date().addingTimeInterval(Double(item.1) * 86400))
-                    Button(item.0) { due = d }.buttonStyle(ChipStyle(on: due.map { Calendar.current.isDate($0, inSameDayAs: d) } ?? false)).axName("Due \(item.0)")
-                }
-                Spacer()
                 if let d = due {
-                    Text(d, format: .dateTime.month(.twoDigits).day(.twoDigits).year()).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
+                    DatePicker("", selection: Binding(get: { d }, set: { due = Calendar.current.startOfDay(for: $0) }), displayedComponents: .date)
+                        .labelsHidden().datePickerStyle(.field).font(.system(size: 13)).axName("Due date")
+                    Spacer()
                     Button { due = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Clear due date")
+                } else {
+                    ForEach([("Today", 0), ("Tomorrow", 1), ("Next week", 7)], id: \.1) { item in
+                        let d = Calendar.current.startOfDay(for: Date().addingTimeInterval(Double(item.1) * 86400))
+                        Button(item.0) { due = d }.buttonStyle(ChipStyle(on: false)).axName("Due \(item.0)")
+                    }
+                    Spacer()
                 }
             }
+            .padding(8).background(RoundedRectangle(cornerRadius: 10).stroke(Color.symBorder))
             HStack(spacing: 6) {
                 ForEach([nil, "low", "med", "high"] as [String?], id: \.self) { p in
                     Button { priority = p } label: {
