@@ -11,6 +11,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
     private var homeHost: NSView!
+    private var missionHost: NSView?
+    private var missionObserver: Any?
     private var canvases: [UUID: CanvasView] = [:]
     private var shownWorkspaceID: UUID?
     private var observers: [NSObjectProtocol] = []
@@ -69,6 +71,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
         let home = HiddenAwareHostingView(rootView: HomeView(model: model, c: self))
         home.translatesAutoresizingMaskIntoConstraints = false
+        home.sizingOptions = []
         home.isHidden = true
         homeHost = home
         content.addSubview(home)
@@ -97,6 +100,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let selection = host(SelectionPanel(model: model, chrome: chrome, c: self))
         let resume = host(ResumeToast(chrome: chrome, c: self))
         for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume] as [NSView] { content.addSubview(v) }
+        let mission = HiddenAwareHostingView(rootView: MissionHost(model: model, chrome: chrome, c: self))
+        mission.translatesAutoresizingMaskIntoConstraints = false
+        mission.sizingOptions = []
+        mission.isHidden = true
+        missionHost = mission
+        content.addSubview(mission)
+        NSLayoutConstraint.activate([
+            mission.topAnchor.constraint(equalTo: content.topAnchor),
+            mission.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            mission.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            mission.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+        ])
+        missionObserver = chrome.$missionOpen.sink { [weak self] open in self?.missionHost?.isHidden = !open }
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: content.topAnchor),
@@ -405,7 +421,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     func openProfiles() { togglePanel(tab: "Profiles") }
     func openLoops() { togglePanel(tab: "Loops") }
     func openMemory() { togglePanel(tab: "Memory") }
-    func openMission() { togglePanel(tab: "Mission") }
+    func openMission() { chrome.missionOpen.toggle() }
+
+    /// 그룹 프레임 전체가 보이게 맞춘다.
+    func zoomToTeam(_ id: UUID) {
+        let ms = model.selectedWorkspace.nodes.filter { $0.teamID == id }
+        guard !ms.isEmpty else { return }
+        let minX = ms.map(\.frame.x).min()!, minY = ms.map(\.frame.y).min()!
+        let maxX = ms.map { $0.frame.x + $0.frame.w }.max()!, maxY = ms.map { $0.frame.y + $0.frame.h }.max()!
+        let size = scrollView.frame.size
+        let zoom = min((size.width - 200) / (maxX - minX + 80), (size.height - 240) / (maxY - minY + 80), 1.2)
+        scrollView.center(on: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2), zoom: zoom)
+    }
     func openSettings() { chrome.flash("Settings: drag folders onto Home to add projects") }
 
     /// 놓기 도구로 캔버스를 눌렀을 때.
@@ -804,6 +831,16 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let size = scrollView.frame.size
         let zoom = min((size.width - 160) / (maxX - minX + 40), (size.height - 220) / (maxY - minY + 40), 1)
         scrollView.center(on: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / max(zoom, 0.1)), zoom: zoom)
+    }
+}
+
+/// 미션 맵 모달을 열렸을 때만 그린다.
+struct MissionHost: View {
+    @ObservedObject var model: AppModel
+    @ObservedObject var chrome: ChromeModel
+    let c: MainWindowController
+    var body: some View {
+        if chrome.missionOpen { MissionMapView(model: model, beat: .shared, chrome: chrome, c: c) }
     }
 }
 

@@ -88,7 +88,7 @@ struct SidePanelView: View {
             .padding(8)
             Divider()
             if state.tab == "Mission" {
-                MissionMapView(state: state, focus: focus)
+                MissionListView(state: state, focus: focus)
             } else if let v = state.extraTabs.first(where: { $0.0 == state.tab })?.1 {
                 v
             }
@@ -98,7 +98,7 @@ struct SidePanelView: View {
     }
 }
 
-struct MissionMapView: View {
+struct MissionListView: View {
     @ObservedObject var state: SidePanelState
     var focus: (UUID) -> Void
 

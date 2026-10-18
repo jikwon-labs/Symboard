@@ -45,8 +45,8 @@ STATUS: IN_PROGRESS
 
 ## D. 미션 맵
 
-- [ ] D1. 도구 메뉴에서 여는 큰 모달·부제·필터 칩·검색 (teams.jpg, agent1/teams-30.jpg)
-- [ ] D2. 오케스트레이터→팀→콘솔 곡선 그래프 + 오른쪽 상세 + Go to 줌 (teams.jpg r2~r3)
+- [x] D1. 도구 메뉴에서 여는 큰 모달·부제·필터 칩·검색 (teams.jpg, agent1/teams-30.jpg)
+- [x] D2. 오케스트레이터→팀→콘솔 곡선 그래프 + 오른쪽 상세 + Go to 줌 (teams.jpg r2~r3)
 
 ## J. 루프
 
@@ -109,5 +109,8 @@ STATUS: IN_PROGRESS
 - C1~C4: 원본 board.jpg r1c3~r3c3, board.mp4 7~16초 / 내 것 `v2/C1-orchestrator-empty.png`, `v2/C2-orchestrator-connect.png`, `v2/C2-orchestrator-wired-links.png`, `v2/C3-C4-orchestrator-rows.png`. 오른쪽 막대 삽입 메뉴 Orchestrator → 캔버스에 놓기. 빈 상태 "No agents wired"+Spawn agent, Connect → 그룹 칩(누르면 강조색)·콘솔 칩, 보드의 콘솔을 누르면 연결/해제, Done. 연결은 작업공간 links 에 저장되고 그룹 프레임·콘솔로 점 흐르는 곡선. 행: 배지·이름·CLI·상태 알약, 마우스를 올리면 보드에서 보기·일시정지. 아래 "Command N agents · @ to direct": 그룹 2개+콘솔 1개 연결 후 전체 11개 전송, "@testers ..." 는 6개만. 재실행 후에도 연결 유지.
   - 고친 것: 같은 콘솔에 연달아 보내면 앞의 Enter 전에 다음 글이 섞였다 → 콘솔마다 보내기를 줄 세움("echo one"/"echo two" 따로 실행 확인). 그룹 프레임 hitTest 가 프레임 밖(왼쪽·위)의 클릭까지 가로채던 문제.
   - 남은 차이: 원본은 오케스트레이터를 어디서 만드는지 영상에 안 나와 삽입 메뉴에 넣었다. 진행 표시는 READY 수/전체.
+- D1·D2: 원본 teams.jpg, agent1/teams-30.jpg / 내 것 `v2/D1-mission-map.png`, `v2/D2-mission-console-detail.png`, `v2/D2-mission-team-detail.png`. 위쪽 도구 메뉴 Mission Map → 보드 위 큰 모달(뒤 어둡게). 부제 "N orchestrator · N teams · N consoles · N working", 필터 칩 All/Working/Needs you/Idle/Done(개수), 검색, 왼쪽 열 Command center·오케스트레이터 → 가운데 팀 → 오른쪽 콘솔 곡선(오케스트레이터에 안 닿는 콘솔은 Command center 에서 점선), 아래 범례. 오른쪽 상세: 선택 없음=상태별 개수와 구조 요약, 팀=Show this team on the board, 콘솔=Go to the console·Pause·Kill·지금 상태와 그 상태로 지난 시간·소속(그룹/오케스트레이터/Command center). 한 번 누르면 보기, 두 번 누르면 모달 닫고 그 노드로 이동.
+  - 고친 것: 고정 크기 모달이 창 크기를 줄여 버렸다(NSHostingView 크기 제약) → 최대 크기로 바꾸고 호스팅 뷰 sizingOptions 를 비움. 시험 중 실수로 `yes` 를 백그라운드로 띄워 바로 pkill 로 끔.
+  - 남은 차이: 모달이 열려 있을 때 창 왼쪽 위에 오케스트레이터 행의 상태 알약 몇 개가 비치는 그리기 흠이 있다(모달을 닫으면 사라짐). 원인 미확인.
 
 ## 막힌 것

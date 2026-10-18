@@ -14,6 +14,8 @@ final class SessionManager {
     unowned let model: AppModel
     private(set) var sessions: [UUID: TerminalSession] = [:]
     private(set) var statuses: [UUID: NodeStatus] = [:]
+    /// 지금 상태가 시작된 시각(미션 맵의 "For").
+    private(set) var statusSince: [UUID: Date] = [:]
     private var timer: Timer?
     let shell = ProcessEnvironment.userShell
 
@@ -99,7 +101,11 @@ final class SessionManager {
 
     private func tick() {
         let now = Date()
-        for (id, s) in sessions { statuses[id] = s.currentStatus(now: now) }
+        for (id, s) in sessions {
+            let st = s.currentStatus(now: now)
+            if statuses[id] != st { statusSince[id] = now }
+            statuses[id] = st
+        }
         NotificationCenter.default.post(name: .statusTick, object: nil)
     }
 

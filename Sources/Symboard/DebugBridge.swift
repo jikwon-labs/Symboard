@@ -362,6 +362,10 @@ final class DebugBridge {
             if let o = cmd["orch"] as? Int, o < nodes.count {
                 log.append("orchSend \(controller.orchestratorSend(nodes[o].id, text: cmd["text"] as? String ?? ""))")
             }
+        case "mission":
+            controller.chrome.missionOpen = cmd["open"] as? Bool ?? true
+            if let n = node(cmd) { controller.chrome.missionSelected = n.id }
+            if let t = cmd["team"] as? Int, t < model.selectedWorkspace.teams.count { controller.chrome.missionSelected = model.selectedWorkspace.teams[t].id }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }
