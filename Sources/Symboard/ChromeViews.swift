@@ -417,6 +417,8 @@ struct LayersList: View {
         case .git: return "arrow.triangle.branch"
         case .file: return "doc"
         case .orchestrator: return "point.3.connected.trianglepath.dotted"
+        case .calendar: return "calendar"
+        case .shape: return "square.on.circle"
         }
     }
 }

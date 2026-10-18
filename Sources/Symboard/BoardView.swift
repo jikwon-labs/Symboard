@@ -111,6 +111,8 @@ final class CanvasView: NSView {
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
+    /// 창이 뒤에 있을 때 첫 클릭으로 바로 놓기·선택이 되게.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     var workspace: Workspace? { model.workspace(workspaceID) }
 

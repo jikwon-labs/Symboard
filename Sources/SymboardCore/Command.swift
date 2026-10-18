@@ -113,3 +113,29 @@ public enum ResumePolicy {
         state.workspaces.flatMap { $0.nodes.filter { $0.kind == .terminal && canResume($0.terminal) }.map(\.id) }
     }
 }
+
+/// 칸반 카드 옮기기·달력 계산.
+public enum Board {
+    /// 카드를 다른(또는 같은) 열의 index 자리로 옮긴다. 1차 글자 카드는 이때 items 로 바뀐다.
+    public static func move(card id: UUID, to column: UUID, at index: Int?, in columns: inout [KanbanColumn]) {
+        for i in columns.indices where columns[i].items == nil { columns[i].items = columns[i].allCards; columns[i].cards = [] }
+        guard let from = columns.firstIndex(where: { $0.items!.contains { $0.id == id } }),
+              let to = columns.firstIndex(where: { $0.id == column }) else { return }
+        let fi = columns[from].items!.firstIndex { $0.id == id }!
+        let card = columns[from].items!.remove(at: fi)
+        var at = min(index ?? columns[to].items!.count, columns[to].items!.count)
+        if from == to && index != nil && fi < at { at = max(0, at - 1) }
+        columns[to].items!.insert(card, at: min(at, columns[to].items!.count))
+    }
+
+    /// 월 격자(월요일 시작, 6주 42칸). 그달이 아닌 날도 채운다.
+    public static func monthGrid(for date: Date, calendar: Calendar) -> [Date] {
+        var cal = calendar
+        cal.firstWeekday = 2
+        let first = cal.date(from: cal.dateComponents([.year, .month], from: date))!
+        let weekday = cal.component(.weekday, from: first)
+        let lead = (weekday - cal.firstWeekday + 7) % 7
+        let start = cal.date(byAdding: .day, value: -lead, to: first)!
+        return (0..<42).map { cal.date(byAdding: .day, value: $0, to: start)! }
+    }
+}

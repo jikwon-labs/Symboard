@@ -29,6 +29,8 @@ public enum NodeKind: String, Codable, Sendable, CaseIterable {
     case git
     case file
     case orchestrator
+    case calendar
+    case shape
 }
 
 /// 글자·도형 노드의 겉모양. 비어 있는 값은 노드 종류의 기본값을 쓴다.
@@ -102,9 +104,59 @@ public struct ChecklistItem: Codable, Equatable, Sendable, Identifiable {
 public struct KanbanColumn: Codable, Equatable, Sendable, Identifiable {
     public var id: UUID
     public var title: String
+    /// 1차의 글자 카드. 2차에서는 items 를 쓰고, items 가 없을 때만 읽어서 옮긴다.
     public var cards: [String]
-    public init(id: UUID = UUID(), title: String, cards: [String] = []) {
-        self.id = id; self.title = title; self.cards = cards
+    public var items: [KanbanCard]?
+    public init(id: UUID = UUID(), title: String, cards: [String] = [], items: [KanbanCard]? = nil) {
+        self.id = id; self.title = title; self.cards = cards; self.items = items
+    }
+
+    /// 화면에 쓸 카드 목록(1차 글자 카드도 포함).
+    public var allCards: [KanbanCard] { items ?? cards.map { KanbanCard(title: $0) } }
+}
+
+public struct KanbanCard: Codable, Equatable, Sendable, Identifiable {
+    public var id: UUID
+    public var title: String
+    public var notes: String
+    public var due: Date?
+    /// "low", "med", "high" 또는 nil.
+    public var priority: String?
+    public var done: Bool
+    public init(id: UUID = UUID(), title: String, notes: String = "", due: Date? = nil, priority: String? = nil, done: Bool = false) {
+        self.id = id; self.title = title; self.notes = notes; self.due = due; self.priority = priority; self.done = done
+    }
+}
+
+public struct CalendarEvent: Codable, Equatable, Sendable, Identifiable {
+    public var id: UUID
+    public var title: String
+    /// 그날 0시(현지).
+    public var day: Date
+    public var allDay: Bool
+    public var colorHex: String
+    public var notes: String
+    public init(id: UUID = UUID(), title: String, day: Date, allDay: Bool = true, colorHex: String = "#F05A38", notes: String = "") {
+        self.id = id; self.title = title; self.day = day; self.allDay = allDay; self.colorHex = colorHex; self.notes = notes
+    }
+}
+
+/// 도형 노드 모양.
+public struct ShapeSpec: Codable, Equatable, Sendable {
+    /// "rect", "ellipse", "diamond", "arrow"
+    public var kind: String
+    public var strokeHex: String
+    public var fillHex: String?
+    public var strokeWidth: Double
+    /// "solid", "dashed", "dotted"
+    public var dash: String
+    /// 0 이면 반듯, 1·2 로 갈수록 손그림처럼 흔들린다.
+    public var roughness: Double
+    public var cornerRadius: Double
+    public init(kind: String = "rect", strokeHex: String = "#ECE7E2", fillHex: String? = nil, strokeWidth: Double = 2,
+                dash: String = "solid", roughness: Double = 1, cornerRadius: Double = 12) {
+        self.kind = kind; self.strokeHex = strokeHex; self.fillHex = fillHex; self.strokeWidth = strokeWidth
+        self.dash = dash; self.roughness = roughness; self.cornerRadius = cornerRadius
     }
 }
 
@@ -137,6 +189,8 @@ public struct BoardNode: Codable, Equatable, Sendable, Identifiable {
     public var teamID: UUID?
     public var role: String?
     public var style: NodeStyle?
+    public var events: [CalendarEvent]?
+    public var shape: ShapeSpec?
 
     public init(id: UUID = UUID(), kind: NodeKind, frame: Rect, title: String,
                 terminal: TerminalSpec? = nil, text: String? = nil, colorHex: String? = nil,

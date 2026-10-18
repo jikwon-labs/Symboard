@@ -18,7 +18,7 @@ enum Placement: Equatable {
         case .text: return CGSize(width: 520, height: 90)
         case .sticky: return CGSize(width: 240, height: 220)
         case .checklist: return CGSize(width: 300, height: 320)
-        case .kanban: return CGSize(width: 900, height: 420)
+        case .kanban: return CGSize(width: 990, height: 440)
         case .web: return CGSize(width: 760, height: 520)
         case .orchestrator: return CGSize(width: 380, height: 500)
         }

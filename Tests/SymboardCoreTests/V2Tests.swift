@@ -138,3 +138,29 @@ import Testing
         #expect(AgentStreamParser.verdict("maybe") == nil)
     }
 }
+
+@Suite struct BoardHelperTests {
+    @Test func moveCardAcrossColumnsMigratesOldCards() {
+        var cols = [KanbanColumn(title: "A", cards: ["one", "two"]), KanbanColumn(title: "B")]
+        let id = cols[0].allCards[0].id
+        // allCards 는 매번 새 id 를 만들므로, 먼저 옮겨 둔 뒤 id 로 찾는다.
+        Board.move(card: id, to: cols[1].id, at: nil, in: &cols)
+        #expect(cols[0].items!.count == 2)
+        let first = cols[0].items![0].id
+        Board.move(card: first, to: cols[1].id, at: 0, in: &cols)
+        #expect(cols[0].items!.map(\.title) == ["two"])
+        #expect(cols[1].items!.map(\.title) == ["one"])
+        #expect(cols[0].cards.isEmpty)
+    }
+
+    @Test func monthGridStartsMonday() {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let d = cal.date(from: DateComponents(year: 2026, month: 9, day: 15))!
+        let grid = Board.monthGrid(for: d, calendar: cal)
+        #expect(grid.count == 42)
+        // 2026-09-01 은 화요일 → 첫 칸은 8월 31일 월요일.
+        #expect(cal.component(.day, from: grid[0]) == 31)
+        #expect(cal.component(.day, from: grid[1]) == 1)
+    }
+}

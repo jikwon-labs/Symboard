@@ -42,7 +42,7 @@ final class DebugBridge {
         let model = controller.model
         let nodes = model.selectedWorkspace.nodes
         func node(_ c: [String: Any]) -> BoardNode? {
-            guard let i = c["index"] as? Int, i < nodes.count else { return nil }
+            guard let i = c["index"] as? Int, i >= 0, i < nodes.count else { return nil }
             return nodes[i]
         }
         switch op {
@@ -292,7 +292,7 @@ final class DebugBridge {
                 log.append("mouse hit=\(hit.map { String(describing: type(of: $0)) } ?? "nil")")
             }
         case "select":
-            if let n = node(cmd) { controller.currentCanvas?.select(n.id) }
+            controller.currentCanvas?.select(node(cmd)?.id)
         case "command":
             controller.chrome.command = cmd["text"] as? String ?? ""
             if cmd["send"] as? Bool ?? true { controller.runCommand() }
@@ -388,6 +388,36 @@ final class DebugBridge {
             controller.chrome.loopsPage = "form"
             if cmd["save"] as? Bool == true { controller.saveLoop() }
             log.append("loopForm valid=\(d.isValid)")
+        case "kanbanAdd":
+            // index: 칸반 노드, column, title, due(오늘부터 날 수), priority
+            if let n = node(cmd), let ci = cmd["column"] as? Int {
+                var card = KanbanCard(title: cmd["title"] as? String ?? "Card")
+                if let d = cmd["due"] as? Int { card.due = Calendar.current.startOfDay(for: Date().addingTimeInterval(Double(d) * 86400)) }
+                card.priority = cmd["priority"] as? String
+                card.done = cmd["done"] as? Bool ?? false
+                model.mutateNode(n.id) { node in
+                    guard var cols = node.kanban, ci < cols.count else { return }
+                    for i in cols.indices where cols[i].items == nil { cols[i].items = cols[i].allCards; cols[i].cards = [] }
+                    cols[ci].items!.append(card)
+                    node.kanban = cols
+                }
+                controller.currentCanvas?.nodeViews[n.id]?.syncFromModel()
+                log.append("kanbanAdd")
+            }
+        case "kanbanMove":
+            if let n = node(cmd), let from = cmd["from"] as? Int, let to = cmd["to"] as? Int {
+                model.mutateNode(n.id) { node in
+                    guard var cols = node.kanban, from < cols.count, to < cols.count, let card = cols[from].allCards.first else { return }
+                    if cols[from].items == nil { cols[from].items = cols[from].allCards; cols[from].cards = [] }
+                    Board.move(card: cols[from].items![0].id, to: cols[to].id, at: nil, in: &cols)
+                    _ = card
+                    node.kanban = cols
+                }
+                controller.currentCanvas?.nodeViews[n.id]?.syncFromModel()
+                log.append("kanbanMove")
+            }
+        case "cardEditor":
+            if let n = node(cmd) { NotificationCenter.default.post(name: .openCardEditor, object: n.id, userInfo: ["column": cmd["column"] as? Int ?? 0]) }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

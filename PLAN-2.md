@@ -56,8 +56,8 @@ STATUS: IN_PROGRESS
 
 ## H·I. 칸반·스티키·체크리스트·캘린더·도형·펜
 
-- [ ] H1. 칸반 4열·열 머리·No cards·Add card·+ Column·드래그 이동 (node-kanban.jpg, agent2/kanban-1~3.jpg)
-- [ ] H2. 카드 추가 모달(제목·메모·마감 칩·우선순위)과 카드 모양 (agent2/k-newcard.jpg)
+- [x] H1. 칸반 4열·열 머리·No cards·Add card·+ Column·드래그 이동 (node-kanban.jpg, agent2/kanban-1~3.jpg)
+- [x] H2. 카드 추가 모달(제목·메모·마감 칩·우선순위)과 카드 모양 (agent2/k-newcard.jpg)
 - [ ] H3. 오른쪽 막대 삽입 팝오버 Checklist/Board/Calendar, 체크리스트 원형 카운터 (node-kanban.jpg r1)
 - [ ] H4. 캘린더 노드: 월 격자·오늘·이벤트 팝오버·칩 (node-kanban.jpg r3)
 - [ ] H5. 스티키: 헤더 없는 종이·손글씨체·접힌 모서리·종이 색 8개 팝오버 (node-kanban.jpg)
@@ -115,5 +115,8 @@ STATUS: IN_PROGRESS
 - J1~J3: 원본 node-loops.jpg, agent2/l-mid.jpg, agent2/l-end.jpg / 내 것 `v2/J1-loops-templates.png`, `v2/J2-loop-form.png`, `v2/J3-loop-list.png`. 오른쪽 막대 루프 버튼 → 모달. 루프가 없으면 틀 카드 7개(이름·설명·지시문은 직접 씀) + Start from scratch. 양식: 틀 칩 줄, 이름, 지시문, 시작 조건 카드 3개(타이머 5m~2h 칩+스테퍼 / 조용해지면 초 / 출력 문구), 대상(모든 콘솔·나중 것 포함 / 골라서), 멈춤 토글 3개(횟수·시간·목표: 출력 문구 / 명령 성공 / 에이전트 판단+CLI), 다른 작업공간에서도 계속 토글, 아래 요약 문장과 시간당 횟수(SymboardCore LoopSummary, 단위 테스트). 목록 줄: 상태 점·이름·횟수·요약·지시문·카운트다운·지금 실행·토글·메뉴(고치기·삭제), 오른쪽 막대 배지.
   - 실행 확인: Kai 셸에 "조용해지면 4초, echo nudge, 목표=`test -f /tmp/symsample/DONE`" 루프 → 3회 보냄 → DONE 파일을 만들자 다음 확인에서 "goal met" 으로 꺼짐(4 runs). 에이전트 판단은 claude -p(도구 없음)에 YES/NO 를 묻는 방식으로 만들었고 응답 해석은 단위 테스트로만 봤다(실제 호출은 사용량 때문에 아직 안 함).
   - 남은 차이: 원본의 "Typed into each targeted console" 아래 미리보기 문구 위치 등 작은 배치. 1차의 노드 하나 대상 규칙은 그대로 동작(대상 목록이 없으면 nodeID).
+- H1·H2: 원본 node-kanban.jpg, agent2/k-shape.jpg(보드), agent2/k-newcard.jpg / 내 것 `v2/H1-kanban.png`, `v2/H2-new-card.png`. 기본 4열 BACKLOG/TO DO/IN PROGRESS/DONE, 열 머리(색 점·제목·개수·⋯ 이름 바꾸기/지우기), 빈 열 "No cards", 열 아래 + Add card, 오른쪽 + Column. 카드: 완료 원·제목·마감 칩(Today/Tomorrow/날짜)·우선순위 칩·왼쪽 색 띠, 누르면 고치기. 카드 모달: 제목·메모·마감(Today/Tomorrow/Next week, 지우기)·우선순위 None/Low/Med/High, 고칠 때 삭제. 1차 글자 카드는 처음 옮기거나 고칠 때 새 카드 형식으로 바뀐다(Board.move, 단위 테스트).
+  - 카드 끌어 옮기기는 SwiftUI draggable/dropDestination 으로 만들었고 자동 확인은 모델 이동(디버그 kanbanMove)까지만 했다. 실제 마우스 끌기는 확인하지 못했다.
+  - 고친 것: 창이 뒤에 있을 때 캔버스 첫 클릭이 창 활성화로만 쓰여 놓기가 안 되던 문제(acceptsFirstMouse).
 
 ## 막힌 것
