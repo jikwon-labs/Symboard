@@ -240,6 +240,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             MainActor.assumeIsolated {
                 guard let self, event.window === self.window else { return event }
+                // Esc 는 열린 모달부터 닫는다. 닫지 않으면 다음 클릭이 어두운 배경을 눌러 모달을 닫는 데 쓰여 "첫 클릭 무시" 처럼 보였다.
+                if event.keyCode == 53, self.closeTopOverlay() { return nil }
                 if event.keyCode == 53, self.chrome.tool != .select {
                     self.setTool(.select)
                     return nil
@@ -575,6 +577,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         spec.profileID = p?.id
         addTerminal(spec: spec, at: nil, applyActiveProfile: false)
     }
+    /// 맨 위에 열린 모달 하나를 닫는다. 닫은 게 있으면 true.
+    @discardableResult
+    func closeTopOverlay() -> Bool {
+        if chrome.loopsPage != nil { chrome.loopsPage = nil }
+        else if memoryHub.page != nil, memoryHub.page != "scan" { memoryHub.page = nil }
+        else if studioState.kind != nil { closeStudio() }
+        else if chrome.missionOpen { chrome.missionOpen = false }
+        else { return false }
+        // 사라진 모달 안 입력란에 초점이 남지 않게 보드로 돌린다.
+        window?.makeFirstResponder(currentCanvas)
+        return true
+    }
+
     func openLoops() { chrome.loopsPage = chrome.loopsPage == nil ? "list" : nil }
     func openMemory() { memoryHub.page = memoryHub.page == nil ? "list" : nil }
 
