@@ -45,12 +45,26 @@ public enum LaunchPlanner {
         var hooks: [String: [[String: Any]]] = [:]
         for entry in claudeHookMap {
             let cmd = "[ -n \"$SYMBOARD_STATUS_FILE\" ] && printf '\(entry.state.rawValue)' > \"$SYMBOARD_STATUS_FILE\" || true"
-            var group: [String: Any] = ["hooks": [["type": "command", "command": cmd, "timeout": 5]]]
+            var list: [[String: Any]] = [["type": "command", "command": cmd, "timeout": 5]]
+            if sessionIDEvents.contains(entry.event) { list.append(["type": "command", "command": sessionIDHookCommand, "timeout": 5]) }
+            var group: [String: Any] = ["hooks": list]
             if let m = entry.matcher { group["matcher"] = m }
             hooks[entry.event, default: []].append(group)
         }
         let data = try! JSONSerialization.data(withJSONObject: ["hooks": hooks], options: [.sortedKeys])
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// 이 claude(2.1.302)는 --session-id 로 준 id 를 쓰지 않고 자기 id 로 기록할 때가 있다(6차 마지막 점검에서 직접 확인).
+    /// 그래서 훅 입력 JSON 의 session_id 를 "$SYMBOARD_STATUS_FILE.sid" 에 적어 두고, 앱이 그 id 로 이어 간다.
+    public static let sessionIDEvents: Set<String> = ["SessionStart", "UserPromptSubmit"]
+    public static let sessionIDHookCommand =
+        "[ -n \"$SYMBOARD_STATUS_FILE\" ] && sed -n 's/.*\"session_id\"[[:space:]]*:[[:space:]]*\"\\([0-9a-fA-F-]*\\)\".*/\\1/p' | head -n 1 > \"$SYMBOARD_STATUS_FILE.sid.tmp\" && [ -s \"$SYMBOARD_STATUS_FILE.sid.tmp\" ] && mv \"$SYMBOARD_STATUS_FILE.sid.tmp\" \"$SYMBOARD_STATUS_FILE.sid\" || true"
+
+    /// .sid 파일 내용에서 세션 id 를 꺼낸다. UUID 꼴이 아니면 nil.
+    public static func hookSessionID(_ raw: String) -> String? {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return UUID(uuidString: t) == nil ? nil : t
     }
 
     /// - Parameters:

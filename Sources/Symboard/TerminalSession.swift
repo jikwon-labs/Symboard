@@ -68,6 +68,8 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         self.plan = plan
         try? FileManager.default.createDirectory(at: statusFile.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? FileManager.default.removeItem(at: statusFile)
+        try? FileManager.default.removeItem(atPath: statusFile.path + ".sid")
+        reportedSessionID = nil
         statusMTime = nil
         tracker = StatusTracker(usesHooks: tracker.usesHooks)
 
@@ -196,7 +198,17 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
            let state = HookState(rawValue: word.trimmingCharacters(in: .whitespacesAndNewlines)) {
             tracker.noteHook(state, at: mtime)
         }
+        // claude 가 실제로 쓰는 세션 id(훅이 적어 둔 것). 다르면 알려서 이어하기가 그 id 를 쓰게 한다.
+        if let raw = try? String(contentsOfFile: statusFile.path + ".sid", encoding: .utf8),
+           let sid = LaunchPlanner.hookSessionID(raw), sid != reportedSessionID {
+            reportedSessionID = sid
+            onSessionID?(sid)
+        }
     }
+
+    private var reportedSessionID: String?
+    /// 훅이 알려 준 claude 세션 id.
+    var onSessionID: ((String) -> Void)?
 
     private func handleOutput(_ slice: ArraySlice<UInt8>) {
         tracker.noteOutput()

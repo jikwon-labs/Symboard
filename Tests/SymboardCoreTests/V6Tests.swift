@@ -88,3 +88,36 @@ import Testing
         #expect(BoardCommand.parse("delete the group called group 1")?.plan.contains("close every console") == true)
     }
 }
+
+@Suite struct HookSessionIDTests {
+    @Test func parsesOnlyUUIDs() {
+        #expect(LaunchPlanner.hookSessionID("E669E207-4FFE-4E6C-9A51-A80B69124962\n") == "e669e207-4ffe-4e6c-9a51-a80b69124962")
+        #expect(LaunchPlanner.hookSessionID("") == nil)
+        #expect(LaunchPlanner.hookSessionID("not-a-session") == nil)
+    }
+
+    @Test func shellHookWritesSessionIDFromHookInput() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("symsid-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let status = dir.appendingPathComponent("status").path
+        let input = #"{"session_id":"e669e207-4ffe-4e6c-9a51-a80b69124962","transcript_path":"/x/817b.jsonl","hook_event_name":"SessionStart"}"#
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", LaunchPlanner.sessionIDHookCommand]
+        p.environment = ["SYMBOARD_STATUS_FILE": status, "PATH": "/usr/bin:/bin"]
+        let pipe = Pipe()
+        p.standardInput = pipe
+        try p.run()
+        pipe.fileHandleForWriting.write(Data(input.utf8))
+        try pipe.fileHandleForWriting.close()
+        p.waitUntilExit()
+        let got = try String(contentsOfFile: status + ".sid", encoding: .utf8)
+        #expect(LaunchPlanner.hookSessionID(got) == "e669e207-4ffe-4e6c-9a51-a80b69124962")
+    }
+
+    @Test func settingsCarryTheHookOnSessionStart() {
+        let json = LaunchPlanner.claudeHookSettingsJSON()
+        #expect(json.contains(".sid"))
+    }
+}

@@ -81,6 +81,12 @@ final class SessionManager {
         } ?? false
         let plan = LaunchPlanner.plan(for: spec, nodeID: s.nodeID, statusFile: s.statusFile.path,
                                       profile: profile, claudeSessionExists: exists, defaultShell: shell)
+        if spec.agent == .claude {
+            s.onSessionID = { [weak self] sid in
+                guard let self, self.model.node(s.nodeID)?.terminal?.sessionID != sid else { return }
+                self.model.mutateNode(s.nodeID) { $0.terminal?.sessionID = sid }
+            }
+        }
         s.start(plan: plan, shell: shell)
         model.mutateNode(s.nodeID) { node in
             node.terminal?.hasLaunched = true
