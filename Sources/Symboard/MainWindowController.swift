@@ -53,6 +53,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         _ = model.loops
         buildUI()
         observe()
+        CursorWatch.start(window: window)
+        TextCursor.install()
         DispatchQueue.main.async { [weak self] in self?.model.usage.refresh() }
         // 알약이 CLI 와 같은 시각·% 를 보이도록 /usage 도 읽는다(질문 아님). 창이 먼저 뜨게 조금 늦춘다.
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.model.usage.refreshLimitsIfStale() }
@@ -282,6 +284,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                     term.send([byte])
                     return nil
                 }
+                // 입력칸의 @ 목록이 열려 있으면 Esc 는 그 목록만 닫는다(입력칸이 받는다).
+                if event.keyCode == 53, MentionTextField.listOpen(for: self.window?.firstResponder) { return event }
                 // Esc 는 열린 모달부터 닫는다. 닫지 않으면 다음 클릭이 어두운 배경을 눌러 모달을 닫는 데 쓰여 "첫 클릭 무시" 처럼 보였다.
                 if event.keyCode == 53, self.closeTopOverlay() { return nil }
                 if event.keyCode == 53, self.chrome.tool != .select {
@@ -885,6 +889,27 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         guard let wsID = model.workspaceID(containing: orch), let ws = model.workspace(wsID) else { return [] }
         let to = Set((ws.links ?? []).filter { $0.from == orch }.map(\.to))
         return ws.nodes.filter { $0.kind == .terminal && (to.contains($0.id) || ($0.teamID.map(to.contains) ?? false)) }
+    }
+
+    /// 입력칸 @ 목록: 살아 있는 콘솔 → all → 그룹(소문자 이름, 보드 명령과 같은 꼴).
+    /// 오케스트레이터 입력칸이면 그 오케스트레이터에 연결된 콘솔만(보낼 수 있는 대상만) 보인다.
+    func mentionOptions(orchestrator: UUID? = nil) -> [MentionOption] {
+        let ws = orchestrator.flatMap { model.workspaceID(containing: $0) }.flatMap { model.workspace($0) } ?? model.selectedWorkspace
+        let pool = orchestrator.map { orchestratorTargets($0) } ?? ws.nodes.filter { $0.kind == .terminal }
+        let live = pool.filter { model.sessions.status(of: $0.id) != .exited }
+        var out: [MentionOption] = []
+        var seen = Set<String>()
+        func add(_ o: MentionOption) { if seen.insert(o.id).inserted { out.append(o) } }
+        for n in live {
+            add(MentionOption(name: n.title, kind: .console(AgentCatalog.choice(for: n.terminal), model.sessions.status(of: n.id) ?? .starting)))
+        }
+        guard !live.isEmpty else { return [] }
+        add(MentionOption(name: "all", kind: .all(live.count)))
+        for t in ws.teams {
+            let k = live.filter { $0.teamID == t.id }.count
+            if k > 0 { add(MentionOption(name: t.name.lowercased(), kind: .group(count: k, colorHex: t.colorHex))) }
+        }
+        return out
     }
 
     /// 연결된 콘솔 전부에, 또는 앞에 쓴 @이름 대상에만 보낸다. 보낸 수를 돌려준다.

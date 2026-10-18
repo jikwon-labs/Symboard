@@ -26,10 +26,22 @@ public struct CommandTargets: Equatable, Sendable {
         var ids: [UUID] = []
         var unknown: [String] = []
         var sawTarget = false
+        // 빈칸이 든 이름(그룹 "Group 1")은 @ 뒤에서 가장 길게 맞는 알려진 이름으로 먼저 잡는다.
+        let multi = (candidates.map(\.name) + candidates.compactMap(\.team)).filter { $0.contains(" ") }
         while let w = words.first, w.hasPrefix("@"), w.count > 1 {
-            words.removeFirst()
+            var name: String
+            let rest = words.joined(separator: " ") as NSString
+            if let len = Mention.matchedName(rest, nameStart: 1, names: multi) {
+                name = rest.substring(with: NSRange(location: 1, length: len))
+                words.removeFirst(name.split(separator: " ").count)
+                // "@Group 1," 처럼 붙은 구두점은 이름 뒤 낱말에 남는다.
+                if let next = words.first, !next.isEmpty, next.allSatisfy({ ",:".contains($0) }) { words.removeFirst() }
+            } else {
+                name = String(w.dropFirst())
+                words.removeFirst()
+            }
             sawTarget = true
-            let name = String(w.dropFirst()).trimmingCharacters(in: CharacterSet(charactersIn: ",:")).lowercased()
+            name = name.trimmingCharacters(in: CharacterSet(charactersIn: ",:")).lowercased()
             let hits: [UUID]
             if name == "all" {
                 hits = candidates.map(\.id)

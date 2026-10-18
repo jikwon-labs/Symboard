@@ -490,7 +490,8 @@ struct BottomBar: View {
     @ObservedObject var chrome: ChromeModel
     @ObservedObject var composer: ComposerState
     let c: MainWindowController
-    @FocusState private var focused: Bool
+    @StateObject private var mention = MentionState()
+    @State private var focusRequest = 0
 
     var body: some View {
         VStack(spacing: 8) {
@@ -510,7 +511,7 @@ struct BottomBar: View {
                 .floatingCapsule(radius: 14)
             } else if let s = chrome.suggestion, !chrome.overlayOpen {
                 HStack(spacing: 6) {
-                    Button(s) { chrome.command = "@all git status"; focused = true }
+                    Button(s) { chrome.command = "@all git status"; focusRequest += 1 }
                         .buttonStyle(.plainHit).axName(s)
                     Button { chrome.suggestion = nil } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.tip("Dismiss hint")
                         .buttonStyle(.plainHit)
@@ -535,16 +536,16 @@ struct BottomBar: View {
                 Button("Memory") { c.openMemory() }.axName("Memory")
             }
             .buttonStyle(PillButtonStyle())
+            if mention.isOpen {
+                MentionList(state: mention).frame(width: 520)
+            }
             HStack(spacing: 10) {
                 Image(systemName: "chevron.right.2").foregroundStyle(Color.symAccent)
                     .frame(width: 26, height: 26)
                     .background(Circle().fill(Color.symAccent.opacity(0.15)))
-                TextField("", text: $chrome.command, prompt: Text(placeholder).foregroundColor(Color.symDim))
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.symText)
-                    .focused($focused)
-                    .onSubmit { c.runCommand() }
+                MentionField(text: $chrome.command, placeholder: placeholder, fontSize: 13, state: mention,
+                             options: { [c] in c.mentionOptions() }, onSubmit: { [c] in c.runCommand() },
+                             focusRequest: focusRequest, axLabel: "Command")
                 if !chrome.thread.entries.isEmpty {
                     Button { chrome.threadOpen.toggle() } label: {
                         Image(systemName: chrome.threadOpen ? "chevron.down" : "chevron.up").font(.system(size: 11, weight: .bold))

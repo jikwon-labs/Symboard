@@ -32,6 +32,7 @@ struct OrchestratorView: View {
     weak var c: MainWindowController?
     @State private var command = ""
     @State private var hoverRow: UUID?
+    @StateObject private var mention = MentionState()
 
     var ws: Workspace? { model.workspaceID(containing: nodeID).flatMap { model.workspace($0) } }
     var links: [NodeLink] { (ws?.links ?? []).filter { $0.from == nodeID } }
@@ -75,6 +76,11 @@ struct OrchestratorView: View {
             }
 
             commandField
+        }
+        .overlay(alignment: .bottom) {
+            if mention.isOpen {
+                MentionList(state: mention, maxHeight: 190).padding(.horizontal, 10).padding(.bottom, 52)
+            }
         }
         .background(Color.symSurface)
     }
@@ -190,9 +196,9 @@ struct OrchestratorView: View {
 
     var commandField: some View {
         HStack(spacing: 8) {
-            TextField("", text: $command, prompt: Text("Command \(targets.count) agent\(targets.count == 1 ? "" : "s") · @ to direct").foregroundColor(Color.symDim))
-                .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
-                .onSubmit(send)
+            MentionField(text: $command, placeholder: "Command \(targets.count) agent\(targets.count == 1 ? "" : "s") · @ to direct",
+                         fontSize: 12, state: mention, options: { [c, nodeID] in c?.mentionOptions(orchestrator: nodeID) ?? [] },
+                         onSubmit: send, axLabel: "Orchestrator command")
             Button(action: send) {
                 Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
                     .frame(width: 22, height: 22)
