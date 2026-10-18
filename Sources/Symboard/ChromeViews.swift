@@ -325,10 +325,11 @@ struct RightRail: View {
                 .popover(isPresented: $chrome.insertOpen, arrowEdge: .leading) {
                     InsertMenu { p in chrome.insertOpen = false; c.setTool(.place(p)) }
                 }
-            Button { c.openSettings() } label: { Image(systemName: "slider.horizontal.3") }
-                .buttonStyle(RailButtonStyle()).tip("Settings")
+            // 원본 오른쪽 막대 셋째: 오케스트레이터를 바로 놓는다(설정은 위쪽 톱니).
+            Button { c.addOrchestratorNearSelection() } label: { Image(systemName: "circle.hexagongrid") }
+                .buttonStyle(RailButtonStyle()).tip("Orchestrator")
             Divider().frame(width: 22).overlay(Color.symBorder)
-            Button { c.openStudio(tab: "Code") } label: { Image(systemName: "chevron.left.forwardslash.chevron.right") }
+            Button { c.openStudio(tab: "Code") } label: { Image(systemName: "folder") }
                 .buttonStyle(RailButtonStyle()).tip("Code studio")
             Button { c.openStudio(tab: "Markdown") } label: { Image(systemName: "doc.text") }
                 .buttonStyle(RailButtonStyle()).tip("Markdown studio")

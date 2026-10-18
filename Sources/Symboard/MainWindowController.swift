@@ -749,6 +749,21 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         scrollView.center(on: Point(x: r.center.x, y: r.center.y + 20 / z), zoom: z)
     }
 
+    /// 오케스트레이터를 고른 노드 바로 아래(없으면 화면 가운데)에 놓는다.
+    func addOrchestratorNearSelection() {
+        var at = scrollView.visibleCenter
+        var console: UUID?
+        if let id = currentCanvas?.selectedNodeID, let n = model.node(id) {
+            at = Point(x: n.frame.x + n.frame.w / 2, y: n.frame.y + n.frame.h + 60)
+            if n.kind == .terminal { console = id }
+        }
+        place(.orchestrator, at: at)
+        // 원본처럼 고른 콘솔은 처음부터 연결해 둔다("1 agent").
+        if let console, let orch = currentCanvas?.selectedNodeID, model.node(orch)?.kind == .orchestrator {
+            toggleWire(orch, to: console)
+        }
+    }
+
     func place(_ p: Placement, at point: Point) {
         let s = p.size
         let isShape: Bool = { if case .shape = p { return true }; return false }()
