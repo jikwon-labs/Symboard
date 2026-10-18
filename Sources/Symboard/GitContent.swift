@@ -54,8 +54,6 @@ final class GitCardModel: ObservableObject {
     @Published var added = 0
     @Published var removed = 0
     @Published var resultLine: String?
-    /// 커밋이 끝났을 때(결과 한 줄). 브랜치 칩 팝오버는 이것으로 닫는다.
-    var onCommitted: ((String) -> Void)?
     @Published var resultOK = true
     @Published var showHistory = false
     @Published var generating = false
@@ -123,7 +121,6 @@ final class GitCardModel: ObservableObject {
             resultLine = "Committed \(files.count) file\(files.count == 1 ? "" : "s") · no remote"
         }
         await refresh()
-        if resultOK, let line = resultLine { onCommitted?(line) }
     }
 
     /// 고른 변경의 diff 를 CLI 에 보내 한 줄 메시지를 받는다(사용자 CLI 사용량을 쓴다).
@@ -160,6 +157,9 @@ final class GitCardModel: ObservableObject {
 struct GitCardView: View {
     @ObservedObject var card: GitCardModel
     var onClose: (() -> Void)?
+    /// 커밋 뒤 입력칸이 사라지면 결과 줄이 초점을 받는다. 팝오버 창이 키 창인데 초점 받을 곳이 없으면
+    /// 키 입력이 갈 데가 없었다(4차). Esc 는 onExitCommand 로 팝오버를 닫는다.
+    @FocusState private var resultFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -169,6 +169,13 @@ struct GitCardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.symSurface)
+        .onExitCommand { onClose?() }
+        .onChange(of: card.resultLine) { _, line in
+            if line != nil, card.status?.isClean ?? false { resultFocused = true }
+        }
+        .onChange(of: card.status?.isClean) { _, clean in
+            if clean == true, card.resultLine != nil { resultFocused = true }
+        }
     }
 
     var header: some View {
@@ -287,6 +294,10 @@ struct GitCardView: View {
                     }
                     .padding(10).frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
+                    .focusable()
+                    .focusEffectDisabled()
+                    .focused($resultFocused)
+                    .accessibilityElement(children: .combine)
                 }
             }
             .padding(12)

@@ -691,7 +691,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     /// 맨 위에 열린 모달 하나를 닫는다. 닫은 게 있으면 true.
     @discardableResult
     func closeTopOverlay() -> Bool {
-        if chrome.loopsPage != nil { chrome.loopsPage = nil }
+        if chrome.gitOpen { chrome.gitOpen = false }
+        else if chrome.loopsPage != nil { chrome.loopsPage = nil }
         else if memoryHub.page != nil, memoryHub.page != "scan" { memoryHub.page = nil }
         else if studioState.kind != nil { closeStudio() }
         else if chrome.missionOpen { chrome.missionOpen = false }

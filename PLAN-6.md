@@ -31,7 +31,12 @@ STATUS: IN_PROGRESS
   - 바꾼 것: `GroupFrameView.wireState`(none/offer/wired)와 `WirePillView`(접근성 단추). `layoutGroups` 가 Connect 중인 오케스트레이터와 이 팀의 연결 여부로 상태를 정하고, 알약을 누르면 `toggleWire`. Connect/Done·연결 바꿈 때 그룹을 다시 그린다. 안내 문구에 "a group's pill" 추가.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-1, 배율 60%): 오케스트레이터 Connect → 그룹 윗변 "Group wired"(이미 연결됨) → 알약 클릭(좌표) → 점선 + "Click to wire group", 오케스트레이터 "0 agents · 0 groups" → 다시 클릭 → "Group wired", "4 agents · 1 group" → Done. 비교 그림 `compare/2-wire-offer.png`, `2-wire-wired.png`.
   - 덧붙임: 첫 실행에서 배율 60% 의 오케스트레이터 Connect 를 좌표로 세 번 눌렀는데 반응이 없었다(접근성 누르기는 됨). 로그를 넣고 다시 띄운 뒤에는 60%·48%·버튼 줌·끌어 옮긴 뒤 모두 첫 클릭에 반응해 재현하지 못했다. 마지막 점검에서 다시 본다.
-- [ ] 3. node-git: 커밋 뒤 팝오버가 열린 채 결과를 보이게(키 창 문제를 다른 방법으로)
+- [x] 3. node-git: 커밋 뒤 팝오버가 열린 채 결과를 보이게(키 창 문제를 다른 방법으로)
+  - 원본 장면: `node-git.mp4` 7.5초. 커밋 뒤 팝오버가 열린 채 CHANGES "Working tree clean · Nothing to commit.", RECENT 맨 위에 새 커밋, 바닥 "Committed 5 files · pushed".
+  - 4차에서 닫은 이유(PLAN-4 119줄): 남은 변경이 없으면 입력칸이 사라져, 팝오버 창이 초점 받을 곳 없는 키 창으로 남았고 orca 가 Esc·Cmd+Q 를 "초점 창 없음" 으로 거부했다.
+  - 1차 시도(키 창만 본 창으로 돌림): AppKit 키 창은 본 창이 됐지만(`drive.sh windows`) orca 는 여전히 거부했다. 버림.
+  - 바꾼 것: 팝오버를 닫지 않는다. 커밋 결과 줄이 생기고 작업 트리가 깨끗해지면 결과 줄이 SwiftUI 초점을 받는다(`focusable`·`focused`, 초점 테두리 없음). Esc 는 `onExitCommand` 로 팝오버를 닫는다. 본 창의 Esc 처리(`closeTopOverlay`)도 git 팝오버부터 닫는다. 쓰지 않게 된 `onCommitted` 를 지웠다.
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-3, 로컬 bare 원격이 있는 /tmp/symgit6): Open folder → 브랜치 칩 → 입력칸에 "Add d and e" → Return → 팝오버가 열린 채 Working tree clean·RECENT "Add d and e 4 seconds ago"·"Committed 2 files · pushed"(원격 `366bd24`) → Esc(orca 가 받음) → 팝오버 닫힘 → 명령 바 클릭 → "echo after-commit" 타이핑이 들어감. 비교 그림 `compare/3-git-after-commit.png`.
 - [ ] 4. node-kanban: Today 를 누르면 날짜 입력으로, 일정 기본색
 - [ ] 5. node-memory: 목록 줄 켜짐 체크, 마우스 올리면 휴지통, 스캔 단계 Wrap up
 - [ ] 6. node-loops: 목표 기본값을 원본과 같은 종류로
