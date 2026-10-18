@@ -64,6 +64,27 @@ final class BoardScrollView: NSScrollView {
         reflectScrolledClipView(contentView)
     }
 
+    private var glide: Timer?
+
+    /// center(on:zoom:) 를 짧게 미끄러지듯. 배율은 로그 눈금으로 옮겨 확대·축소 속도가 고르다.
+    func glide(to p: Point, zoom: CGFloat, duration: TimeInterval = 0.35) {
+        glide?.invalidate()
+        let z1 = max(minMagnification, min(maxMagnification, zoom))
+        let z0 = magnification
+        let c0 = visibleCenter
+        let start = Date()
+        glide = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] t in
+            MainActor.assumeIsolated {
+                guard let self else { t.invalidate(); return }
+                let raw = min(1, Date().timeIntervalSince(start) / duration)
+                let e = 1 - pow(1 - raw, 3)
+                let z = exp(log(z0) + (log(z1) - log(z0)) * e)
+                self.center(on: Point(x: c0.x + (p.x - c0.x) * e, y: c0.y + (p.y - c0.y) * e), zoom: z)
+                if raw >= 1 { t.invalidate(); self.glide = nil }
+            }
+        }
+    }
+
     func zoom(by factor: CGFloat) {
         let r = contentView.bounds
         setMagnification(max(minMagnification, min(maxMagnification, magnification * factor)),
@@ -130,6 +151,31 @@ final class CanvasView: NSView {
 
     var workspace: Workspace? { model.workspace(workspaceID) }
 
+    /// 첫 reloadNodes 가 끝났는지. 그 뒤에 생기거나 사라지는 노드만 움직임을 준다.
+    private var hasLoaded = false
+    /// 나타나기 움직임을 따로 주는 노드(다이어그램의 미끄러지기).
+    var quietAppear: Set<UUID> = []
+
+    /// 노드를 from(모델 좌표)에서 지금 자리로 미끄러뜨린다.
+    func slideNode(_ id: UUID, from: Rect, duration: TimeInterval = 0.45) {
+        guard let v = nodeViews[id] else { return }
+        let target = v.frame
+        v.slidingUntil = Date().addingTimeInterval(duration + 0.1)
+        v.frame = CanvasGeometry.viewRect(from)
+        v.alphaValue = 0.35
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = duration
+            ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
+            v.animator().frame = target
+            v.animator().alphaValue = 1
+        } completionHandler: { [weak v] in
+            MainActor.assumeIsolated {
+                v?.slidingUntil = nil
+                v?.syncFromModel()
+            }
+        }
+    }
+
     /// 모델과 노드 뷰를 맞춘다. 새로 생긴 노드는 뷰를 만들고, 사라진 노드는 뷰를 뗀다.
     func reloadNodes() {
         guard let ws = workspace else { return }
@@ -137,15 +183,18 @@ final class CanvasView: NSView {
         arrowsView.isArrowLayer = true
         let ids = Set(ws.nodes.map(\.id))
         for (id, v) in nodeViews where !ids.contains(id) {
-            v.removeFromSuperview()
             nodeViews[id] = nil
+            if hasLoaded { NodeMotion.disappear(v) } else { v.removeFromSuperview() }
         }
         for node in ws.nodes where nodeViews[node.id] == nil {
             let v = NodeView.make(node: node, model: model)
             v.canvas = self
             addSubview(v)
             nodeViews[node.id] = v
+            // 처음 불러올 때(앱 시작·작업공간 전환)가 아니라 새로 생긴 노드만 원본처럼 작게 시작해 커진다.
+            if hasLoaded, !quietAppear.contains(node.id) { NodeMotion.appear(v) }
         }
+        hasLoaded = true
         for node in ws.nodes { nodeViews[node.id]?.syncFromModel() }
         applyOrder(ws)
         layoutGroups()
@@ -492,5 +541,56 @@ extension NSColor {
             self.init(srgbRed: CGFloat((v >> 16) & 0xFF) / 255, green: CGFloat((v >> 8) & 0xFF) / 255,
                       blue: CGFloat(v & 0xFF) / 255, alpha: 1)
         }
+    }
+}
+
+/// 노드가 생기고 사라질 때의 짧은 움직임. 크기(frame)는 그대로 두고 층 변환만 쓴다(터미널 크기가 흔들리지 않게).
+@MainActor
+enum NodeMotion {
+    static let appearDuration: CFTimeInterval = 0.2
+    static let disappearDuration: CFTimeInterval = 0.15
+
+    /// 가운데를 기준으로 s 배 줄인 변환. 층 기준점이 어느 모서리든 같은 결과가 된다.
+    static func centeredScale(_ s: CGFloat, size: CGSize) -> CATransform3D {
+        CATransform3DConcat(CATransform3DMakeScale(s, s, 1),
+                            CATransform3DMakeTranslation(size.width * (1 - s) / 2, size.height * (1 - s) / 2, 0))
+    }
+
+    static func appear(_ v: NSView) {
+        guard let layer = v.layer else { return }
+        let scale = CABasicAnimation(keyPath: "transform")
+        scale.fromValue = centeredScale(0.6, size: v.bounds.size)
+        scale.toValue = CATransform3DIdentity
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 0
+        fade.toValue = 1
+        let g = CAAnimationGroup()
+        g.animations = [scale, fade]
+        g.duration = appearDuration
+        g.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1)
+        layer.add(g, forKey: "symAppear")
+    }
+
+    static func disappear(_ v: NSView) {
+        guard let layer = v.layer else { v.removeFromSuperview(); return }
+        let scale = CABasicAnimation(keyPath: "transform")
+        scale.fromValue = CATransform3DIdentity
+        scale.toValue = centeredScale(0.92, size: v.bounds.size)
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 1
+        fade.toValue = 0
+        let g = CAAnimationGroup()
+        g.animations = [scale, fade]
+        g.duration = disappearDuration
+        g.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        g.fillMode = .forwards
+        g.isRemovedOnCompletion = false
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { v.removeFromSuperview() }
+        layer.add(g, forKey: "symDisappear")
+        CATransaction.commit()
+        // 지워지는 동안 클릭을 받지 않게.
+        v.isHidden = false
+        (v as? NodeView)?.isEnabledForHit = false
     }
 }

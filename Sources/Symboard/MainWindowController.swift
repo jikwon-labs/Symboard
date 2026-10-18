@@ -139,6 +139,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         missionObserver = chrome.$missionOpen.sink { [weak self] open in self?.missionHost?.isHidden = !open }
         // 스튜디오 패널은 보드 위, 위쪽·아래 막대보다는 아래에 둔다.
         let studioHost = HiddenAwareHostingView(rootView: StudioOverlay(studio: studioState, c: self))
+        studioHostView = studioHost
         studioHost.translatesAutoresizingMaskIntoConstraints = false
         studioHost.sizingOptions = []
         studioHost.isHidden = true
@@ -523,7 +524,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         studioState.save()
         if let f = studioState.selected, studioState.kind != "Documents",
            !model.selectedWorkspace.nodes.contains(where: { $0.kind == .file && $0.text == f.path }) {
-            addNode(kind: .file, size: CGSize(width: 380, height: 240), title: f.lastPathComponent) { $0.text = f.path }
+            collapseStudio {
+                addNode(kind: .file, size: CGSize(width: 380, height: 240), title: f.lastPathComponent) { $0.text = f.path }
+            }
+            return
         }
         studioState.kind = nil
     }
@@ -531,8 +535,65 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func studioInsert() {
         guard let f = studioState.selected else { return }
         studioState.save()
-        addNode(kind: .file, size: CGSize(width: 560, height: 420), title: f.lastPathComponent) { $0.text = f.path }
+        collapseStudio {
+            addNode(kind: .file, size: CGSize(width: 560, height: 420), title: f.lastPathComponent) { $0.text = f.path }
+        }
+    }
+
+    /// 스튜디오 패널(여백을 뺀 자리, StudioOverlay 의 padding 과 같다)을 창 내용 좌표로.
+    private func studioPanelRect(_ host: NSView) -> NSRect {
+        let b = host.bounds
+        let r = NSRect(x: 84, y: 58, width: max(40, b.width - 160), height: max(40, b.height - 150))
+        return host.convert(host.isFlipped ? r : NSRect(x: r.minX, y: b.height - r.maxY, width: r.width, height: r.height), to: host.superview)
+    }
+
+    /// 스튜디오가 새로 생긴 카드 자리로 줄어들며 닫히는 움직임(원본 studio-documents 19초, 약 0.25초).
+    /// 패널을 찍어 둔 그림을 카드 자리로 옮기고, 다 옮기면 카드를 보인다. add 는 카드를 만든다.
+    private func collapseStudio(_ add: () -> Void) {
+        let before = Set(model.selectedWorkspace.nodes.map(\.id))
+        var ghost: NSImageView?
+        if let host = studioHostView, !host.isHidden {
+            let panel = studioPanelRect(host)
+            let local = host.convert(panel, from: host.superview)
+            if let rep = host.bitmapImageRepForCachingDisplay(in: local) {
+                host.cacheDisplay(in: local, to: rep)
+                let img = NSImage(size: local.size)
+                img.addRepresentation(rep)
+                let g = NSImageView(frame: panel)
+                g.image = img
+                g.imageScaling = .scaleAxesIndependently
+                g.wantsLayer = true
+                g.layer?.cornerRadius = 14
+                g.layer?.masksToBounds = true
+                host.superview?.addSubview(g, positioned: .above, relativeTo: host)
+                ghost = g
+            }
+        }
+        add()
         studioState.kind = nil
+        guard let g = ghost else { return }
+        let newID = model.selectedWorkspace.nodes.map(\.id).first { !before.contains($0) }
+        // 카드 뷰가 생기고 화면이 카드 쪽으로 옮겨진 다음 자리를 잰다.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let id = newID, let v = self.currentCanvas?.nodeViews[id] else {
+                NSAnimationContext.runAnimationGroup { $0.duration = 0.15; g.animator().alphaValue = 0 } completionHandler: { g.removeFromSuperview() }
+                return
+            }
+            v.layer?.removeAnimation(forKey: "symAppear")
+            v.alphaValue = 0
+            let target = v.convert(v.bounds, to: g.superview)
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.28
+                ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.3, 0.0, 0.2, 1)
+                g.animator().frame = target
+                g.animator().alphaValue = 0.6
+            } completionHandler: {
+                MainActor.assumeIsolated {
+                    v.alphaValue = 1
+                    NSAnimationContext.runAnimationGroup { $0.duration = 0.08; g.animator().alphaValue = 0 } completionHandler: { g.removeFromSuperview() }
+                }
+            }
+        }
     }
 
     func studioAddToBoard() { studioInsert() }
@@ -542,8 +603,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let url = docStudio.url(for: id)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let agent = docStudio.agent
-        studioState.kind = nil
-        addNode(kind: .document, size: CGSize(width: 520, height: 620), title: "Document") { $0.text = url.path; $0.role = agent }
+        collapseStudio {
+            addNode(kind: .document, size: CGSize(width: 520, height: 620), title: "Document") { $0.text = url.path; $0.role = agent }
+        }
     }
 
     func studioExportDocPDF(_ id: String) {
@@ -975,6 +1037,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         chrome.loopsPage = "list"
     }
 
+    /// 스튜디오 패널 호스트(닫히는 움직임에서 찍어 둔다).
+    private weak var studioHostView: NSView?
+
     var studio: StudioWindowController?
 
     @objc func openStudio(_ sender: Any?) {
@@ -1181,7 +1246,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let maxX = nodes.map { $0.frame.x + $0.frame.w }.max()!, maxY = nodes.map { $0.frame.y + $0.frame.h }.max()!
         let size = scrollView.frame.size
         let zoom = min((size.width - 160) / (maxX - minX + 40), (size.height - 220) / (maxY - minY + 40), 1)
-        scrollView.center(on: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / max(zoom, 0.1)), zoom: zoom)
+        scrollView.glide(to: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / max(zoom, 0.1)), zoom: zoom)
     }
 }
 

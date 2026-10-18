@@ -93,19 +93,30 @@ final class DiagramMaker: ObservableObject {
             }
         }
         let groupIndex = Dictionary(uniqueKeysWithValues: (spec.groups ?? []).enumerated().map { ($0.element.id, $0.offset) })
-        for n in spec.nodes {
+        // 원본처럼 노드가 제목 아래 한 줄로 먼저 나타났다가 제자리로 미끄러진다.
+        let perRow = 6
+        for (i, n) in spec.nodes.enumerated() {
             guard let r = lay.nodes[n.id] else { continue }
             let tint = colorful ? Self.palette[(groupIndex[n.group ?? ""] ?? 0) % Self.palette.count] : "#ECE7E2"
+            let start = Rect(x: lay.title.x + Double(i % perRow) * (r.w + 24), y: lay.title.y + 40 + Double(i / perRow) * (r.h + 24), w: r.w, h: r.h)
             later {
+                var newID: UUID?
                 self.c.addNode(kind: .shape, size: CGSize(width: r.w, height: r.h), title: n.label, at: Point(x: r.x, y: r.y)) {
+                    newID = $0.id
+                    self.c.currentCanvas?.quietAppear.insert($0.id)
                     $0.shape = ShapeSpec(kind: n.shape == "ellipse" ? "ellipse" : "rect", strokeHex: tint, fillHex: colorful ? Self.dim(tint) : nil,
                                          strokeWidth: 2, dash: "solid", roughness: 1, cornerRadius: 14)
                     $0.text = [n.label, n.sub].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
                     $0.style = NodeStyle(fontSize: 18, font: "hand", textColorHex: "#ECE7E2", align: "center")
                 }
-                if let id = self.c.model.selectedWorkspace.nodes.last?.id { created[n.id] = id }
+                if let id = newID {
+                    created[n.id] = id
+                    self.c.currentCanvas?.slideNode(id, from: start)
+                }
             }
         }
+        // 마지막 노드가 자리에 닿은 뒤 화살표를 잇고 화면을 맞춘다.
+        step += 0.45
         later {
             self.c.model.mutateWorkspace(wsID) { ws in
                 var links = ws.links ?? []

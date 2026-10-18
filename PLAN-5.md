@@ -13,8 +13,9 @@ STATUS: IN_PROGRESS
 |---|------|------|------|
 | 1 | 1번 문서 생성 | 문서 스튜디오 Quick(/tmp/symsample) | a 5-line README for this repo |
 | 2 | 1번 루프 | 루프 Run now → Ada(/tmp/symsample) | reply with just the word ok, no tools |
+| 3 | 4번 다이어그램 움직임 | 다이어그램 Components(/tmp/symsample) | (템플릿 질문) |
 
-합계: 2
+합계: 3
 
 ## 고칠 것
 
@@ -36,7 +37,12 @@ STATUS: IN_PROGRESS
   - 고침: `CodexStatusProbe` 가 화면 없는 터미널에 `codex --no-daemon` 을 띄워 `/status` 를 읽는다(`--no-daemon` 은 데몬 설정 메뉴를 피한다). 업데이트 안내는 Esc(건너뛰기) 한 번, Enter 는 입력칸에 `/status` 가 보일 때만 보낸다. 폴더 신뢰 화면이면 답하지 않고 그만두고 가장 최근 세션 로그의 `rate_limits` 를 보이며 이유를 적는다. `CodexLimitParser`(Core, 단위 테스트 3개)가 `% left` 를 used % 로 바꾼다. 팝오버 X 탭은 claude 탭과 같은 꼴: 큰 링(세션 한도가 없으면 첫 한도, 이름 "Weekly limit"), 나머지 한도 막대, 바닥 "codex · /status · local session logs".
   - 확인한 실제 입력(`env -i`): /tmp/symsample(codex 가 신뢰 안 한 폴더) → 알약 → X → "Weekly limit 0% · Resets 12:10 AM on 24 Oct · codex is asking a question in this folder… · showing the last session log"(`3-codex-tab-log-fallback.png`). Home → Open folder `/tmp/symtrust-5`(4차에서 신뢰한 폴더) → 알약 → X → "Weekly limit 0% used · Resets 5:38 PM on 25 Oct", 바닥 "codex · /status"(`3-codex-tab-status.png`). 끝난 뒤 codex 프로세스 남지 않음, `codex --version` 0.157.1 그대로.
   - **사고 기록**: 처음 화면을 살피려고 파이썬 pty 로 codex 를 띄워 `/status` + Enter 를 보냈는데, 그때 화면이 업데이트 메뉴(기본값 "1. Update now")여서 Enter 가 `npm install -g @openai/codex` 를 돌려 0.157.1 → 0.163.0 으로 올라갔다(전역 설치 금지 위반). 바로 `npm install -g @openai/codex@0.157.1` 로 원래 버전으로 되돌렸다. 앱의 탐침은 이 때문에 업데이트 메뉴에서 Enter 를 절대 보내지 않게 만들었다. `~/.codex/config.toml` 은 건드리지 않았다(신뢰 화면에서 그만둠).
-- [ ] 4. 움직임 (스튜디오 → 카드 줄어들기, 다이어그램 노드 미끄러지기, 노드 추가·닫기, 팝오버)
+- [x] 4. 움직임 (스튜디오 → 카드 줄어들기, 다이어그램 노드 미끄러지기, 노드 추가·닫기, 팝오버)
+  - 원본(1초 4장·8장으로 뽑음): `studio-documents.mp4` 19초 Add to board → 스튜디오가 0.25초 안에 카드 자리로 줄어든다. `studio-diagrams.mp4` 2~6초: 노드가 제목 아래 한 줄로 먼저 생기고, 그래프 꼴로 자리를 옮긴 뒤 화면이 부드럽게 맞춰진다. `board.mp4` 1초: 놓기 미리보기(점선 상자) → 클릭하면 노드가 작게(약 60%) 나타나 0.2초 안에 커진다. 팝오버는 시스템 기본 움직임.
+  - 원인: 카드·노드는 모델이 바뀌면 바로 그 자리에 생기고 사라졌다. 다이어그램 노드는 처음부터 최종 자리에 놓였다. 화면 맞춤(`zoomToFit`)은 한 번에 건너뛰었다.
+  - 고침: `collapseStudio`(스튜디오 패널을 찍은 그림을 새 카드 자리로 0.28초에 옮긴 뒤 카드를 보임) — Add to Board·Insert·닫을 때 파일 카드·문서 카드에 씀. `NodeMotion.appear`(층 변환으로 가운데 기준 60%→100%, 투명→불투명 0.2초)·`disappear`(92%·투명 0.15초, 그동안 클릭 안 받음) — 처음 불러올 때는 쓰지 않는다. frame 이 아니라 층 변환이라 터미널 크기가 흔들리지 않는다. 다이어그램 노드는 제목 아래 6개씩 한 줄 자리에서 최종 자리로 0.45초에 미끄러진다(`CanvasView.slideNode`, 그동안 모델 맞추기가 frame 을 덮지 않음). `zoomToFit` 은 0.35초 동안 배율(로그 눈금)과 가운데를 옮긴다(`glide`).
+  - 확인한 실제 입력(`env -i`, 화면 녹화 `screencapture -v` 를 20장/초로 뽑음): README 카드 X → 0.15초에 흐려지며 작아짐(`4-node-close-20fps.png`). Markdown 스튜디오 → Add to Board → 패널이 카드 자리로 줄어듦(`4-studio-collapse-20fps.png`). 별 → Shell → 캔버스 클릭 → 점선 미리보기 → 작게 나타나 커짐(`4-node-appear-20fps.png`). 다이어그램 → Components(질문 3) → 노드가 한 줄에서 자리로 미끄러지고 화면이 맞춰짐(`4-diagram-slide-8fps.png`).
+  - 남은 것: 다이어그램이 화면 가운데에 그려져 기존 카드 위에 겹친다(원본은 빈 캔버스). V13 에서 다룬다.
 - [ ] 5. 앱 아이콘과 Dock (번들 아이콘, Dock·Cmd+Tab, 창 닫은 뒤 Dock 클릭으로 다시 열기)
 
 ## 많이 띄우기

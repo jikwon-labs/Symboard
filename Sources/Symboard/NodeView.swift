@@ -121,10 +121,20 @@ final class NodeView: NSView {
         header.needsLayout = true
     }
 
+    /// 사라지는 움직임 중에는 클릭을 받지 않는다.
+    var isEnabledForHit = true
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        isEnabledForHit ? super.hitTest(point) : nil
+    }
+
+    /// 자리로 미끄러지는 중이면 모델 맞추기가 frame 을 건드리지 않는다.
+    var slidingUntil: Date?
+
     func syncFromModel() {
         guard let node = model.node(nodeID) else { return }
         let target = CanvasGeometry.viewRect(node.frame)
-        if frame != target { frame = target }
+        if frame != target, (slidingUntil.map { Date() > $0 } ?? true) { frame = target }
         header.titleLabel.stringValue = node.title
         header.roleLabel.stringValue = node.role ?? ""
         if let spec = node.terminal {
