@@ -1,4 +1,4 @@
-STATUS: IN_PROGRESS
+STATUS: DONE
 
 # Symboard 6차 진행표
 
@@ -12,14 +12,18 @@ STATUS: IN_PROGRESS
 | 때 | codex | claude |
 |----|-------|--------|
 | 시작 | 0.157.1 | 2.1.302 |
+| 마지막 점검 뒤 | 0.157.1 | 2.1.302 |
 
 ## 실제 CLI 질문 수 (한도 10)
 
 | # | 항목 | 대상 | 질문 |
 |---|------|------|------|
 | 1 | 5번 메모리 스캔 | Memory → Scan repo → Claude Code(/tmp/symsample) | (스캔 질문) |
+| 2 | 마지막 점검 4차 시도 5단계 | Ada(/tmp/symsample) | reply with just the word ok, no tools |
+| 3 | 마지막 점검 5차 시도 5단계 | Ada(/tmp/symsample) | reply with just the word ok, no tools |
+| 4 | 마지막 점검 6차 시도 5단계 | Ada(/tmp/symsample) | reply with just the word ok, no tools |
 
-합계: 1
+합계: 4
 
 ## 고칠 것
 
@@ -92,7 +96,21 @@ STATUS: IN_PROGRESS
 
 ## 마지막 점검
 
-- [ ] 7단계 한 번에 통과
+- [x] 7단계 한 번에 통과 (6번째 시도, `env -i`, 새 SYMBOARD_HOME=/tmp/symv6-final6)
+  - 앞 시도에서 찾고 고친 것(고칠 때마다 처음부터 다시):
+    - 1·2차: 보드를 누르는 동안 THREAD 카드가 밑의 오케스트레이터를 가렸다 → 보드를 누르면 THREAD 를 접는다.
+    - 2·3차: 마크다운 스튜디오 Add to Board 카드가 칸반·캘린더 위에 겹쳐 놓였다(자리를 정하지 않은 `addNode` 가 1번 규칙을 안 탔다) → `addNode` 도 빈 자리로 민다. 마크다운 스튜디오에 저장 단추·표시가 없어 "저장 → Saved" 를 할 수 없었다 → Save / ✓ Saved, • Edited 추가.
+    - 4차: Cmd+Q 뒤 이어하기 Yes 를 눌렀는데 새 대화로 떴다. 원인: claude 2.1.302 가 `--session-id 817b…` 를 무시하고 `e669e207…` 로 기록해, 앱이 `817b….jsonl` 을 못 찾았다 → 훅이 실제 session_id 를 `.sid` 파일로 알리고 앱이 저장한다(단위 테스트 3개, 실제 셸로 훅 실행 포함).
+    - 5차: 토스트의 No 를 눌러 버렸다(화면 배율 1.094 를 빼먹은 내 좌표 실수, 앱 문제 아님). 그대로 다시.
+  - 6차 기록:
+    1. Open folder → Cmd+Shift+G `/tmp/symsample` → 별 → Claude Code → 캔버스 클릭(Ada) → 별 → Shell → 캔버스 클릭(Pip) → 둘 다 READY. 신뢰 화면은 뜨지 않았다(이 폴더는 앞 차수에서 이미 신뢰됨, 사용자 설정에 기록돼 있어 새 SYMBOARD_HOME 으로는 다시 볼 수 없다). 그래서 "신뢰 승인" 동작은 이번에 하지 않았다.
+    2. 명령 바 `spawn 4 shell` → Group 1(Maya·Iris·Dax·Rafa) → `add an orchestrator wired to group 1` → 이어진 오케스트레이터 → 빈 보드 클릭(THREAD 접힘) → 오케스트레이터 입력 클릭 → `echo ok` → Return → 넷 모두 `ok`.
+    3. Insert → Board → Backlog Add card "Write release notes" → Insert → Sticky → "ship it" → Insert → Calendar → New "Launch day" → 18일에 일정.
+    4. Markdown studio → Add to Board(카드가 캘린더 오른쪽 빈 자리에) → 카드 바닥 Open in Studio → Source → 끝에 " (final check)" → "• Edited", Save → Save 클릭 → "✓ Saved", 파일에 저장됨(뒤에 표본 파일 되돌림).
+    5. 명령 바 `@ada reply with just the word ok, no tools`(질문 4) → 2초 RUNNING·"1 working" → 14초 DONE, 답 "ok". state.json 의 Ada 세션 id `1be2c972…` 와 그 기록 파일이 일치.
+    6. Cmd+W → 창 0개, 같은 pid(96485) → `open build/Symboard.app` → 같은 창·출력 그대로 → Cmd+Q → 프로세스 끝 → `env -i` 로 다시 띄움 → 보드 전체 복원, "Resume all conversations? 1 console…" 토스트 → Yes(접근성 누르기는 한 번 반응이 없어 좌표 클릭) → `claude --resume 1be2c972…`, Ada 에 앞 대화("reply with just the word ok…" / "ok")가 보임.
+    7. 명령 바 `delete the group called group 1` → THREAD 에 "Maya, Iris, Dax, Rafa: about to close 4 consoles" 와 Confirm · 4 → 클릭 → "Closed 4 consoles", state.json 에 팀 없음·콘솔 Ada·Pip 만, 2 live.
+  - 끝난 뒤 `codex --version` 0.157.1, `claude --version` 2.1.302. `swift build -c release`·`swift test`(162개) 통과.
 
 ## 막힌 것
 
