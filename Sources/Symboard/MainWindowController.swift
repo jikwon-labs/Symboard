@@ -3,7 +3,7 @@ import SwiftUI
 import SymboardCore
 
 /// 메인 창: 꽉 찬 보드 위에 떠 있는 막대들(위쪽 바, 좌우 세로 막대, 아래 명령 바, 배율, 브랜치 칩).
-final class MainWindowController: NSWindowController, NSWindowDelegate {
+final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopoverDelegate {
     let model: AppModel
     let chrome = ChromeModel()
     let composer = ComposerState()
@@ -162,6 +162,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             loopsHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         loopsObserver = chrome.$loopsPage.sink { page in loopsHost.isHidden = page == nil }
+        composerObserver = composer.$open.removeDuplicates().sink { [weak self] open in
+            DispatchQueue.main.async { self?.syncComposerPopover(open) }
+        }
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: content.topAnchor),
@@ -919,6 +922,38 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     @objc func openComposer(_ sender: Any?) {
         if !composer.open { composer.reset(default: AgentCatalog.shared.lastChoiceID) }
         composer.open.toggle()
+    }
+
+    /// 아래 막대 Group 단추 자리. 컴포저 팝오버가 여기에 붙는다.
+    weak var composerAnchor: NSView?
+    private var composerPopover: NSPopover?
+    private var composerObserver: Any?
+
+    /// 컴포저 카드는 AppKit 팝오버로 띄운다. SwiftUI 팝오버는 타일 줄이 늘 때 위쪽을 고정한 채 아래로 자라
+    /// 아래 단추 줄과 명령 입력을 가렸다. AppKit 팝오버는 단추 쪽(아래)을 고정하고 위로 자란다.
+    private func syncComposerPopover(_ open: Bool) {
+        if !open {
+            composerPopover?.close()
+            return
+        }
+        guard composerPopover?.isShown != true, let anchor = composerAnchor, anchor.window != nil else { return }
+        let host = NSHostingController(rootView: ComposerCard(state: composer) { [weak self] in self?.spawnComposer() }
+            .environment(\.colorScheme, .dark))
+        host.sizingOptions = [.preferredContentSize]
+        let pop = NSPopover()
+        pop.behavior = .transient
+        pop.animates = false
+        pop.appearance = NSAppearance(named: .darkAqua)
+        pop.contentViewController = host
+        pop.delegate = self
+        composerPopover = pop
+        pop.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY)
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        guard (notification.object as? NSPopover) === composerPopover else { return }
+        composerPopover = nil
+        if composer.open { composer.open = false }
     }
 
     /// 컴포저 카드의 Spawn N: 역할 색 그룹 프레임을 만들고 노드를 차례로 띄운다.

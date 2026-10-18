@@ -472,9 +472,7 @@ struct BottomBar: View {
                 Button("New console") { c.spawnQuick(count: 1) }
                 Button("Spawn 4") { c.spawnQuick(count: 4) }
                 Button("Group") { c.openComposer(nil) }
-                    .popover(isPresented: $composer.open, arrowEdge: .top) {
-                        ComposerCard(state: composer) { c.spawnComposer() }
-                    }
+                    .background(PopoverAnchor { c.composerAnchor = $0 })
                 Menu("Presets") {
                     ForEach(ComposerPreset.all) { p in Button(p.name) { c.spawnPreset(p) } }
                 }
@@ -705,4 +703,16 @@ struct DiagramRailButton: View {
             .help("Diagram")
             .popover(isPresented: $maker.open, arrowEdge: .trailing) { DiagramPopover(maker: maker) }
     }
+}
+
+
+/// SwiftUI 단추 자리에 AppKit 팝오버를 붙이기 위한 빈 뷰.
+struct PopoverAnchor: NSViewRepresentable {
+    var onMake: (NSView) -> Void
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        DispatchQueue.main.async { onMake(v) }
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
