@@ -546,7 +546,17 @@ struct BranchChip: View {
                     if let card = chrome.gitCard {
                         GitCardView(card: card) { chrome.gitOpen = false }
                             .frame(width: 360, height: 470)
-                            .onAppear { Task { await card.refresh() } }
+                            .onAppear {
+                                // 커밋 뒤 남은 변경이 없으면 팝오버를 닫고 결과를 알린다.
+                                // 입력칸이 사라진 팝오버 창이 키 창으로 남으면 그 뒤 키 입력(Esc·Cmd+Q)이 갈 곳이 없었다.
+                                card.onCommitted = { line in
+                                    guard (card.status?.changes.isEmpty ?? true) else { return }
+                                    chrome.gitOpen = false
+                                    chrome.flash(line)
+                                    MainWindowController.current?.window?.makeKeyAndOrderFront(nil)
+                                }
+                                Task { await card.refresh() }
+                            }
                     }
                 }
                 .hiddenOnHome(chrome)

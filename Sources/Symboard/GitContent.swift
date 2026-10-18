@@ -54,6 +54,8 @@ final class GitCardModel: ObservableObject {
     @Published var added = 0
     @Published var removed = 0
     @Published var resultLine: String?
+    /// 커밋이 끝났을 때(결과 한 줄). 브랜치 칩 팝오버는 이것으로 닫는다.
+    var onCommitted: ((String) -> Void)?
     @Published var resultOK = true
     @Published var showHistory = false
     @Published var generating = false
@@ -120,6 +122,8 @@ final class GitCardModel: ObservableObject {
             phase = ""
             resultLine = "Committed \(files.count) file\(files.count == 1 ? "" : "s") · no remote"
         }
+        await refresh()
+        if resultOK, let line = resultLine { onCommitted?(line) }
     }
 
     /// 고른 변경의 diff 를 CLI 에 보내 한 줄 메시지를 받는다(사용자 CLI 사용량을 쓴다).

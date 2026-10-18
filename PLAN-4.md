@@ -1,4 +1,4 @@
-STATUS: IN_PROGRESS
+STATUS: DONE
 
 # Symboard 4차 진행표
 
@@ -15,10 +15,12 @@ STATUS: IN_PROGRESS
 | 3 | 4번 작업 중 | Ada | write a 200-word paragraph about ocean tides, no tools (5초 안에 끝나 미션 맵을 못 봄) |
 | 4 | 4번 작업 중 | Ada | write about 600 words on the history of mechanical clocks, no tools |
 | 5 | R 문서 생성 | 문서 스튜디오(/tmp/symsample) | a 5-line README for this repo (실시간 안 그려짐 재현) |
-| 7 | S 다이어그램 | 다이어그램 칸(/tmp/symsample) | how hello.py uses util.py |
 | 6 | R 문서 생성 | 문서 스튜디오(/tmp/symsample) | a 5-line README for this repo (고친 뒤 확인) |
+| 7 | S 다이어그램 | 다이어그램 칸(/tmp/symsample) | how hello.py uses util.py |
+| 8·9 | 하루 쓰기 1차 | @testers → Ada·Pip(/tmp/symday) | run the tests and tell me which one fails, do not fix |
+| 10·11 | 하루 쓰기 2차(통과) | @testers → Ada·Pip(/tmp/symday) | run the tests and tell me which one fails, do not fix |
 
-합계: 7
+합계: 11 (한도 12 안). 메모리 Rewrite·git 메시지 생성 같은 다른 질문은 보내지 않았다. 사용량 탐침(`/usage`)은 질문이 아니다.
 
 ## 고칠 것
 
@@ -112,15 +114,28 @@ STATUS: IN_PROGRESS
 
 ## 하루 쓰기 흐름 (새 SYMBOARD_HOME, /tmp/symday)
 
-- [ ] 1. 홈 화면 → Open folder
-- [ ] 2. Group 으로 claude 2 + 셸 1 팀, claude 하나는 자동 승인 끔
-- [ ] 3. `@team` 으로 "run the tests and tell me which one fails, do not fix" (질문 2회)
-- [ ] 4. 미션 맵에서 Working → Needs you(권한) → Done
-- [ ] 5. 권한 기다리는 노드로 Go to → 승인 → 끝날 때까지
-- [ ] 6. 칸반에 결과 카드
-- [ ] 7. git 카드에서 로컬 커밋
-- [ ] 8. Cmd+Q → 다시 실행 → 이어하기 토스트 → 같은 자리·같은 대화
+예제 레포 `/tmp/symday`: calc.py(add, 버그 있는 sub), test_calc.py(test_add 통과, test_sub 실패), README.md, 로컬 git(원격 없음).
+
+**1차(상태 /tmp/symv4day): 7단계에서 멈춤.** 1~6 은 됐고, 7단계 git 칩에서 커밋한 뒤 orca 가 "초점 창 없음" 으로 Cmd+Q·Esc 를 모두 거부했다(입력칸이 사라진 git 팝오버 창이 남아 키를 받을 곳이 없었다). 고침: 커밋 뒤 남은 변경이 없으면 팝오버를 닫고 결과를 알리고 본 창을 키 창으로(`onCommitted`). 그 사이 6단계에서 칸반 "Add card" 가 안 눌린 것처럼 보였는데, 캡처 배율(0.914)을 빼먹은 내 좌표 계산 실수였다(디버그 `hit` 로 칸반이 클릭을 받는 것을 확인). 2차 첫 시도는 컴포저 셋째 타일을 한 번만 눌러 Codex 가 되어 바로 처음부터 다시 했다(질문 전).
+
+**2차(상태 /tmp/symv4day2, 새 예제 레포): 1~8 한 번에 통과.**
+
+- [x] 1. 홈 화면(Projects · Open folder) → Open folder → Cmd+Shift+G `/tmp/symday` → 보드가 symday 로(`day-1a-home.png`, `day-1.png`).
+- [x] 2. Group → Testers → − 한 번 → 셋째 타일 두 번(Claude→Codex→Shell) → Spawn 3 → TESTERS 프레임 Ada·Pip(claude)·Maya(셸)(`day-2a-composer.png`). 폴더는 1차에서 신뢰해 둔 상태라 신뢰 화면이 없었다. Pip ⌄ → Permissions → Ask Before Tools → "manual mode on", ASK 배지(`day-2.png`).
+- [x] 3. 명령 바에 "@testers run the tests and tell me which one fails, do not fix" → Return(`day-3.png`). Maya(셸)에도 들어가 "command not found" — @team 은 팀 전체에 보낸다.
+- [x] 4. 미션 맵(1초 캡처 `day-4-sequence.png`): Working 2 → Working 1·Needs you 1(Pip 권한) → Done 1(Ada)·Needs you 1. 그룹 머리 "1 needs you · 1 done"(`day-4.png`).
+- [x] 5. 미션 맵 Pip 클릭 → Go to the console → 노란 테두리 Pip, "Do you want to proceed? ❯ 1. Yes"(`day-5a-goto.png`) → Return → working → 두 번째 권한(pytest 가 없어 unittest 로 다시) waiting → Return → done → (그 노드를 보고 있어서) idle. 답: "test_sub fails with AssertionError: 8 != 2 … I haven't changed anything"(`day-5.png`).
+- [x] 6. 오른쪽 막대 → Board → 캔버스 클릭 → TO DO "Add card" → 바로 "Fix sub(): returns a+b (test_sub fails)" → Return → 카드(`day-6.png`, state.json 에 저장).
+- [x] 7. 명령 바 "@Maya echo 'test_sub fails: sub returns a+b' > RESULT.md" → 브랜치 칩 → 바로 "Record failing test" → Return → 커밋 9b79acb, 팝오버가 닫히고 보드로(`day-7a.png`, `day-7.png`).
+- [x] 8. Cmd+Q(orca hotkey) → 종료 → 같은 상태 폴더로 다시 실행 → 같은 화면 자리와 "Resume all conversations? 2 consoles" 토스트·노드별 말풍선(`day-8a-toast.png`) → Yes → 노드 위치·세션 id 가 종료 전과 같음(diff 없음), Ada·Pip 에 앞 대화(test_sub 답)가 그대로, Pip 은 ASK 그대로(`day-8.png`).
 
 ## 막힌 것
 
-(없음)
+(없음. 시험 도구 한계는 각 항목과 REPORT-4 에 적었다.)
+
+## 완료 기준 확인
+
+- `swift build -c release` 통과, `swift test` 119개 통과(3차 92개). 상태 판정 화면 글자 표본 테스트: claude 신뢰·테마 메뉴, codex 신뢰·업데이트·데몬 메뉴, 평소 입력창, 번호 목록 답, 스크롤된 옛 화면, NUL 칸, Done 판정 6개.
+- 고칠 것 1~8 실제 입력으로 확인. 다시 눌러 볼 화면 1~9 비교·고침 기록. 하루 쓰기 흐름 2차 한 번에 통과.
+- 새 충돌 기록 없음(`Symboard-*.ips` 마지막 13:43 그대로).
+- 실제 CLI 질문 11회(한도 12).

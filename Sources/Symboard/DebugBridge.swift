@@ -239,6 +239,15 @@ final class DebugBridge {
             log.append("windowID \(controller.window?.windowNumber ?? 0)")
         case "usageProbe":
             log.append("limits=\(model.usage.limits) note=\(model.usage.limitsNote)\n\(model.usage.probe.lastScreen)")
+        case "hit":
+            // 창 기준 포인트(위에서부터)에서 마우스를 받을 뷰 줄기.
+            if let cv = controller.window?.contentView, let x = cmd["x"] as? Double, let y = cmd["y"] as? Double {
+                let p = NSPoint(x: x, y: cv.bounds.height - y)
+                var v = cv.hitTest(p)
+                var chain: [String] = []
+                while let cur = v, chain.count < 12 { chain.append(String(describing: type(of: cur)).prefix(60).description); v = cur.superview }
+                log.append("hit " + chain.joined(separator: " < "))
+            }
         case "windows":
             // 키 창·메인 창과 열린 창 목록(시험 도구가 "초점 창 없음" 이라고 할 때 원인 확인용).
             log.append("active=\(NSApp.isActive) key=\(NSApp.keyWindow.map { "\(type(of: $0)) \($0.windowNumber)" } ?? "nil") main=\(NSApp.mainWindow?.windowNumber ?? 0)")
