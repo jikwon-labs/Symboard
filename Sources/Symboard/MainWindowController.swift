@@ -657,6 +657,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
     }
 
+    /// 보드 위 마크다운 카드의 PDF 단추. 저장 위치는 저장 시트로.
+    func exportCardPDF(_ md: URL) {
+        guard let w = window else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = md.deletingPathExtension().lastPathComponent + ".pdf"
+        panel.beginSheetModal(for: w) { [weak self] r in
+            guard r == .OK, let out = panel.url, let self else { return }
+            self.exportPDF(markdown: md, to: out)
+        }
+    }
+
     private var pdfExporter: StudioModel?
     func exportPDF(markdown md: URL, to out: URL) {
         let m = StudioModel(root: md.deletingLastPathComponent())

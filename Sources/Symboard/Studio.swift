@@ -165,6 +165,12 @@ struct FileCardView: View {
     let url: URL
     @State var text: String
 
+    /// 지금 프로젝트 폴더 기준 경로(밖이면 전체 경로).
+    var relativePath: String {
+        let root = ((NSApp.delegate as? AppDelegate)?.windowController.projectPath ?? "") + "/"
+        return url.path.hasPrefix(root) ? String(url.path.dropFirst(root.count)) : url.path
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
@@ -173,12 +179,28 @@ struct FileCardView: View {
                 Text(url.deletingLastPathComponent().lastPathComponent + "/" + url.lastPathComponent).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim).lineLimit(1)
                 Spacer()
                 Text("\(text.split(separator: "\n", omittingEmptySubsequences: false).count - (text.hasSuffix("\n") ? 1 : 0)) lines").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
-                Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Open in studio")
+                if url.pathExtension.lowercased() != "md" {
+                    Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Open in studio")
+                }
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
             if url.pathExtension.lowercased() == "md" {
                 HTMLPreview(html: Markdown.html(text, title: url.lastPathComponent, theme: "dark"), base: url.deletingLastPathComponent())
+                // 원본처럼 바닥에 프로젝트 기준 경로와 "Open in Studio · PDF" 글 단추.
+                HStack(spacing: 12) {
+                    Text(relativePath).font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim).lineLimit(1).truncationMode(.head)
+                    Spacer()
+                    Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: {
+                        Label("Open in Studio", systemImage: "rectangle.portrait.and.arrow.right").font(.system(size: 11))
+                    }
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symText.opacity(0.8)).axName("Open in Studio")
+                    Button { (NSApp.delegate as? AppDelegate)?.windowController.exportCardPDF(url) } label: {
+                        Label("PDF", systemImage: "doc").font(.system(size: 11))
+                    }
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symText.opacity(0.8)).axName("PDF")
+                }
+                .padding(.horizontal, 10).padding(.vertical, 6)
             } else {
                 CodeEditor(text: $text, ext: url.pathExtension, editable: false).padding(6)
             }

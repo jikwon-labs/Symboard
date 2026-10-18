@@ -77,7 +77,10 @@ STATUS: IN_PROGRESS
   - 원본 장면: `studio-documents.mp4` 0~1초. 오른쪽 막대 문서 단추 → 옆에 "GENERATE PDF" 작은 메뉴(종류 셋, 선, "Ask for anything...", 바닥 "Written by your CLI, exported as PDF.") → 고르면 그 종류가 골라진 스튜디오와 Generate 단추(바로 쓰지 않음).
   - 바꾼 것: `DocGenerateMenu`(ChromeViews.swift) — 우리 종류 목록의 앞 셋(Overview·Getting started·Architecture)과 Ask for anything. 고르면 `openDocuments(kind:)` 가 그 종류를 고른 채 스튜디오를 연다. Ask 는 종류를 바꾸지 않고 열어 요청 칸(이미 첫 초점)에 쓰게 한다. 스튜디오가 열려 있을 때 단추를 누르면 메뉴 없이 닫는다. 이름은 우리 종류 이름 그대로(원본 문구를 옮기지 않음).
   - 확인한 실제 입력(`env -i`, /tmp/symv6-7): 오른쪽 막대 Document studio → 메뉴(`compare/12-docs-menu.png`) → Architecture → 스튜디오가 Architecture 골라진 채 "Generate with Claude Code" 단추(질문 안 보냄) → 다시 막대 단추 → 스튜디오 닫힘.
-- [ ] 13. studio-markdown: 카드 바닥 "Open in Studio · PDF" 글 단추
+- [x] 13. studio-markdown: 카드 바닥 "Open in Studio · PDF" 글 단추
+  - 원본 장면: `studio-markdown.mp4` 19초. 보드의 마크다운 카드 바닥 왼쪽에 흐린 경로(docs/…/01-threat-model.md), 오른쪽에 아이콘 붙은 글 단추 "Open in Studio" · "PDF".
+  - 바꾼 것: `FileCardView` 가 .md 카드 바닥에 프로젝트 기준 경로와 두 글 단추를 그린다. PDF 는 저장 시트로 위치를 고르고 기존 `exportPDF(markdown:to:)` 로 낸다(`exportCardPDF`). 머리의 펼치기 아이콘은 .md 카드에서는 뺐다(코드 카드는 그대로).
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-13): Markdown studio → README → Add to Board → 카드 바닥 "README.md · Open in Studio · PDF" → PDF → 저장 시트(README.pdf) → Cmd+Shift+G `/tmp/symv6-13` → Return → Return → `/tmp/symv6-13/README.pdf`(PDF 1쪽, 27KB) → Open in Studio → 마크다운 스튜디오가 README 로 열림. 비교 그림 `compare/13-md-card-footer.png`.
 - [ ] 14. teams: 오른쪽 기본 패널 Fleet / Structure 두 카드
 - [ ] 15. voice: 명령 바 보드 명령 THREAD 패널, 프리셋에 콘솔 말고 다른 노드도
 
