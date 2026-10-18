@@ -164,3 +164,23 @@ import Testing
         #expect(cal.component(.day, from: grid[1]) == 1)
     }
 }
+
+@Suite struct InkTests {
+    @Test func simplifyDropsNearPoints() {
+        let pts = [Point(x: 0, y: 0), Point(x: 0.5, y: 0), Point(x: 3, y: 0), Point(x: 3.2, y: 0)]
+        #expect(Ink.simplify(pts).map(\.x) == [0, 3, 3.2])
+    }
+
+    @Test func bezierPassesThroughPoints() {
+        let pts = [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 20, y: 10)]
+        let segs = Ink.bezier(pts)
+        #expect(segs.count == 2)
+        #expect(segs[0].0 == pts[1] && segs[1].0 == pts[2])
+    }
+
+    @Test func eraserHitsSegmentMiddle() {
+        let s = Stroke(points: [Point(x: 0, y: 0), Point(x: 100, y: 0)], width: 4)
+        #expect(Ink.hits(s, Point(x: 50, y: 5), radius: 6))
+        #expect(!Ink.hits(s, Point(x: 50, y: 20), radius: 6))
+    }
+}

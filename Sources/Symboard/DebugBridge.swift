@@ -446,6 +446,12 @@ final class DebugBridge {
                 }
                 controller.currentCanvas?.nodeViews[n.id]?.syncFromModel()
             }
+        case "image":
+            controller.addImage(url: URL(fileURLWithPath: cmd["path"] as? String ?? ""), at: Point(x: cmd["x"] as? Double ?? 0, y: cmd["y"] as? Double ?? 0))
+            log.append("image")
+        case "pen2":
+            if let c = cmd["color"] as? String { controller.chrome.penColor = c }
+            if let w = cmd["width"] as? Double { controller.chrome.penWidth = w }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

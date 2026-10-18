@@ -78,6 +78,7 @@ final class CanvasView: NSView {
     var tool: BoardTool = .select {
         didSet {
             window?.invalidateCursorRects(for: self)
+            window?.invalidateCursorRects(for: inkView)
             if case .place = tool {} else { hoverPoint = nil }
             needsDisplay = true
         }
@@ -87,6 +88,12 @@ final class CanvasView: NSView {
     private var hoverPoint: NSPoint?
     private(set) var nodeViews: [UUID: NodeView] = [:]
     private(set) var groupViews: [UUID: GroupFrameView] = [:]
+    private(set) lazy var inkView: InkOverlayView = {
+        let v = InkOverlayView(frame: bounds)
+        v.canvas = self
+        addSubview(v)
+        return v
+    }()
     private lazy var linksView: LinksView = {
         let v = LinksView(frame: bounds)
         addSubview(v, positioned: .below, relativeTo: nil)
@@ -94,7 +101,8 @@ final class CanvasView: NSView {
     }()
     private var panStart: (NSPoint, NSPoint)?
     private var currentStroke: [Point]?
-    var penColor = "#FF3B30"
+    var penColor: String { controller?.chrome.penColor ?? "#F05A38" }
+    var penWidth: Double { controller?.chrome.penWidth ?? 3 }
     var onSelect: ((UUID?) -> Void)?
     private(set) var selectedNodeID: UUID?
 
@@ -133,7 +141,14 @@ final class CanvasView: NSView {
         for node in ws.nodes { nodeViews[node.id]?.syncFromModel() }
         applyOrder(ws)
         layoutGroups()
+        syncInk()
         needsDisplay = true
+    }
+
+    /// 펜 획 층을 맨 위에 두고 모델과 맞춘다.
+    func syncInk() {
+        if subviews.last !== inkView { addSubview(inkView, positioned: .above, relativeTo: nil) }
+        inkView.sync(workspace?.strokes ?? [])
     }
 
     // MARK: 그룹 프레임·연결선
@@ -213,17 +228,20 @@ final class CanvasView: NSView {
         let box = Unmanaged.passRetained(RankBox(rank))
         sortSubviews({ a, b, ctx in
             let r = Unmanaged<RankBox>.fromOpaque(ctx!).takeUnretainedValue().rank
-            let ra = r[ObjectIdentifier(a)] ?? -1, rb = r[ObjectIdentifier(b)] ?? -1
+            let ra = a is InkOverlayView ? Int.max : (r[ObjectIdentifier(a)] ?? -1)
+            let rb = b is InkOverlayView ? Int.max : (r[ObjectIdentifier(b)] ?? -1)
             return ra < rb ? .orderedAscending : (ra > rb ? .orderedDescending : .orderedSame)
         }, context: box.toOpaque())
         box.release()
     }
 
     func bringToFront(_ v: NodeView) {
-        guard subviews.last !== v else { return }
+        guard subviews.last !== v, subviews.dropLast().last !== v || subviews.last !== inkView else { return }
         // 터미널 뷰가 창에서 떨어지지 않도록 removeFromSuperview 대신 순서만 바꾼다.
         sortSubviews({ a, b, ctx in
             let front = Unmanaged<NSView>.fromOpaque(ctx!).takeUnretainedValue()
+            if a is InkOverlayView { return .orderedDescending }
+            if b is InkOverlayView { return .orderedAscending }
             if a === front { return .orderedDescending }
             if b === front { return .orderedAscending }
             return .orderedSame
@@ -263,11 +281,7 @@ final class CanvasView: NSView {
                 x += step
             }
         }
-        guard let ws = workspace else { return }
-        for s in ws.strokes { Self.draw(stroke: s, offset: CanvasGeometry.origin) }
-        if let cur = currentStroke {
-            Self.draw(stroke: Stroke(points: cur, colorHex: penColor), offset: CanvasGeometry.origin)
-        }
+
         if case .place(let p) = tool, let h = hoverPoint {
             let s = p.size
             let r = NSRect(x: h.x - s.width / 2, y: h.y - 20, width: s.width, height: s.height)
@@ -303,11 +317,10 @@ final class CanvasView: NSView {
     /// 지우개: 누른 자리 가까이 지나는 보드 획을 지운다.
     private func erase(at p: Point) {
         guard let ws = workspace else { return }
-        let r = 10 / max(enclosingScrollView?.magnification ?? 1, 0.2)
-        let hit = ws.strokes.lastIndex { s in s.points.contains { hypot($0.x - p.x, $0.y - p.y) < r + s.width } }
-        guard let i = hit else { return }
+        let r = 8 / max(enclosingScrollView?.magnification ?? 1, 0.2)
+        guard let i = ws.strokes.lastIndex(where: { Ink.hits($0, p, radius: r) }) else { return }
         model.mutateWorkspace(workspaceID) { $0.strokes.remove(at: i) }
-        needsDisplay = true
+        syncInk()
     }
 
     static func draw(stroke: Stroke, offset: CGFloat) {
@@ -357,7 +370,7 @@ final class CanvasView: NSView {
         }
         if tool == .pen, currentStroke != nil {
             currentStroke?.append(CanvasGeometry.modelPoint(convert(event.locationInWindow, from: nil)))
-            needsDisplay = true
+            inkView.showLive(currentStroke, color: penColor, width: penWidth)
             return
         }
         guard let (startWin, startOrigin) = panStart, let sv = enclosingScrollView else { return }
@@ -372,10 +385,11 @@ final class CanvasView: NSView {
         if let pts = currentStroke {
             currentStroke = nil
             if pts.count > 0 {
-                let s = Stroke(points: pts, colorHex: penColor)
+                let s = Stroke(points: Ink.simplify(pts), colorHex: penColor, width: penWidth)
                 model.mutateWorkspace(workspaceID) { $0.strokes.append(s) }
             }
-            needsDisplay = true
+            inkView.showLive(nil, color: penColor, width: penWidth)
+            syncInk()
             return
         }
         if panStart != nil {

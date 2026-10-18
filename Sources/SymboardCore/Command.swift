@@ -139,3 +139,44 @@ public enum Board {
         return (0..<42).map { cal.date(byAdding: .day, value: $0, to: start)! }
     }
 }
+
+/// 펜 획 다듬기.
+public enum Ink {
+    /// 너무 가까운 점을 뺀다.
+    public static func simplify(_ pts: [Point], minDistance: Double = 1.5) -> [Point] {
+        guard var last = pts.first else { return [] }
+        var out = [last]
+        for p in pts.dropFirst() where hypot(p.x - last.x, p.y - last.y) >= minDistance {
+            out.append(p); last = p
+        }
+        if let l = pts.last, out.count > 1, out.last != l { out.append(l) }
+        return out
+    }
+
+    /// Catmull-Rom 을 3차 베지어 조각으로. 각 조각은 (끝점, 제어점1, 제어점2).
+    public static func bezier(_ pts: [Point]) -> [(Point, Point, Point)] {
+        guard pts.count > 2 else { return pts.dropFirst().map { ($0, $0, $0) } }
+        var out: [(Point, Point, Point)] = []
+        for i in 0..<(pts.count - 1) {
+            let p0 = pts[max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[min(i + 2, pts.count - 1)]
+            let c1 = Point(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
+            let c2 = Point(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
+            out.append((p2, c1, c2))
+        }
+        return out
+    }
+
+    /// 점 p 가 획 가까이(반경 r)에 있는지. 선분 거리로 본다.
+    public static func hits(_ s: Stroke, _ p: Point, radius r: Double) -> Bool {
+        let rr = r + s.width / 2
+        if s.points.count == 1 { return hypot(s.points[0].x - p.x, s.points[0].y - p.y) <= rr }
+        for i in 0..<(s.points.count - 1) {
+            let a = s.points[i], b = s.points[i + 1]
+            let dx = b.x - a.x, dy = b.y - a.y
+            let len2 = dx * dx + dy * dy
+            let t = len2 == 0 ? 0 : max(0, min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2))
+            if hypot(a.x + t * dx - p.x, a.y + t * dy - p.y) <= rr { return true }
+        }
+        return false
+    }
+}

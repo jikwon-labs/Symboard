@@ -65,6 +65,8 @@ final class ChromeModel: ObservableObject {
     @Published var missionOpen = false
     @Published var insertOpen = false
     @Published var shapeOpen = false
+    @Published var penColor = "#F05A38"
+    @Published var penWidth = 3.0
     /// 루프 모달: nil 이면 닫힘, "list"·"gallery"·"form".
     @Published var loopsPage: String?
     @Published var missionSelected: UUID?

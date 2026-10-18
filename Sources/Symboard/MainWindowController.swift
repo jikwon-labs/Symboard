@@ -99,6 +99,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let zoom = host(ZoomControl(chrome: chrome, c: self))
         let hint = host(HintBanner(chrome: chrome))
         let selection = host(SelectionPanel(model: model, chrome: chrome, c: self))
+        let pen = host(PenPanel(chrome: chrome))
+        content.addSubview(pen)
         let resume = host(ResumeToast(chrome: chrome, c: self))
         for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume] as [NSView] { content.addSubview(v) }
         let mission = HiddenAwareHostingView(rootView: MissionHost(model: model, chrome: chrome, c: self))
@@ -154,6 +156,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             hint.topAnchor.constraint(equalTo: content.topAnchor, constant: 56),
             resume.topAnchor.constraint(equalTo: topRight.bottomAnchor, constant: 10),
             resume.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
+            pen.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 10),
+            pen.centerYAnchor.constraint(equalTo: left.centerYAnchor, constant: -80),
             selection.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 10),
             selection.centerYAnchor.constraint(equalTo: left.centerYAnchor),
             hint.centerXAnchor.constraint(equalTo: content.centerXAnchor),
