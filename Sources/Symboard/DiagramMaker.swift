@@ -61,7 +61,14 @@ final class DiagramMaker: ObservableObject {
         let est = spec.layout(origin: Point(x: 0, y: 0), nodeW: 250, nodeH: 120)
         let maxX = est.nodes.values.map { $0.x + $0.w }.max() ?? 0
         let maxY = est.nodes.values.map { $0.y + $0.h }.max() ?? 0
-        let origin = Point(x: center.x - maxX / 2, y: center.y - maxY / 2)
+        var origin = Point(x: center.x - maxX / 2, y: center.y - maxY / 2)
+        // 원본은 빈 캔버스에 그린다. 그 자리에 이미 노드가 있으면 보드 오른쪽 빈 곳으로 옮긴다(겹쳐 그리지 않게).
+        let area = Rect(x: origin.x - 40, y: origin.y - 120, w: maxX + 80, h: maxY + 160)
+        let others = c.model.selectedWorkspace.nodes.map(\.frame)
+        if others.contains(where: { $0.x < area.x + area.w && $0.x + $0.w > area.x && $0.y < area.y + area.h && $0.y + $0.h > area.y }) {
+            let right = others.map { $0.x + $0.w }.max() ?? 0
+            origin = Point(x: right + 200, y: center.y - maxY / 2)
+        }
         let lay = spec.layout(origin: origin, nodeW: 250, nodeH: 120)
         let wsID = c.model.selectedWorkspace.id
         var created: [String: UUID] = [:]

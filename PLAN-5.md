@@ -15,8 +15,9 @@ STATUS: IN_PROGRESS
 | 2 | 1번 루프 | 루프 Run now → Ada(/tmp/symsample) | reply with just the word ok, no tools |
 | 3 | 4번 다이어그램 움직임 | 다이어그램 Components(/tmp/symsample) | (템플릿 질문) |
 | 4 | V8 메모리 | Memory → Scan with Claude Code(/tmp/symsample) | (스캔 질문) |
+| 5 | V13 다이어그램 | 다이어그램 Components(Workspace 3, 노드 많은 보드) | (템플릿 질문) |
 
-합계: 4
+합계: 5
 
 ## 고칠 것
 
@@ -140,7 +141,11 @@ STATUS: IN_PROGRESS
   - 쓰는 데 지장 있는 차이: 없음.
   - 모양 차이(고침): 처음 열면 원본은 README.md, 우리는 빈 편집기("Pick a file on the left") → README 를 먼저 연다(`v12-code-readme.png`).
   - 모양 차이(남김): 원본은 저장 뒤 단추가 "✓ Saved" 로 바뀐다(우리는 "Edited" 표시만 사라짐).
-- [ ] V13. studio-diagrams.mp4
+- [x] V13. studio-diagrams.mp4
+  - 원본 조작: 왼쪽 다이어그램 아이콘 → 팝오버(MODEL·STYLE Ink/Colorful·FROM YOUR PROJECT 6개·설명 칸·STARTER SHAPES 4개) → Components → "Claude is drawing" 칩과 회색 자리표시 → 노드가 한 줄로 → 그룹 꼴로 자리 잡음 → 화면 맞춤 → 노드 제목 두 번 눌러 편집(주황 테두리, 글 패널) → 글 고침 → 빈 곳 클릭.
+  - 우리(`env -i`, 질문 5, 카드가 많은 Workspace 3): 다이어그램 아이콘 → 같은 꼴 팝오버 → Components → 칩·자리표시 → 노드가 한 줄에서 미끄러져 그룹(USERS·SCRIPTS·DOCS) 꼴로, 손글씨 제목 "symsample repository structure" → 확대 → hello.py 두 번 클릭 → 편집(글 커서, 왼쪽 STROKE·BACKGROUND·TEXT·OPACITY 패널, `v13-diagram-edit.png`).
+  - 쓰는 데 지장 있는 차이(고침, 4번에서 본 것): 다이어그램이 화면 가운데의 기존 카드 위에 겹쳐 그려졌다 → 그 자리에 노드가 있으면 보드 오른쪽 빈 곳에 그린다. 확인: 카드 사이에서 생성 → 오른쪽 빈 곳에 그려짐.
+  - 모양 차이(남김): 화면 맞춤이 보드 전체를 담아(32%) 원본(다이어그램만, 82%)보다 작다. 다이어그램 노드 편집 때 원본은 글 패널(TEXT COLOR·FONT·SIZE·ALIGN), 우리는 도형 패널(선·배경·글 크기·글꼴).
 - [ ] V14. studio-documents.mp4
 - [ ] V15. studio-markdown.mp4
 - [ ] V16. teams.mp4
