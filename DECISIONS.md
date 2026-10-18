@@ -11,3 +11,4 @@
 - 2차: 원본 아래 바의 음성 입력은 명령 입력으로 바꿨다. 맨 앞 `@이름`(노드 이름·팀 이름·all)이 대상, 없으면 고른 콘솔. Pause all/Resume all 은 콘솔 프로세스 그룹에 SIGSTOP/SIGCONT.
 - 2차: 원본 영상(node-kanban 40초)에서 속성 패널은 고른 객체 옆이 아니라 왼쪽 도구 막대 옆에 붙어 뜬다. 그 자리를 따랐다.
 - 2차: 손글씨 글꼴은 따로 넣지 않고 macOS 기본 Chalkboard SE 를 쓴다.
+- 2차: git 카드는 원본처럼 아래 왼쪽 브랜치 칩에서 여는 팝오버로 두고, 보드에 놓는 git 노드도 같은 카드를 쓴다. Commit & Push 는 고른 경로만 `git add -- 경로` 후 `git commit -- 경로` 로 커밋한다(1차의 add -A 대신). 원격이 있으면 이어서 push, upstream 이 없으면 `push -u origin <브랜치>`.

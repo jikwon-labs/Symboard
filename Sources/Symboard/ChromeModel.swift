@@ -65,6 +65,9 @@ final class ChromeModel: ObservableObject {
     @Published var missionOpen = false
     @Published var insertOpen = false
     @Published var shapeOpen = false
+    /// 아래 왼쪽 브랜치 칩에서 여는 git 카드.
+    @Published var gitCard: GitCardModel?
+    @Published var gitOpen = false
     @Published var penColor = "#F05A38"
     @Published var penWidth = 3.0
     /// 루프 모달: nil 이면 닫힘, "list"·"gallery"·"form".

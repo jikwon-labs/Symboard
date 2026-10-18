@@ -66,7 +66,7 @@ STATUS: IN_PROGRESS
 
 ## L·M·N.
 
-- [ ] L1. git 카드 헤더·변경 목록 체크·None·메시지 생성·Commit & Push·완료 상태·히스토리 (node-git.jpg, agent2/g-end.jpg)
+- [x] L1. git 카드 헤더·변경 목록 체크·None·메시지 생성·Commit & Push·완료 상태·히스토리 (node-git.jpg, agent2/g-end.jpg)
 - [ ] M1. 웹 타일 탭·뒤/앞/새로고침·주소줄·시작 화면 포트 칩 (node-webtiles.jpg, agent2/w-open.jpg)
 - [ ] M2. 표시 크기 프리셋·기기 배지·인스펙터 별도 타일+연결선 (agent2/w-end.jpg)
 - [ ] N1. 사용량 팝오버: 링·주간 막대·히트맵·통계·토큰 상세 (node-usage.jpg, agent2/u-1.jpg)
@@ -124,5 +124,8 @@ STATUS: IN_PROGRESS
   - 남은 차이: 원본은 끌어서 크기를 정하며 그리지만 여기는 클릭으로 기본 크기를 놓고 손잡이로 키운다. 둥근 사각형의 손그림 모서리는 깎은 팔각형으로 흉내 냈다.
 - I1: 원본 node-ink.jpg / 내 것 `v2/I1-pen-panel-ink.png`. 펜을 켜면 왼쪽 막대 옆 COLOR 9개+사용자 색, WIDTH 5단계. 획은 모든 노드 위의 벡터 층(획마다 CAShapeLayer)에 그려서 이미지 위에서 시작해 보드까지 이어진다. 점 줄이기+Catmull-Rom 베지어로 부드럽게(Ink, 단위 테스트), 십자 커서. 지우개: 누르거나 끌면 가까운 획을 지운다(선분 거리, 단위 테스트; 5→4 확인). 이미지 노드는 헤더 없이 사진만.
   - 남은 차이: 1차에서 이미지 노드 안에 저장된 표시는 그대로 이미지에 그려지고, 새 획은 보드 층에 저장된다.
+- L1: 원본 node-git.jpg, agent2/g-end.jpg / 내 것 `v2/L1-git-card-changes.png`, `v2/L1-git-card-pushed.png`. 원본처럼 아래 왼쪽 브랜치 칩을 누르면 카드가 뜬다(보드의 git 노드도 같은 카드). 헤더: 레포 이름·브랜치·synced/↑↓/local, 히스토리·Finder 열기·새로고침·닫기 원형 버튼. CHANGES 고른 수/전체 +더한 줄 −뺀 줄, 파일마다 체크·상태 글자(M/U/A/D/R)·폴더, None/All. 메시지 칸(비우면 "Add 2 files, update 1 file" 같은 기본 메시지) + 반짝이 버튼(claude -p 로 한 줄 메시지, 도구 없음). "Commit & Push N files" 하나 → Committing... → Pushing... → "Committed 3 files · pushed". RECENT 3개(상대 시간), 히스토리(제목·짧은 해시·작성자·시간). 파싱·기본 메시지·상대 시간 단위 테스트(GitInfo).
+  - 실행 확인: /tmp/symsample 에 /tmp/symsample-remote.git(bare)을 origin 으로 두고 4개 변경 중 3개만 골라 커밋 → bare 레포 main 이 같은 커밋으로 올라감, 뺀 파일은 그대로 남음. add -A 대신 고른 경로만 add·commit(pathspec).
+  - 남은 차이: 메시지 생성 버튼은 실제 CLI 호출 확인을 아직 하지 않았다(사용량 아끼려고 R·S 시험 때 함께 보기로). 새 파일 줄 수는 +/− 에 들어가지 않는다.
 
 ## 막힌 것

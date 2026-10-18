@@ -530,6 +530,20 @@ struct BranchChip: View {
     @ObservedObject var chrome: ChromeModel
     var body: some View {
         if let b = chrome.branch {
+            Button { chrome.gitOpen.toggle() } label: { chip(b) }
+                .buttonStyle(.plain)
+                .popover(isPresented: $chrome.gitOpen, arrowEdge: .top) {
+                    if let card = chrome.gitCard {
+                        GitCardView(card: card) { chrome.gitOpen = false }
+                            .frame(width: 360, height: 470)
+                            .onAppear { Task { await card.refresh() } }
+                    }
+                }
+                .hiddenOnHome(chrome)
+        }
+    }
+
+    func chip(_ b: String) -> some View {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.triangle.branch")
                 Text(b).font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -544,9 +558,8 @@ struct BranchChip: View {
             .foregroundStyle(Color.symText)
             .padding(.horizontal, 10).padding(.vertical, 6)
             .floatingCapsule(radius: 10)
-            .help("Branch and uncommitted changes in this project")
+            .help("Branch and changes: click to commit")
             .fixedSize()
-        }
     }
 }
 

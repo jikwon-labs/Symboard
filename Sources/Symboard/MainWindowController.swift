@@ -328,6 +328,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
                 let s = GitStatus.parse(out.out)
                 chrome.branch = s.branch
                 chrome.changeCount = s.changes.count
+                if chrome.gitCard?.repo != path { chrome.gitCard = GitCardModel(repo: path) { _ in } }
             } else {
                 chrome.branch = nil
                 chrome.changeCount = 0

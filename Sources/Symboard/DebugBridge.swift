@@ -452,6 +452,17 @@ final class DebugBridge {
         case "pen2":
             if let c = cmd["color"] as? String { controller.chrome.penColor = c }
             if let w = cmd["width"] as? Double { controller.chrome.penWidth = w }
+        case "projectGit":
+            // 브랜치 칩 카드: open, exclude(경로 목록), message, commit
+            if let card = controller.chrome.gitCard {
+                if let o = cmd["open"] as? Bool { controller.chrome.gitOpen = o }
+                if let ex = cmd["exclude"] as? [String] { card.excluded = Set(ex) }
+                if let m = cmd["message"] as? String { card.message = m }
+                if let h = cmd["history"] as? Bool { card.showHistory = h }
+                if cmd["commit"] as? Bool == true { Task { await card.commit() } }
+                if cmd["refresh"] as? Bool == true { Task { await card.refresh() } }
+                log.append("projectGit \(card.status?.changes.count ?? -1) changes, result=\(card.resultLine ?? "-")\n\(card.log)")
+            } else { log.append("projectGit: none") }
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

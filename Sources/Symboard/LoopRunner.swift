@@ -201,7 +201,8 @@ final class LoopRunner: ObservableObject {
                 p.standardError = FileHandle.nullDevice
                 var code: Int32 = -1
                 if (try? p.run()) != nil { p.waitUntilExit(); code = p.terminationStatus }
-                await MainActor.run { finish(code == 0) }
+                let passed = code == 0
+                await MainActor.run { finish(passed) }
             }
             return
         }

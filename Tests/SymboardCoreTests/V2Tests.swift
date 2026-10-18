@@ -184,3 +184,28 @@ import Testing
         #expect(!Ink.hits(s, Point(x: 50, y: 20), radius: 6))
     }
 }
+
+@Suite struct GitInfoTests {
+    @Test func logAndNumstat() {
+        let log = "abc1234\u{1f}Add files\u{1f}Kim\u{1f}1700000000\ndef5678\u{1f}Init\u{1f}Lee\u{1f}1690000000"
+        let c = GitInfo.parseLog(log)
+        #expect(c.count == 2 && c[0].hash == "abc1234" && c[1].author == "Lee")
+        #expect(GitInfo.numstat("3\t1\ta.swift\n-\t-\tlogo.png\n6\t3\tb.swift") == (9, 4))
+    }
+
+    @Test func lettersAndMessages() {
+        #expect(GitInfo.letter("??") == "U")
+        #expect(GitInfo.letter(".M") == "M")
+        #expect(GitInfo.letter("D.") == "D")
+        let ch = [GitStatus.Change(code: "??", path: "src/new.swift"), GitStatus.Change(code: ".M", path: "a.swift"), GitStatus.Change(code: ".M", path: "b.swift")]
+        #expect(GitInfo.defaultMessage(ch) == "Add 1 file, update 2 files")
+        #expect(GitInfo.defaultMessage([ch[1]]) == "Update a.swift")
+    }
+
+    @Test func relativeTime() {
+        let now = Date()
+        #expect(GitInfo.relative(now.addingTimeInterval(-3), now: now) == "3 seconds ago")
+        #expect(GitInfo.relative(now.addingTimeInterval(-720), now: now) == "12 minutes ago")
+        #expect(GitInfo.relative(now.addingTimeInterval(-86400 * 21), now: now) == "3 weeks ago")
+    }
+}
