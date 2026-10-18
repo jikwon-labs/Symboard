@@ -1,4 +1,4 @@
-STATUS: IN_PROGRESS
+STATUS: DONE
 
 # Symboard 3차 진행표
 
@@ -69,11 +69,11 @@ STATUS: IN_PROGRESS
 - [x] F3. Cmd+Q → 다시 실행 → 노드·그룹 같은 자리 — state.json 의 노드 이름·좌표·팀 비교가 같음, 화면에 TESTERS 프레임 그대로.
 - [x] F4. 오케스트레이터 → Connect → 그룹 → Done → 연결선 → 오케스트레이터 입력으로 명령 — 삽입 메뉴 Orchestrator → 캔버스 클릭 → Connect → Testers 행 → Done → 그룹까지 곡선, 입력에 `echo from orch` → "Sent to 5 agents", 5개 모두 출력.
 - [x] F5. 미션 맵 → 콘솔 고르기 → Go to → 이동 — 도구 메뉴 Mission Map → Maya 행 → 오른쪽 Go to the console → 모달 닫히고 Maya 가 선택된 채 화면 가운데(80%).
-- [ ] F6. 루프: 템플릿 → 만들기 → 카운트다운 → 지금 실행 → 대상 콘솔 입력
-- [ ] F7. 스티키·도형·펜: 놓기, 색 바꾸기, 그리기, 지우개
-- [ ] F8. git 카드: bare 원격 예제 레포에서 파일 고르고 Commit & Push
-- [ ] F9. 웹 타일: 포트 칩으로 열기, 해상도 프리셋, 인스펙터 타일
-- [ ] F10. 코드 스튜디오 편집 → Save → 디스크 반영. 마크다운 Reading/Source/Graph
+- [x] F6. 루프: 템플릿 → 만들기 → 카운트다운 → 지금 실행 → 대상 콘솔 입력 — Pulse check → 지시문 `echo pulse`, Pick consoles·Maya → Create loop → 목록에 "in 14:59" → ▶ → Maya 에만 `echo pulse` / pulse.
+- [x] F7. 스티키·도형·펜: 놓기, 색 바꾸기, 그리기, 지우개 — 삽입 메뉴 Sticky note → 캔버스 클릭 → 종이 색 파랑, 도형 메뉴 원 → 캔버스 클릭 → 선 색 주황, 펜 → 끌기로 선 1개(state 의 획 0→1), 지우개 → 선 위 클릭 → 획 0. orca 의 끌기는 시작·끝 두 점만 보내 지우개 끌기는 선을 건너뛰어 클릭으로 확인했다.
+- [x] F8. git 카드: bare 원격 예제 레포에서 파일 고르고 Commit & Push — /tmp/symv3repo(원격 /tmp/symv3repo-remote.git)에서 README 를 고친 뒤 아래 왼쪽 main 칩 → 카드에 README.md 1개 → 메시지 입력 → Commit & Push 1 file → 로컬·원격 모두 939aa5b, 작업 트리 깨끗.
+- [x] F9. 웹 타일: 포트 칩으로 열기, 해상도 프리셋, 인스펙터 타일 — /tmp/symv3web 에 python http.server 8000, 왼쪽 막대 웹 → 캔버스 클릭 → :8000 칩 → 페이지 보임 → 표시 크기 메뉴 Phone 393×852 → 좁은 폭으로 보임, 벌레 단추 → Inspector 타일(Elements 트리)과 연결선. 인스펙터 타일은 웹 타일 오른쪽에 붙어 생겨 오른쪽 막대에 일부 가린다(놓기 자리 조정은 클릭으로 놓는 노드에만 적용).
+- [x] F10. 코드 스튜디오 편집 → Save → 디스크 반영. 마크다운 Reading/Source/Graph — 오른쪽 막대 코드 → src 펼치기 → app.py → 끝에 한 줄 입력 → Save → "Saved", 디스크의 app.py 에 반영. 마크다운 스튜디오 README → Reading → Source(원문) → Graph(README—notes 연결 2개).
 
 ## 시험 도구 메모
 
@@ -86,4 +86,9 @@ STATUS: IN_PROGRESS
 
 ## 충돌 기록
 
-(없음)
+이번 회차(14:13 이후) 새 `Symboard-*.ips` 없음. 남아 있는 13:02·13:39·13:43 기록은 이 회차 시작 전 것이다.
+
+## 완료 기준 확인
+
+- `swift build -c release` 통과, `swift test` 92개 통과(2차 72개).
+- 고칠 것 1~13 모두 실제 입력으로 확인. 흐름 F1~F10 모두 통과.
