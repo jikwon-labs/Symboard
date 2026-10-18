@@ -93,7 +93,7 @@ struct MemoryPanelView: View {
                                     memory.editingID = memory.editingID == n.id ? nil : n.id
                                 }
                                 Spacer()
-                                Button { memory.remove(n.id) } label: { Image(systemName: "trash") }.buttonStyle(.plain)
+                                Button { memory.remove(n.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit)
                             }
                             .controlSize(.small)
                         }

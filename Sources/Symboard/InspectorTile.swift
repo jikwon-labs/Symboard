@@ -12,7 +12,7 @@ final class InspectorContent: NodeContent {
 
     init(node: BoardNode, model: AppModel) {
         inspector = InspectorModel(webID: node.text.flatMap(UUID.init(uuidString:)))
-        host = NSHostingView(rootView: InspectorView(model: inspector).environment(\.colorScheme, .dark))
+        host = CanvasHostingView(rootView: InspectorView(model: inspector).environment(\.colorScheme, .dark))
     }
 
     func sync(node: BoardNode) {}
@@ -110,7 +110,7 @@ struct InspectorView: View {
                     Button(t) { model.tab = t }.buttonStyle(ChipStyle(on: model.tab == t))
                 }
                 Spacer()
-                Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
             }
             .padding(8)
             Divider().overlay(Color.symBorder)

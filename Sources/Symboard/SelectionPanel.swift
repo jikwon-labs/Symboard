@@ -60,7 +60,7 @@ struct SelectionPanel: View {
                                     Image(systemName: "nosign").font(.system(size: 11)).frame(width: 18, height: 18)
                                         .foregroundStyle(sp.fillHex == nil ? Color.symAccent : Color.symDim)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.plainHit)
                                 swatches(Self.fills, current: sp.fillHex) { hex in shape(n.id) { $0.fillHex = hex } }
                             }
                         }
@@ -154,7 +154,7 @@ struct SelectionPanel: View {
                     Circle().fill(Color(hex: hex)).frame(width: 18, height: 18)
                         .overlay(Circle().stroke(Color.white.opacity(current?.uppercased() == hex.uppercased() ? 0.9 : 0.12), lineWidth: current?.uppercased() == hex.uppercased() ? 2 : 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
             }
             Button { ColorPanelBridge.shared.open(current: current ?? colors[0], pick: pick) } label: {
                 Image(systemName: "eyedropper").font(.system(size: 10, weight: .semibold))
@@ -162,7 +162,7 @@ struct SelectionPanel: View {
                     .frame(width: 18, height: 18)
                     .background(Circle().fill(Color(hex: current ?? colors[0])))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.plainHit)
             .help("Custom color")
         }
     }
@@ -176,6 +176,20 @@ struct SelectionPanel: View {
             .buttonStyle(ChipStyle(on: false))
             .help(tip)
     }
+}
+
+/// .plain 과 같은 모양이지만 글자·아이콘 사이 빈틈까지 라벨 사각형 전체를 누를 수 있다.
+/// .plain 은 그려진 부분만 눌려서, 축소된 캔버스에서 "+ New" 같은 작은 단추가 자주 빗나갔다.
+struct PlainHitStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.6 : 1)
+    }
+}
+
+extension ButtonStyle where Self == PlainHitStyle {
+    static var plainHit: PlainHitStyle { PlainHitStyle() }
 }
 
 struct ChipStyle: ButtonStyle {

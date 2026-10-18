@@ -204,7 +204,7 @@ struct GitCardView: View {
                 .background(Circle().fill(on ? Color.symAccent.opacity(0.18) : Color.symRaised))
                 .foregroundStyle(on ? Color.symAccent : Color.symText.opacity(0.8))
         }
-        .buttonStyle(.plain).help(tip)
+        .buttonStyle(.plainHit).help(tip)
     }
 
     func section(_ t: String) -> some View {
@@ -233,7 +233,7 @@ struct GitCardView: View {
                         Button(card.excluded.isEmpty ? "None" : "All") {
                             card.excluded = card.excluded.isEmpty ? Set(s.changes.map(\.path)) : []
                         }
-                        .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Color.symDim)
+                        .buttonStyle(.plainHit).font(.system(size: 11)).foregroundStyle(Color.symDim)
                     }
                     ScrollView {
                         VStack(alignment: .leading, spacing: 2) {
@@ -247,7 +247,7 @@ struct GitCardView: View {
                             .onSubmit { Task { await card.commit() } }
                         if card.generating { ProgressView().controlSize(.mini) } else {
                             Button { Task { await card.generateMessage(agent: "claude") } } label: { Image(systemName: "sparkles") }
-                                .buttonStyle(.plain).foregroundStyle(Color.symAccent).help("Write the message with Claude (uses your plan)")
+                                .buttonStyle(.plainHit).foregroundStyle(Color.symAccent).help("Write the message with Claude (uses your plan)")
                         }
                     }
                     .padding(.horizontal, 10).padding(.vertical, 8)
@@ -261,7 +261,7 @@ struct GitCardView: View {
                         .frame(maxWidth: .infinity).padding(.vertical, 8)
                         .background(Capsule().fill(Color.symAccent.opacity(card.selected.isEmpty ? 0.4 : 1)))
                     }
-                    .buttonStyle(.plain).disabled(card.busy || card.selected.isEmpty)
+                    .buttonStyle(.plainHit).disabled(card.busy || card.selected.isEmpty)
                 }
                 section("RECENT").padding(.top, 4)
                 ForEach(card.recent.prefix(3), id: \.hash) { c in
@@ -323,7 +323,7 @@ struct GitCardView: View {
             }
             .padding(.vertical, 3).contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainHit)
     }
 
     var history: some View {
@@ -359,7 +359,7 @@ final class GitContent: NodeContent {
         card = GitCardModel(repo: node.text ?? NSHomeDirectory()) { [weak model] path in
             model?.mutateNode(id) { $0.text = path }
         }
-        host = NSHostingView(rootView: GitCardView(card: card).environment(\.colorScheme, .dark))
+        host = CanvasHostingView(rootView: GitCardView(card: card).environment(\.colorScheme, .dark))
     }
 
     func sync(node: BoardNode) {}

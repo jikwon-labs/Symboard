@@ -108,7 +108,7 @@ struct ProfilesPanelView: View {
                     }
                     Spacer()
                     Button("Launch") { launch(p) }.controlSize(.small)
-                    Button { profiles.remove(p.id) } label: { Image(systemName: "trash") }.buttonStyle(.plain)
+                    Button { profiles.remove(p.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit)
                 }
             }
             .listStyle(.plain)

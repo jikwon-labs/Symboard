@@ -134,22 +134,22 @@ struct UsagePopover: View {
     var header: some View {
         HStack(spacing: 8) {
             if page == "tokens" {
-                Button { page = "overview" } label: { Image(systemName: "chevron.left") }.buttonStyle(.plain)
+                Button { page = "overview" } label: { Image(systemName: "chevron.left") }.buttonStyle(.plainHit)
                 Text("tokens").font(.system(size: 15, weight: .semibold))
             } else {
                 Text("usage").font(.system(size: 15, weight: .semibold))
                 ForEach([AgentKind.claude, .codex], id: \.self) { a in
                     Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                         .opacity(agent == a ? 1 : 0.45)
                         .overlay(alignment: .bottom) { if agent == a { Circle().fill(Color.symAccent).frame(width: 4, height: 4).offset(y: 6) } }
                 }
             }
             Spacer()
             Button { page = page == "tokens" ? "overview" : "tokens" } label: { Image(systemName: "chart.bar.fill") }
-                .buttonStyle(.plain).help("Token details")
-            Button { store.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).help("Rescan logs")
-            Button(action: close) { Image(systemName: "xmark") }.buttonStyle(.plain)
+                .buttonStyle(.plainHit).help("Token details")
+            Button { store.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).help("Rescan logs")
+            Button(action: close) { Image(systemName: "xmark") }.buttonStyle(.plainHit)
         }
         .foregroundStyle(Color.symText)
         .padding(14)

@@ -94,13 +94,13 @@ struct PenPanel: View {
                             Circle().fill(Color(hex: hex)).frame(width: 18, height: 18)
                                 .overlay(Circle().stroke(Color.white.opacity(chrome.penColor == hex ? 0.9 : 0.1), lineWidth: chrome.penColor == hex ? 2 : 1))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                     }
                     Button { ColorPanelBridge.shared.open(current: chrome.penColor) { chrome.penColor = $0 } } label: {
                         Image(systemName: "eyedropper").font(.system(size: 10, weight: .semibold)).foregroundStyle(Color.black.opacity(0.7))
                             .frame(width: 18, height: 18).background(Circle().fill(Color(hex: chrome.penColor)))
                     }
-                    .buttonStyle(.plain).help("Custom color")
+                    .buttonStyle(.plainHit).help("Custom color")
                 }
                 Text("WIDTH").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
                 HStack(spacing: 6) {
@@ -111,7 +111,7 @@ struct PenPanel: View {
                                 .background(RoundedRectangle(cornerRadius: 7).fill(chrome.penWidth == w ? Color.symAccent.opacity(0.18) : Color.symRaised.opacity(0.6)))
                                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(chrome.penWidth == w ? Color.symAccent : Color.clear))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                     }
                 }
             }

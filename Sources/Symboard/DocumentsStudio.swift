@@ -125,7 +125,7 @@ struct DocumentsStudio: View {
             HStack(spacing: 6) {
                 ForEach(["claude", "codex"], id: \.self) { a in
                     Button { docs.agent = a } label: { AgentBadge(choice: AgentCatalog.choice(id: a)!, size: 28) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(docs.agent == a ? Color.symAccent : .clear, lineWidth: 1.5).padding(-4))
                         .opacity(AgentCatalog.shared.installed.contains(a) ? 1 : 0.35)
                         .help(AgentCatalog.choice(id: a)!.name)
@@ -143,7 +143,7 @@ struct DocumentsStudio: View {
                         .background(RoundedRectangle(cornerRadius: 9).fill(docs.depth == d.0 ? Color.symAccent.opacity(0.12) : Color.symRaised.opacity(0.5)))
                         .overlay(RoundedRectangle(cornerRadius: 9).stroke(docs.depth == d.0 ? Color.symAccent.opacity(0.7) : .clear))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                 }
             }
             Divider().overlay(Color.symBorder)
@@ -164,7 +164,7 @@ struct DocumentsStudio: View {
                     Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
                         .frame(width: 22, height: 22).background(Circle().fill(docs.request.isEmpty ? Color.symRaised : Color.symAccent))
                 }
-                .buttonStyle(.plain).disabled(docs.request.isEmpty || docs.generating != nil)
+                .buttonStyle(.plainHit).disabled(docs.request.isEmpty || docs.generating != nil)
             }
             .padding(8).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
         }
@@ -188,7 +188,7 @@ struct DocumentsStudio: View {
             .background(RoundedRectangle(cornerRadius: 9).fill(sel ? Color.symAccent.opacity(0.10) : .clear))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainHit)
     }
 
     var agentName: String { AgentCatalog.choice(id: docs.agent)?.name ?? docs.agent }
@@ -229,7 +229,7 @@ struct DocumentsStudio: View {
                 Button { c.studioExportDocPDF(docs.selected) } label: { Label("Export PDF", systemImage: "arrow.down.doc") }.buttonStyle(PillButtonStyle(prominent: true))
             }
             Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }
-                .buttonStyle(.plain).foregroundStyle(Color.symDim)
+                .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
     }
@@ -326,7 +326,7 @@ final class DocumentCardContent: NodeContent {
     init(node: BoardNode) {
         let url = URL(fileURLWithPath: node.text ?? "")
         let text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        host = NSHostingView(rootView: DocumentCardView(text: text, agent: node.role ?? "claude", url: url).environment(\.colorScheme, .dark))
+        host = CanvasHostingView(rootView: DocumentCardView(text: text, agent: node.role ?? "claude", url: url).environment(\.colorScheme, .dark))
     }
 
     func sync(node: BoardNode) {}

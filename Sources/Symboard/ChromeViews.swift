@@ -46,7 +46,7 @@ struct TopLeftBar: View {
                         WorkspaceTab(ws: ws, active: ws.id == model.selectedWorkspace.id, c: c)
                     }
                     Button { c.newWorkspace(nil) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                         .foregroundStyle(Color.symDim)
                         .help("New workspace")
                 }
@@ -81,7 +81,7 @@ struct WorkspaceTab: View {
             }
             if active || hover {
                 Button { c.closeWorkspace(ws.id) } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                     .foregroundStyle(Color.symDim)
                     .help("Close workspace")
             }
@@ -155,7 +155,7 @@ struct TopRightBar: View {
 
     func iconButton(_ symbol: String, _ tip: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: symbol).font(.system(size: 14)).frame(width: 30, height: 28) }
-            .buttonStyle(.plain)
+            .buttonStyle(.plainHit)
             .help(tip)
     }
 }
@@ -459,9 +459,9 @@ struct BottomBar: View {
             } else if let s = chrome.suggestion {
                 HStack(spacing: 6) {
                     Button(s) { chrome.command = "@all git status"; focused = true }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                     Button { chrome.suggestion = nil } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                 }
                 .font(.system(size: 11))
                 .foregroundStyle(Color.symDim)
@@ -501,7 +501,7 @@ struct BottomBar: View {
                         .frame(width: 26, height: 26)
                         .background(Circle().fill(chrome.command.isEmpty ? Color.symRaised : Color.symAccent))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
                 .help("Send")
             }
             .padding(.leading, 8).padding(.trailing, 8).padding(.vertical, 7)
@@ -538,7 +538,7 @@ struct BranchChip: View {
     var body: some View {
         if let b = chrome.branch {
             Button { chrome.gitOpen.toggle() } label: { chip(b) }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
                 .popover(isPresented: $chrome.gitOpen, arrowEdge: .top) {
                     if let card = chrome.gitCard {
                         GitCardView(card: card) { chrome.gitOpen = false }
@@ -582,7 +582,7 @@ struct ZoomControl: View {
             .help("Reset to 100%")
             Button { c.zoomIn(nil) } label: { Image(systemName: "plus").frame(width: 24, height: 24) }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainHit)
         .foregroundStyle(Color.symText)
         .padding(.horizontal, 6).padding(.vertical, 3)
         .floatingCapsule(radius: 10)
@@ -614,7 +614,7 @@ struct ResumeToast: View {
                 Button("Yes") { c.answerResumeAll(true) }.buttonStyle(PillButtonStyle(prominent: true))
                 Button("No") { c.answerResumeAll(false) }.buttonStyle(PillButtonStyle())
                 Button { chrome.resumeDismissed = true } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
-                    .buttonStyle(.plain).foregroundStyle(Color.symDim)
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                     .help("Decide per console")
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
@@ -676,7 +676,7 @@ struct HomeView: View {
                         .background(RoundedRectangle(cornerRadius: 14).fill(Color.symSurface))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.symBorder))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                 }
                 Button { c.chooseProjectFolder() } label: {
                     VStack(spacing: 8) {
@@ -687,7 +687,7 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity, minHeight: 92)
                     .background(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.symBorder, style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
             }
             Spacer()
         }

@@ -169,7 +169,7 @@ struct LoopsModal: View {
                     .buttonStyle(PillButtonStyle(prominent: true))
             }
             Button { chrome.loopsPage = nil } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }
-                .buttonStyle(.plain).foregroundStyle(Color.symDim).padding(.top, 4)
+                .buttonStyle(.plainHit).foregroundStyle(Color.symDim).padding(.top, 4)
         }
         .padding(18)
     }
@@ -196,7 +196,7 @@ struct LoopsModal: View {
                             .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised))
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.symBorder))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                     }
                 }
                 HStack {
@@ -240,7 +240,7 @@ struct LoopsModal: View {
                             Image(systemName: "play.fill").font(.system(size: 10)).frame(width: 26, height: 26)
                                 .background(Circle().fill(Color.symRaised))
                         }
-                        .buttonStyle(.plain).foregroundStyle(Color.symText).help("Run now")
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symText).help("Run now")
                         Toggle("", isOn: Binding(get: { row.enabled }, set: { runner.setEnabled(row.id, $0) }))
                             .toggleStyle(.switch).labelsHidden().tint(Color.symAccent).controlSize(.small)
                         Menu {
@@ -386,7 +386,7 @@ struct LoopsModal: View {
                 }
             }
             Spacer()
-            Button("Cancel") { chrome.loopsPage = runner.rows.isEmpty ? nil : "list" }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+            Button("Cancel") { chrome.loopsPage = runner.rows.isEmpty ? nil : "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
             Button(draft.editing == nil ? "Create loop" : "Save loop") { c.saveLoop() }
                 .buttonStyle(PillButtonStyle(prominent: true)).disabled(!draft.isValid).opacity(draft.isValid ? 1 : 0.5)
         }
@@ -416,7 +416,7 @@ struct LoopsModal: View {
             .background(RoundedRectangle(cornerRadius: 12).fill(on ? Color.symAccent.opacity(0.08) : Color.symRaised))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(on ? Color.symAccent : Color.symBorder))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainHit)
     }
 
     func radio(_ on: Bool, _ title: String, _ sub: String, action: @escaping () -> Void) -> some View {
@@ -431,7 +431,7 @@ struct LoopsModal: View {
             .background(RoundedRectangle(cornerRadius: 10).fill(on ? Color.symAccent.opacity(0.08) : Color.symRaised))
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(on ? Color.symAccent.opacity(0.6) : Color.symBorder))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainHit)
     }
 
     func toggle(_ b: Binding<Bool>, _ title: String) -> some View {

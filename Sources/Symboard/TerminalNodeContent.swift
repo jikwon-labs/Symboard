@@ -25,7 +25,7 @@ final class TerminalNodeContent: NSObject, NodeContent {
         }
         container.addSubview(exitBanner)
         container.banner = exitBanner
-        let bubble = NSHostingView(rootView: ResumeBubble { [weak self] yes in
+        let bubble = CanvasHostingView(rootView: ResumeBubble { [weak self] yes in
             guard let self else { return }
             self.model.sessions.answerResume([self.nodeID], resume: yes)
         })

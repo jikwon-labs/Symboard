@@ -162,7 +162,7 @@ struct MemoryModalView: View {
                 Button { hub.newMemory() } label: { Label("New memory", systemImage: "plus") }.buttonStyle(PillButtonStyle(prominent: true))
             }
             Button { hub.page = nil } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }
-                .buttonStyle(.plain).foregroundStyle(Color.symDim).padding(.top, 4)
+                .buttonStyle(.plainHit).foregroundStyle(Color.symDim).padding(.top, 4)
         }
         .padding(18)
     }
@@ -223,7 +223,7 @@ struct MemoryModalView: View {
                                     Text(n.body).font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.75)).lineLimit(2)
                                 }
                                 Spacer()
-                                Button { hub.editing = n; hub.page = "edit" } label: { Image(systemName: "pencil") }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                                Button { hub.editing = n; hub.page = "edit" } label: { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                             }
                             .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
                         }
@@ -255,7 +255,7 @@ struct MemoryModalView: View {
             Spacer()
             HStack {
                 Spacer()
-                Button("Cancel") { hub.page = "list" }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                Button("Cancel") { hub.page = "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                 Button("Scan with \(AgentCatalog.choice(id: hub.agent)?.name ?? "CLI")") { hub.startScan() }.buttonStyle(PillButtonStyle(prominent: true))
             }
         }
@@ -325,7 +325,7 @@ struct MemoryModalView: View {
                 Button { if let i = hub.proposals.firstIndex(of: p) { hub.proposals[i].selected.toggle() } } label: {
                     Image(systemName: p.selected ? "checkmark.circle.fill" : "circle").foregroundStyle(p.selected ? Color.symAccent : Color.symDim)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) { categoryTag(p.fact.category); Text(p.fact.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText) }
@@ -337,7 +337,7 @@ struct MemoryModalView: View {
                     hub.editing = MemoryNote(repoPath: hub.repo, title: p.fact.title, body: p.fact.body, category: p.fact.category)
                     hub.proposals.removeAll { $0.id == p.id }
                     hub.page = "edit"
-                } label: { Image(systemName: "pencil") }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                } label: { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
             }
         }
         .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
@@ -377,9 +377,9 @@ struct MemoryEditor: View {
             }
             Spacer()
             HStack {
-                Button("Delete") { hub.delete(note.id) }.buttonStyle(.plain).foregroundStyle(Color.symAccent)
+                Button("Delete") { hub.delete(note.id) }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent)
                 Spacer()
-                Button("Cancel") { hub.page = "list" }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                Button("Cancel") { hub.page = "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                 Button("Save memory") { hub.save(note) }.buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(note.title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
@@ -394,7 +394,7 @@ final class MemoryCardContent: NodeContent {
     var view: NSView { host }
 
     init(node: BoardNode, model: AppModel) {
-        host = NSHostingView(rootView: MemoryCardView(model: model, repo: node.text).environment(\.colorScheme, .dark))
+        host = CanvasHostingView(rootView: MemoryCardView(model: model, repo: node.text).environment(\.colorScheme, .dark))
     }
 
     func sync(node: BoardNode) {}
@@ -427,7 +427,7 @@ struct MemoryCardView: View {
                             }
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                     }
                 }
             }

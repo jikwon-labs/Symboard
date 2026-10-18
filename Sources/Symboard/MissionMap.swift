@@ -91,7 +91,7 @@ struct MissionMapView: View {
             }
             Spacer()
             Button { chrome.missionOpen = false } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }
-                .buttonStyle(.plain).foregroundStyle(Color.symDim)
+                .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
         }
         .padding(18)
     }
@@ -110,7 +110,7 @@ struct MissionMapView: View {
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(Capsule().fill(filter == f ? Color.symAccent : Color.clear))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
             }
             Spacer()
             HStack(spacing: 6) {

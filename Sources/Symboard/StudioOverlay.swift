@@ -113,7 +113,7 @@ struct StudioOverlay: View {
                 }
                 Spacer()
                 Button { c.studioAddFolder() } label: { Image(systemName: "plus").frame(width: 26, height: 26) }
-                    .buttonStyle(.plain).foregroundStyle(Color.symDim).help("Add a folder")
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Add a folder")
             }
             if kind == "Markdown" {
                 HStack(spacing: 6) {
@@ -182,7 +182,7 @@ struct StudioOverlay: View {
                     .disabled(studio.selected == nil)
             }
             Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }
-                .buttonStyle(.plain).foregroundStyle(Color.symDim).padding(.leading, 4)
+                .buttonStyle(.plainHit).foregroundStyle(Color.symDim).padding(.leading, 4)
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
     }
@@ -275,7 +275,7 @@ struct TreeRow: View {
             .background(RoundedRectangle(cornerRadius: 7).fill(sel ? Color.symAccent.opacity(0.16) : Color.clear))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainHit)
     }
 }
 

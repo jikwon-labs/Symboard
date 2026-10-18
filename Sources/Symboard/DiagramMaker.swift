@@ -178,7 +178,7 @@ struct DiagramPopover: View {
             HStack(spacing: 6) {
                 ForEach(["claude", "codex"], id: \.self) { a in
                     Button { maker.agent = a } label: { AgentBadge(choice: AgentCatalog.choice(id: a)!, size: 26) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(maker.agent == a ? Color.symAccent : .clear, lineWidth: 1.5).padding(-4))
                         .help(AgentCatalog.choice(id: a)!.name)
                 }
@@ -197,7 +197,7 @@ struct DiagramPopover: View {
                             .background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                             .foregroundStyle(Color.symText)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                 }
             }
             HStack(spacing: 6) {
@@ -216,7 +216,7 @@ struct DiagramPopover: View {
                             .padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 9).stroke(Color.symBorder))
                             .foregroundStyle(Color.symText)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                 }
             }
         }
@@ -238,7 +238,7 @@ struct DrawingChip: View {
             HStack(spacing: 8) {
                 Circle().fill(Color.symAccent).frame(width: 6, height: 6)
                 Text("\(who) is drawing").font(.system(size: 12)).foregroundStyle(Color.symText)
-                Button { maker.cancel() } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                Button { maker.cancel() } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
             }
             .padding(.horizontal, 12).padding(.vertical, 6)
             .floatingCapsule(radius: 12)

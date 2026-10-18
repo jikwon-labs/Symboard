@@ -44,7 +44,7 @@ final class HostedContent: NodeContent {
             }
         }
         extraMenu = menu
-        host = NSHostingView(rootView: make(box).environment(\.colorScheme, .dark).environment(\.locale, Locale(identifier: "en_US")))
+        host = CanvasHostingView(rootView: make(box).environment(\.colorScheme, .dark).environment(\.locale, Locale(identifier: "en_US")))
     }
 
     func sync(node: BoardNode) {
@@ -227,13 +227,13 @@ struct ChecklistView: View {
                                 Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(item.done ? Color.symAccent : Color.symDim)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.plainHit)
                             Text(item.text).strikethrough(item.done).foregroundStyle(item.done ? Color.symDim : Color.symText)
                             Spacer()
                             Button {
                                 box.update { $0.checklist?.removeAll { $0.id == item.id } }
                             } label: { Image(systemName: "xmark").font(.system(size: 9)) }
-                                .buttonStyle(.plain).foregroundStyle(Color.symDim)
+                                .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                         }
                         .font(.system(size: 13))
                         .padding(.vertical, 6).padding(.horizontal, 12)
@@ -258,7 +258,7 @@ struct ChecklistView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                 }
-                .buttonStyle(.plain).padding(8)
+                .buttonStyle(.plainHit).padding(8)
             }
         }
         .background(Color.symSurface)
@@ -300,7 +300,7 @@ struct KanbanView: View {
                         .foregroundStyle(Color.symDim)
                         .frame(width: 90, height: 90)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                 }
                 .padding(10)
             }
@@ -371,7 +371,7 @@ struct KanbanView: View {
                     .padding(.horizontal, 8).padding(.vertical, 6)
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.plainHit)
         }
         .padding(10)
         .frame(width: 200)
@@ -449,7 +449,7 @@ struct CardView: View {
                 Image(systemName: card.done ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(card.done ? Color(hex: "#6FCF97") : Color.symDim)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.plainHit)
             VStack(alignment: .leading, spacing: 6) {
                 Text(card.title).font(.system(size: 12, weight: .medium)).foregroundStyle(card.done ? Color.symDim : Color.symText)
                     .strikethrough(card.done).fixedSize(horizontal: false, vertical: true)
@@ -505,7 +505,7 @@ struct CardEditor: View {
             HStack {
                 Text(editing == nil ? "NEW CARD" : "EDIT CARD").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Color.symDim)
                 Spacer()
-                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
             }
             HStack(spacing: 8) {
                 Circle().fill(Priority.color(priority)).frame(width: 7, height: 7)
@@ -525,7 +525,7 @@ struct CardEditor: View {
                 Spacer()
                 if let d = due {
                     Text(d, format: .dateTime.month(.twoDigits).day(.twoDigits).year()).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
-                    Button { due = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                    Button { due = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                 }
             }
             HStack(spacing: 6) {
@@ -542,10 +542,10 @@ struct CardEditor: View {
             }
             HStack {
                 if editing != nil {
-                    Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plain).foregroundStyle(Color.symAccent)
+                    Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent)
                 }
                 Spacer()
-                Button("Cancel", action: cancel).buttonStyle(.plain).foregroundStyle(Color.symDim)
+                Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                 Button(editing == nil ? "Add card" : "Save") {
                     var c = editing ?? KanbanCard(title: "")
                     c.title = title.trimmingCharacters(in: .whitespaces)

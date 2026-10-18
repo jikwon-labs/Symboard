@@ -22,7 +22,7 @@ struct AccountsPopover: View {
                 Text("accounts").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                 ForEach([AgentKind.claude, .codex], id: \.self) { a in
                     Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }
-                        .buttonStyle(.plain).opacity(agent == a ? 1 : 0.4)
+                        .buttonStyle(.plainHit).opacity(agent == a ? 1 : 0.4)
                 }
                 Spacer()
             }
@@ -99,9 +99,9 @@ struct AccountsPopover: View {
             } else {
                 Button("Use", action: use).buttonStyle(PillButtonStyle(prominent: true))
             }
-            Button(action: open) { Image(systemName: "terminal") }.buttonStyle(.plain).foregroundStyle(Color.symDim).help("Open a console with this account")
-            if let edit { Button(action: edit) { Image(systemName: "pencil") }.buttonStyle(.plain).foregroundStyle(Color.symDim).help("Rename") }
-            if let delete { Button(action: delete) { Image(systemName: "xmark") }.buttonStyle(.plain).foregroundStyle(Color.symDim).help("Remove profile") }
+            Button(action: open) { Image(systemName: "terminal") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Open a console with this account")
+            if let edit { Button(action: edit) { Image(systemName: "pencil") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Rename") }
+            if let delete { Button(action: delete) { Image(systemName: "xmark") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Remove profile") }
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(active ? Color.symAccent.opacity(0.06) : Color.symRaised))

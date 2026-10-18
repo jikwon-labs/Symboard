@@ -25,6 +25,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private var shownWorkspaceID: UUID?
     private var observers: [NSObjectProtocol] = []
     private var gitTimer: Timer?
+    /// 지금 창. 시작할 때 저장된 노드를 만드는 동안에는 AppDelegate.windowController 가 아직 비어 있어서 이걸 쓴다.
+    private(set) static weak var current: MainWindowController?
 
     init(model: AppModel) {
         self.model = model
@@ -39,6 +41,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         window.setFrameAutosaveName("SymboardMain")
         window.minSize = NSSize(width: 900, height: 560)
         super.init(window: window)
+        Self.current = self
         window.delegate = self
         if !window.setFrameUsingName("SymboardMain") { window.center() }
         model.assignProjects(fallback: NewTerminalDialog.lastCwd)

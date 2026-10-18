@@ -47,8 +47,8 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
         let tabs = node.tabs ?? [node.text ?? ""]
         state = WebTileState(tabs: tabs, active: node.activeTab ?? 0, device: node.device)
         var chromeRef: WebContent?
-        chromeHost = NSHostingView(rootView: AnyView(EmptyView()))
-        startHost = NSHostingView(rootView: AnyView(EmptyView()))
+        chromeHost = CanvasHostingView(rootView: AnyView(EmptyView()))
+        startHost = CanvasHostingView(rootView: AnyView(EmptyView()))
         super.init()
         chromeRef = self
         (chromeHost as! NSHostingView<AnyView>).rootView = AnyView(WebTileBar(state: state, web: chromeRef!).environment(\.colorScheme, .dark))
@@ -238,7 +238,7 @@ struct WebTileBar: View {
                         Image(systemName: "globe").font(.system(size: 9))
                         Text(tabTitle(i)).font(.system(size: 11)).lineLimit(1)
                         if state.tabs.count > 1 {
-                            Button { web.closeTab(i) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.buttonStyle(.plain)
+                            Button { web.closeTab(i) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.buttonStyle(.plainHit)
                         }
                     }
                     .foregroundStyle(i == state.active ? Color.symText : Color.symDim)
@@ -247,7 +247,7 @@ struct WebTileBar: View {
                     .background(RoundedRectangle(cornerRadius: 7).fill(i == state.active ? Color.symRaised : Color.clear))
                     .onTapGesture { web.select(i) }
                 }
-                Button { web.newTab() } label: { Image(systemName: "plus").font(.system(size: 10)) }.buttonStyle(.plain).foregroundStyle(Color.symDim)
+                Button { web.newTab() } label: { Image(systemName: "plus").font(.system(size: 10)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                 Spacer()
                 if let d = DevicePreset.find(state.device) {
                     Text("\(d.name)  " + String(Int(d.width)) + " × " + String(Int(d.height))).font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -281,7 +281,7 @@ struct WebTileBar: View {
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).help("Display size")
                 Button(action: web.openInspector) { Image(systemName: "ladybug") }.help("Open inspector tile")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.plainHit)
             .foregroundStyle(Color.symText.opacity(0.85))
             .font(.system(size: 12))
         }
@@ -331,7 +331,7 @@ struct WebStartPage: View {
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(Capsule().fill(Color.symRaised))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                 }
             }
             Text("QUICK OPEN").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim).padding(.top, 4)
@@ -348,7 +348,7 @@ struct WebStartPage: View {
                     }
                     .padding(8).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
             }
             Text("or type any address above").font(.system(size: 11)).foregroundStyle(Color.symDim)
         }

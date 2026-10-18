@@ -137,7 +137,7 @@ final class FileContent: NodeContent {
 
     init(node: BoardNode) {
         path = node.text ?? ""
-        host = NSHostingView(rootView: AnyView(EmptyView()))
+        host = CanvasHostingView(rootView: AnyView(EmptyView()))
         reload()
     }
 
@@ -174,7 +174,7 @@ struct FileCardView: View {
                 Spacer()
                 Text("\(text.split(separator: "\n", omittingEmptySubsequences: false).count - (text.hasSuffix("\n") ? 1 : 0)) lines").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
                 Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                    .buttonStyle(.plain).foregroundStyle(Color.symDim).help("Open in studio")
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Open in studio")
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
             if url.pathExtension.lowercased() == "md" {
@@ -454,7 +454,7 @@ struct LinkGraphView: View {
                             Text(n).font(.system(size: 10)).lineLimit(1)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                     .position(pos[n] ?? center)
                 }
                 if g.nodes.isEmpty { Text("No markdown files in this folder").foregroundStyle(.secondary) }

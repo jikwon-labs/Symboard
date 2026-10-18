@@ -16,8 +16,8 @@ final class OrchestratorContent: NodeContent {
     var view: NSView { host }
 
     init(node: BoardNode, model: AppModel) {
-        let c = (NSApp.delegate as? AppDelegate)?.windowController
-        host = NSHostingView(rootView: OrchestratorView(nodeID: node.id, model: model, beat: .shared, chrome: c?.chrome ?? ChromeModel(), c: c)
+        let c = MainWindowController.current
+        host = CanvasHostingView(rootView: OrchestratorView(nodeID: node.id, model: model, beat: .shared, chrome: c?.chrome ?? ChromeModel(), c: c)
             .environment(\.colorScheme, .dark))
     }
 
@@ -58,7 +58,7 @@ struct OrchestratorView: View {
                     .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(Color.symDim)
                     .help("Ready / wired")
                 Button { spawnWired() } label: { Image(systemName: "plus") }
-                    .buttonStyle(.plain).foregroundStyle(Color.symDim).help("Spawn an agent and wire it")
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).help("Spawn an agent and wire it")
                 Button { c?.toggleConnect(nodeID) } label: {
                     Label(connecting ? "Done" : "Connect", systemImage: connecting ? "checkmark" : "link")
                 }
@@ -134,7 +134,7 @@ struct OrchestratorView: View {
             .background(RoundedRectangle(cornerRadius: 8).fill(on ? Color.symAccent : Color.symRaised))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(on ? Color.clear : Color(hex: color).opacity(0.4)))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainHit)
     }
 
     var rows: some View {
@@ -172,11 +172,11 @@ struct OrchestratorView: View {
             Spacer()
             if hoverRow == n.id {
                 Button { c?.focus(nodeID: n.id) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                    .buttonStyle(.plain).help("Show on board")
+                    .buttonStyle(.plainHit).help("Show on board")
                 Button { _ = model.sessions.session(for: n.id)?.signal(paused ? SIGCONT : SIGSTOP) } label: {
                     Image(systemName: paused ? "play.fill" : "pause.fill")
                 }
-                .buttonStyle(.plain).help(paused ? "Resume" : "Pause")
+                .buttonStyle(.plainHit).help(paused ? "Resume" : "Pause")
             }
             StatusPill(text: paused ? "paused" : st.pillText.lowercased(), color: paused ? Theme.textDim : st.color)
         }
@@ -197,7 +197,7 @@ struct OrchestratorView: View {
                     .frame(width: 22, height: 22)
                     .background(Circle().fill(command.isEmpty ? Color.symRaised : Color.symAccent))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.plainHit)
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised))

@@ -82,7 +82,7 @@ struct ComposerCard: View {
                     .background(Capsule().fill(state.role == r ? Color.white.opacity(0.08) : .clear))
                     .overlay(Capsule().stroke(state.role == r ? Color.symBorder : .clear))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
             }
 
             Divider().overlay(Color.symBorder)
@@ -100,7 +100,7 @@ struct ComposerCard: View {
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: choice.colorHex).opacity(0.08)))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: choice.colorHex).opacity(0.35)))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plainHit)
                     .help("Click to switch this one to another CLI")
                     .transition(.scale.combined(with: .opacity))
                 }
@@ -111,7 +111,7 @@ struct ComposerCard: View {
                 Text("Fill all").font(.system(size: 12)).foregroundStyle(Color.symDim)
                 ForEach(choices) { c in
                     Button { state.tiles = Array(repeating: c.id, count: state.count) } label: { AgentBadge(choice: c, size: 24) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(state.tiles.allSatisfy { $0 == c.id } ? Color.symAccent : .clear, lineWidth: 1.5).padding(-3))
                         .help(c.name)
                 }
@@ -125,7 +125,7 @@ struct ComposerCard: View {
                     Text("\(state.count)").font(.system(size: 14, weight: .semibold, design: .monospaced)).frame(minWidth: 22)
                     Button { state.setCount(state.count + 1) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plainHit)
                 .foregroundStyle(Color.symText)
                 Spacer()
                 Button("Spawn \(state.count)", action: spawn)

@@ -126,7 +126,7 @@ struct MissionListView: View {
             } else {
                 List(state.rows) { row in
                     Button { focus(row.id) } label: { MissionRowView(row: row, selected: row.id == state.selectedNodeID) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.plainHit)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
