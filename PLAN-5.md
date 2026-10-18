@@ -1,4 +1,4 @@
-STATUS: IN_PROGRESS
+STATUS: DONE
 
 # Symboard 5차 진행표
 
@@ -168,6 +168,17 @@ STATUS: IN_PROGRESS
   - 따라 하다 생긴 실수: 처음 판에서는 "고른 콘솔이 없을 때만" 보드 명령으로 봤는데, spawn 뒤 새 콘솔이 골라져 다음 두 명령이 claude 에게 질문으로 갔다(질문 6·7, 표에 적음). 고른 콘솔이 있어도 보드 명령이 먼저가 되게 고쳤다.
   - 확인한 실제 입력(`env -i`, /tmp/symv5-17): 명령 바에 원본 말 그대로 타이핑 → "Can you spawn 5 claude code agents?" → GROUP 1 다섯, "Now spawn 2 codex agents"(Dax 를 고른 채) → GROUP 2 둘, "Can you now put an orchestrator wire with group 1?" → Group 1 왼쪽에 오케스트레이터, 5 agents 연결, "Please can you put me preset 1 in the board" → "Pair: 2 Claude", "…delete the group called group 2 for me" → "Rafa, Kai: about to close 2 consoles · Close 2"(`v17-close-group-confirm.png`) → Close 2 → 4 → 2 live.
   - 모양 차이(남김): 원본은 명령 바 위로 펼쳐지는 THREAD(계획 줄·답·Confirm 단추)가 있고, 우리는 한 줄 알림과 확인 띠. 원본 프리셋 1 은 여러 그룹·웹 타일이 든 "DevHQ", 우리 프리셋은 콘솔 조합만.
+
+## 완료 기준 다시 확인
+
+- `swift build -c release` 통과, `swift test` 147개(4차 119) 통과. PATH 얻기 단위 테스트 12개(잡음 섞인 출력, 시간 초과, 실패 시 대체 경로 포함).
+- `env -i` 로 띄운 앱에서 고칠 것 1~5 를 실제 입력으로 확인(5번 Dock 클릭은 `open` 으로 대신, 위 기록). 마지막 빌드로 다시 띄워 PATH (shell, 0.35s), 별 메뉴에 Claude Code·Codex 확인.
+- 많이 띄우기 수치표 있음. 28개에서 타이핑·끌기 지연 없음, 10분 동안 메모리 계속 늘지 않음.
+- 영상 17개 모두 따라 하기 기록. 쓰는 데 지장 있는 차이 0(찾은 것은 모두 고침).
+- 새 충돌 기록 없음(마지막 Symboard-2026-10-18-134313.ips).
+- 실제 CLI 질문 7회(한도 15).
+- README 실행 방법을 Finder 더블클릭 기준으로, /Applications 옮겨 쓰기 포함.
+- REPORT-5.md 작성.
 
 ## 막힌 것
 
