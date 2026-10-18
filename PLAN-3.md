@@ -24,7 +24,10 @@ STATUS: IN_PROGRESS
   - 재현: 새 타일은 "바로 앞 타일 값" 을 따랐다. 타일 하나를 따로 Claude 로 돌린 뒤 늘리면 Claude 가 생겼다(Fill all 값이 무시됨).
   - 원인: 컴포저가 마지막 Fill all 값을 기억하지 않았다. `fillChoice` 를 두고 `Composer.resize`(단위 테스트 3개)가 Fill all → 앞 타일 → 기본 CLI 순으로 고른다.
   - 확인(실제 클릭): Fill all Shell → 다섯째 타일을 눌러 Claude 로 → + 두 번 → 새 타일 둘 다 Shell. Fill all Claude → + → Claude.
-- [ ] 5. 새로 띄운 셸이 첫 명령 전까지 RUNNING 으로 보임 → READY
+- [x] 5. 새로 띄운 셸이 첫 명령 전까지 RUNNING 으로 보임 → READY
+  - 재현: 이 환경에서는 New console 셸이 3초 뒤 READY 로 바뀌어 그대로 재현되지 않았다. 판정이 "마지막 출력 3초 안이면 RUNNING" 이라, 프롬프트를 다시 그리는 셸 설정(시계·비동기 git 상태 등)이면 입력을 기다리는 동안에도 RUNNING 이 된다는 것을 코드에서 확인했다.
+  - 원인/고침: 일반 셸은 출력 시각 대신 터미널의 앞 프로세스 그룹(`tcgetpgrp`)이 셸 자신인지로 판정한다. 셸이 앞에 있으면 READY, 명령이 돌면 출력이 없어도 RUNNING. 첫 출력 전 3초는 STARTING. 단위 테스트 4개.
+  - 확인(실제 입력): New console 클릭 → 3초 뒤 READY(첫 명령 전) → 명령 입력에 `sleep 6` + Return → 2초 뒤 RUNNING → 9초 뒤 READY.
 - [ ] 6. 캔버스 가장자리에 놓은 노드가 왼쪽 막대·아래 버튼 줄 밑으로 들어감
 - [ ] 7. `SYMBOARD_HOME` 을 새 폴더로 줘도 이전 프로젝트(symclaude)로 열림 → 모든 상태를 SYMBOARD_HOME 아래로, 없으면 홈 화면
 - [ ] 8. 사용량 알약 글자가 "usage" 와 "resets 5:00pm" 사이를 오감

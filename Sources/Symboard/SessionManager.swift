@@ -37,6 +37,7 @@ final class SessionManager {
         if let s = sessions[node.id] { return s }
         guard let spec = node.terminal else { return nil }
         let s = TerminalSession(nodeID: node.id, statusDirectory: model.statusDirectory, usesHooks: spec.agent.supportsHooks)
+        s.isPlainShell = spec.agent == .shell
         sessions[node.id] = s
         if !pendingResume.contains(node.id) { launch(s, spec: spec) }
         return s

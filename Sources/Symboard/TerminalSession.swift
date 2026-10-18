@@ -114,9 +114,21 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
 
     private(set) var paused = false
 
+    /// 일반 셸이면 true. 출력 대신 "앞에 도는 프로세스" 로 쉬는 중인지 본다.
+    var isPlainShell = false
+
     func currentStatus(now: Date = Date()) -> NodeStatus {
         pollStatusFile()
-        return tracker.status(now: now)
+        return tracker.status(now: now, shellAtPrompt: isPlainShell ? shellAtPrompt() : nil)
+    }
+
+    /// 터미널의 앞 프로세스 그룹이 셸 자신이면 프롬프트에서 입력을 기다리는 중이다.
+    private func shellAtPrompt() -> Bool? {
+        let fd = view.process.childfd, pid = view.process.shellPid
+        guard running, fd >= 0, pid > 0 else { return nil }
+        let fg = tcgetpgrp(fd)
+        guard fg > 0 else { return nil }
+        return fg == getpgid(pid)
     }
 
     func idleSeconds(now: Date = Date()) -> TimeInterval { tracker.idleSeconds(now: now) }

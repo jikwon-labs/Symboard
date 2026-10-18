@@ -34,3 +34,33 @@ import Testing
         #expect(Composer.resize(tiles: ["a"], to: 99, fill: nil, fallback: "x").count == Composer.maxNodes)
     }
 }
+
+@Suite struct ShellStatusTests {
+    let t0 = Date(timeIntervalSince1970: 1000)
+
+    @Test func shellAtPromptIsReadyEvenWhilePromptRedraws() {
+        var t = StatusTracker(usesHooks: false, startedAt: t0)
+        t.noteOutput(at: t0.addingTimeInterval(1))
+        // 방금 출력이 있었어도(프롬프트 다시 그리기) 셸이 앞에 있으면 READY.
+        #expect(t.status(now: t0.addingTimeInterval(1.5), shellAtPrompt: true) == .idle)
+    }
+
+    @Test func runningCommandIsWorkingEvenWhenQuiet() {
+        var t = StatusTracker(usesHooks: false, startedAt: t0)
+        t.noteOutput(at: t0.addingTimeInterval(1))
+        #expect(t.status(now: t0.addingTimeInterval(60), shellAtPrompt: false) == .working)
+    }
+
+    @Test func startingUntilFirstOutput() {
+        let t = StatusTracker(usesHooks: false, startedAt: t0)
+        #expect(t.status(now: t0.addingTimeInterval(0.5), shellAtPrompt: true) == .starting)
+        #expect(t.status(now: t0.addingTimeInterval(5), shellAtPrompt: true) == .idle)
+    }
+
+    @Test func withoutShellInfoFallsBackToOutputTiming() {
+        var t = StatusTracker(usesHooks: false, startedAt: t0)
+        t.noteOutput(at: t0.addingTimeInterval(1))
+        #expect(t.status(now: t0.addingTimeInterval(2)) == .working)
+        #expect(t.status(now: t0.addingTimeInterval(10)) == .idle)
+    }
+}

@@ -49,8 +49,15 @@ public struct StatusTracker: Sendable {
         now.timeIntervalSince(lastOutput ?? startedAt)
     }
 
-    public func status(now: Date = Date()) -> NodeStatus {
+    /// shellAtPrompt: 일반 셸일 때 "터미널 앞에 셸 자신만 있는가"(실행 중인 명령 없음). 모르면 nil.
+    /// 셸은 프롬프트를 다시 그리느라 출력이 생겨도 명령을 돌리는 게 아니므로, 이 값이 있으면 출력 시각보다 먼저 본다.
+    public func status(now: Date = Date(), shellAtPrompt: Bool? = nil) -> NodeStatus {
         if exited { return .exited }
+        if let atPrompt = shellAtPrompt {
+            // 첫 출력(프롬프트) 전에는 아직 뜨는 중.
+            if lastOutput == nil && now.timeIntervalSince(startedAt) < idleAfter { return .starting }
+            return atPrompt ? .idle : .working
+        }
         if usesHooks, let hook = hookState {
             switch hook {
             case .working: return .working
