@@ -129,7 +129,11 @@ STATUS: IN_PROGRESS
   - 쓰는 데 지장 있는 차이(고침): 팝오버에서 codex 를 골라도 위 알약이 claude 그대로였다 → 원본처럼 알약도 codex 한도·초기화 시각과 보라 링으로, 팝오버를 닫으면 claude 로 돌아간다. 확인: X → 알약 "0 · resets 12:10 am on 24 Oct", C → "16 · resets 10pm".
   - 시험 도구 한계: 팝오버 머리의 막대 아이콘은 orca 좌표·접근성 어느 쪽으로도 눌리지 않아(팝오버가 별도 창이고 접근성 트리에 안 나옴) tokens 쪽은 디버그 `usage page=tokens` 로 열고 화면만 확인했다. C/X 아이콘은 실제 클릭으로 눌렸다.
   - 모양 차이: 원본은 CLI 다섯 아이콘, 우리는 둘. 원본 LAST 24H, 우리 LAST 30D.
-- [ ] V11. node-webtiles.mp4
+- [x] V11. node-webtiles.mp4
+  - 원본 조작: 지구 도구로 사각형 끌기 → Web 타일("Open a page": LOCALHOST 포트 칩, QUICK OPEN) → :3000 → 페이지(타일 머리·탭이 페이지 제목) → 모니터 아이콘 → 24 in monitor → 타일이 16:9 로 커지고 "24 in monitor"·"1920 × 1080" 빨간 표시 → {} → 옆에 Inspector 타일(연결선).
+  - 우리(`env -i`, /tmp/symv5-web 을 python http.server :3000 으로 띄움): 지구 → 캔버스 클릭 → 같은 시작 화면 → :3000 → 페이지 → 모니터 → 24" 4K → 빨간 "24\" 4K · 1920 × 1080", 1920 폭으로 렌더 → 벌레 아이콘 → Inspector 타일(Elements·Console, DOM 트리).
+  - 쓰는 데 지장 있는 차이(고침): ① 화면 크기를 골라도 타일 크기는 그대로라 페이지가 위아래 검은 띠 안에 작게 보였다 → 원본처럼 타일을 그 비율로(가로형은 폭 유지·높이 맞춤, 폰은 높이 유지·폭 맞춤). ② 타일 머리가 늘 "Web", 탭은 주소였다 → 페이지 제목(didFinish 뒤 늦게 오는 제목도 한 번 더 읽음). 확인 `v11-web-24in.png`.
+  - 모양 차이(남김): 원본은 지구 도구로 끌어 크기를 정하고, 우리는 클릭해 기본 크기로 놓는다. 원본 인스펙터는 Styles·Computed·Box Model 이 있는 DevTools 꼴, 우리는 Elements·Console(공개 API 한계, 2차 DECISIONS). 원본 모니터 메뉴의 휴대폰 다섯 종, 우리는 셋(Phone·Phone Max·Tablet).
 - [ ] V12. studio-code.mp4
 - [ ] V13. studio-diagrams.mp4
 - [ ] V14. studio-documents.mp4

@@ -128,7 +128,9 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
         model.mutateNode(nodeID) { n in
             n.tabs = tabs; n.activeTab = active; n.device = device
             n.text = tabs[active]
-            n.title = "Web"
+            // 원본처럼 타일 머리에 지금 페이지 제목.
+            let t = self.state.titles.indices.contains(active) ? self.state.titles[active] : ""
+            n.title = t.isEmpty ? "Web" : t
         }
     }
 
@@ -171,6 +173,18 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
 
     func setDevice(_ id: String?) {
         state.device = id
+        // 원본처럼 화면 크기를 고르면 타일도 그 비율로 바뀐다(폭은 그대로, 높이를 맞춤. 폰은 높이를 지키고 폭을 맞춤).
+        if let d = DevicePreset.find(id), let node = model.node(nodeID) {
+            let head = Double(Self.barHeight) + 28
+            var f = node.frame
+            if d.width >= d.height {
+                f.h = f.w * d.height / d.width + head
+            } else {
+                f.w = max(260, (f.h - head) * d.width / d.height)
+            }
+            model.mutateNode(nodeID) { $0.frame = f }
+            NotificationCenter.default.post(name: .nodesChanged, object: model.workspaceID(containing: nodeID))
+        }
         layoutStage()
         persist()
     }
@@ -198,6 +212,13 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if let i = views.firstIndex(of: webView) {
             state.titles[i] = webView.title ?? ""
+            // 제목은 didFinish 뒤에 채워지는 때가 있어 한 번 더 읽는다.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak webView] in
+                guard let self, let webView, let j = self.views.firstIndex(of: webView), let t = webView.title, !t.isEmpty,
+                      self.state.titles[j] != t else { return }
+                self.state.titles[j] = t
+                self.persist()
+            }
             if let u = webView.url?.absoluteString, !u.hasPrefix("about:") { state.tabs[i] = u; if i == state.active { state.address = u } }
         }
         updateNav()
