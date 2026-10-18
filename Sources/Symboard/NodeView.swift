@@ -29,6 +29,8 @@ final class NodeView: NSView {
     let content: NodeContent
     let header = NodeHeaderView()
     private let resizeHandle = ResizeHandleView()
+    /// 오케스트레이터 오른쪽 가장자리의 연결 손잡이. 끌어서 그룹·콘솔 위에 놓으면 연결하거나 끊는다.
+    private let wirePort = WirePortView()
 
     var isSelected = false {
         didSet {
@@ -76,6 +78,10 @@ final class NodeView: NSView {
             addSubview(shield)
         }
         addSubview(resizeHandle)
+        if node.kind == .orchestrator {
+            wirePort.nodeView = self
+            addSubview(wirePort)
+        }
         header.nodeView = self
         resizeHandle.nodeView = self
         header.closeButton.target = self
@@ -111,6 +117,7 @@ final class NodeView: NSView {
         content.view.frame = NSRect(x: 0, y: top, width: b.width, height: max(0, b.height - top))
         shield.frame = b
         resizeHandle.frame = NSRect(x: b.width - 16, y: b.height - 16, width: 16, height: 16)
+        wirePort.frame = NSRect(x: b.width - 18, y: b.midY - 9, width: 18, height: 18)
         header.needsLayout = true
     }
 
@@ -664,5 +671,76 @@ enum Prompt {
         alert.buttons[0].keyEquivalentModifierMask = .command
         guard run(alert, focus: tv) == .alertFirstButtonReturn else { return nil }
         return tv.string
+    }
+}
+
+
+/// 오케스트레이터의 연결 손잡이. 눌러 끌면 보드에 임시 선을 그리고, 놓은 자리의 그룹 틀이나 콘솔에 연결을 켜거나 끈다.
+final class WirePortView: NSView {
+    weak var nodeView: NodeView?
+    private var line: CAShapeLayer?
+    private var start: NSPoint = .zero
+
+    override var isFlipped: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let r = bounds.insetBy(dx: 4, dy: 4)
+        Theme.accent.setFill()
+        NSBezierPath(ovalIn: r).fill()
+        NSColor.white.withAlphaComponent(0.9).setStroke()
+        let ring = NSBezierPath(ovalIn: r.insetBy(dx: -1.5, dy: -1.5))
+        ring.lineWidth = 1
+        ring.stroke()
+    }
+
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let canvas = nodeView?.canvas else { return }
+        start = canvas.convert(NSPoint(x: bounds.midX, y: bounds.midY), from: self)
+        let l = CAShapeLayer()
+        l.strokeColor = Theme.accent.cgColor
+        l.fillColor = nil
+        l.lineWidth = 2
+        l.lineDashPattern = [6, 4]
+        canvas.wantsLayer = true
+        canvas.layer?.addSublayer(l)
+        line = l
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let canvas = nodeView?.canvas, let l = line else { return }
+        let p = canvas.convert(event.locationInWindow, from: nil)
+        let path = CGMutablePath()
+        path.move(to: start)
+        let dx = max(60, abs(p.x - start.x) / 2)
+        path.addCurve(to: p, control1: NSPoint(x: start.x + dx, y: start.y), control2: NSPoint(x: p.x - dx, y: p.y))
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        l.path = path
+        CATransaction.commit()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        line?.removeFromSuperlayer()
+        line = nil
+        guard let nv = nodeView, let canvas = nv.canvas, let c = canvas.controller else { return }
+        let p = canvas.convert(event.locationInWindow, from: nil)
+        // 콘솔 노드가 그룹 틀 안에 있으므로 콘솔을 먼저 본다. 그룹 머리·여백에 놓으면 그룹 전체.
+        if let (id, v) = canvas.nodeViews.first(where: { $0.value.frame.contains(p) && $0.key != nv.nodeID }),
+           nv.model.node(id)?.kind == .terminal, v.isHidden == false {
+            c.toggleWire(nv.nodeID, to: id)
+            c.chrome.flash(Self.message(c, orch: nv.nodeID, target: id, name: nv.model.node(id)?.title ?? "console"))
+        } else if let (id, _) = canvas.groupViews.first(where: { $0.value.frame.contains(p) }) {
+            c.toggleWire(nv.nodeID, to: id)
+            let name = nv.model.selectedWorkspace.teams.first { $0.id == id }?.name ?? "group"
+            c.chrome.flash(Self.message(c, orch: nv.nodeID, target: id, name: name))
+        } else {
+            c.chrome.flash("Drop on a group or a console to wire it")
+        }
+    }
+
+    private static func message(_ c: MainWindowController, orch: UUID, target: UUID, name: String) -> String {
+        let wired = c.model.selectedWorkspace.links?.contains { $0.from == orch && $0.to == target } ?? false
+        return wired ? "Wired \(name)" : "Unwired \(name)"
     }
 }
