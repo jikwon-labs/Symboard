@@ -10,8 +10,12 @@ STATUS: IN_PROGRESS
 
 | # | 항목 | 대상 | 질문 |
 |---|------|------|------|
+| 1 | 2번 권한 | Ada(/tmp/symperm, Ask 모드) | make a file named a.txt with the word hi |
+| 2 | 3번 Done | Ada | count from 1 to 80, one number per line, no tools |
+| 3 | 4번 작업 중 | Ada | write a 200-word paragraph about ocean tides, no tools (5초 안에 끝나 미션 맵을 못 봄) |
+| 4 | 4번 작업 중 | Ada | write about 600 words on the history of mechanical clocks, no tools |
 
-합계: 0
+합계: 4
 
 ## 고칠 것
 
@@ -21,9 +25,20 @@ STATUS: IN_PROGRESS
   - 고침: `PromptDetector`(Core) 가 화면 끝 18줄에서 "고르는 표시(❯ ›) + 안내 줄(Enter to confirm, esc quit 등)" 또는 "고르는 표시가 번호 선택지 위" 를 찾으면 `.waiting`. 1초 판정(`StatusTracker.resolve`)이 훅·출력 판정 위에 이것을 얹는다. 화면 글자의 NUL 은 공백으로. 기다리는 노드는 노란 2pt 테두리. 그룹 머리 요약은 "2 need you" 처럼 개수를 함께. 단위 테스트(실제 화면 표본: claude 신뢰, codex 신뢰·업데이트·데몬 메뉴, 평소 입력창, 번호 목록 답) 9개.
   - codex 승인 화면: 이 머신 codex 는 YOLO 모드(자동 승인)라 명령 승인 화면이 뜨지 않는다. 같은 꼴(번호 선택지 위 › 표시)이라 데몬 메뉴 규칙으로 잡힌다(표본 테스트).
   - 확인한 실제 입력: 새 상태 `/tmp/symv4c` → Open folder → Cmd+Shift+G `/tmp/symtrust-5` → Group → − 두 번 → 둘째 타일 눌러 Codex → Spawn 2. 두 노드 NEEDS YOU·노란 테두리, 그룹 머리 "2 · 2 need you"(`1-group-needs-you.png`). 미션 맵(도구 메뉴 → Mission Map) "Needs you 1", 행 "Needs input"(`1-mission-needs-you.png`, symtrust-4). codex 노드 클릭 → `1`, `2` → 신뢰 화면 동안 waiting → Return → 입력창 READY. claude 노드 클릭 → ↓ → Return → 입력창 READY, 그룹 "idle"(`1-after-answer-ready.png`). 질문 0회.
-- [ ] 2. 권한 확인을 기다리는 상태를 실제로 확인(노드·그룹 헤더·미션 맵 Needs you, 노드 강조, 승인 후 Working → Idle/Done)
-- [ ] 3. Idle 과 Done 의 구분(원본 뜻 찾기, DECISIONS, 보거나 새 질문하면 풀림)
-- [ ] 4. 작업 중 표시(노드 알약, 그룹 요약 "1 running", 상단 live, 미션 맵 Working 개수) 1초 간격 캡처
+- [x] 2. 권한 확인을 기다리는 상태를 실제로 확인(노드·그룹 헤더·미션 맵 Needs you, 노드 강조, 승인 후 Working → Idle/Done)
+  - 재현: 이 머신의 `~/.claude/settings.json` 이 `defaultMode: auto` 라 노드가 자동 모드로 떴다. 앱 안에서 노드별로 자동 승인을 끌 방법이 없었다(새 콘솔 대화상자의 인자 칸뿐).
+  - 고침 1: 노드 머리 ⌄ 메뉴에 Permissions(Use CLI Setting / Ask Before Tools / Auto-Approve). claude 는 `--permission-mode manual|bypassPermissions`, codex 는 `-a on-request -s workspace-write` / `--dangerously-bypass-approvals-and-sandbox`. 바꾸면 같은 대화로 다시 띄우고, 머리에 ASK/AUTO 배지(`PermissionMode`, 단위 테스트 2개).
+  - 고침 2(찾은 버그): 다시 띄우기가 옛 프로세스를 끄자마자 같은 터미널에서 새로 띄워, 늦게 온 옛 프로세스 종료 알림이 새 프로세스를 "끝남" 으로 만들고 입력이 막혔다(상태 exited, 친 글자가 안 들어감). 종료 알림을 받은 뒤(최대 2초) 새로 띄운다. Restart Process 도 같은 길을 탄다.
+  - 고침 3: 미션 맵 행·상세의 기다림 글자 "Needs input" → "Needs you"(칩과 같은 말).
+  - 확인한 실제 입력: Group → Claude+Shell → Spawn → 노드 클릭·↓·Return 으로 신뢰 → ⌄ → Permissions → Ask Before Tools → "manual mode on" 으로 다시 뜸, ASK 배지. 입력칸 클릭 → "make a file named a.txt with the word hi" 타이핑 → Return. 1초 캡처(`2-sequence-1s.png`): READY → RUNNING·"1 running" → NEEDS YOU·노란 테두리·"1 needs you". 화면에 "Do you want to create a.txt? ❯ 1. Yes … Esc to cancel"(`2-permission-node.png`). 미션 맵 Needs you 1(`2-permission-mission.png`) → Ada 클릭 → Go to the console → Return(1. Yes) → working 3초 → idle, `/tmp/symperm/a.txt` = hi. Go to 로 그 터미널에 초점이 있어서 Done 이 아니라 Idle 로 끝났다(3번 규칙대로).
+- [x] 3. Idle 과 Done 의 구분(원본 뜻 찾기, DECISIONS, 보거나 새 질문하면 풀림)
+  - 원본: `teams.jpg` 미션 맵은 Idle 27 · Done 0 인데, 같은 장면의 콘솔들은 "Worked for 5m 20s · done Sunday" 처럼 일을 끝낸 상태다. 사용자가 이미 본 끝난 콘솔은 Idle 이다. 그래서 Done = "받은 일을 끝냈는데 아직 안 봄" 으로 정했다(DECISIONS.md).
+  - 고침: `NodeStatus.done`. 판정(`StatusTracker.resolve`): 훅이 working 을 보냈거나(claude), 입력 뒤 출력이 3초 넘게 이어지면(codex 등) "일을 했다" 로 치고, 그 뒤 idle 이 되면 done. 노드를 고르거나(클릭·Go to) 그 터미널에 키보드 초점이 있거나 새 입력을 보내면 풀린다. 일반 셸은 Done 을 쓰지 않는다. 부팅 출력·짧은 출력은 일로 치지 않는다. 알약 DONE(파란색), 그룹 머리 "1 done", 미션 맵 Done 칩. 단위 테스트 6개.
+  - 확인한 실제 입력: 아래 명령 바 클릭 → "@Ada count from 1 to 80, one number per line, no tools" → Return. 2초 working → done, 30초 넘게 done 유지. 알약 DONE·그룹 "1 done"(`3-done-node.png`), 미션 맵 Done 1·행 "Done"(`3-done-mission.png`). Esc → Ada 머리 클릭 → idle(`3-done-cleared.png`). 새 질문을 보내면 바로 working(4번 캡처).
+- [x] 4. 작업 중 표시(노드 알약, 그룹 요약 "1 running", 상단 live, 미션 맵 Working 개수) 1초 간격 캡처
+  - 재현: 노드 알약·그룹 요약·미션 맵은 바뀌었지만, 상단 live 알약은 살아 있는 프로세스 수만 보여 일하는 중인지 알 수 없었다.
+  - 고침: 일하는 콘솔이 있으면 live 점을 강조색으로 바꾸고 "· 1 working" 을 붙인다.
+  - 확인한 실제 입력: 명령 바 → "@Ada write a 200-word paragraph about ocean tides, no tools" → Return(1초 캡처 `4-working-board-1s.png`: READY → RUNNING, "idle" → "1 running", "2 live" → "2 live · 1 working"). 이 답은 5초 안에 끝나 미션 맵을 못 열어서, "@Ada write about 600 words on the history of mechanical clocks, no tools" 로 한 번 더 → 2초 뒤 도구 메뉴 → Mission Map(`4-working-mission-1s.png`: 부제 "1 working", Working 1, 행 "Working", 팀 "1 working"). 끝나면 Done 으로.
 - [ ] 5. 글 쓰는 창이 열리자마자 첫 칸에 초점, Enter 저장 / Esc 취소(여러 줄은 Cmd+Enter)
 - [ ] 6. 칸반 Done 열 카드 표시
 - [ ] 7. 앱이 스스로 만드는 노드(인스펙터, 복제, 컴포저 그룹, 문서·다이어그램 결과)도 보이는 영역 안으로

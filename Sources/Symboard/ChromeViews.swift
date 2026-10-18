@@ -105,9 +105,13 @@ struct TopRightBar: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 6) {
-                Circle().fill(chrome.liveCount > 0 ? Color.green : Color.symDim).frame(width: 7, height: 7)
+                // 일하는 콘솔이 있으면 점을 강조색으로 바꾸고 개수를 붙인다.
+                Circle().fill(chrome.workingCount > 0 ? Color.symAccent : (chrome.liveCount > 0 ? Color.green : Color.symDim)).frame(width: 7, height: 7)
                 Text("\(chrome.liveCount)").font(.system(size: 12, weight: .semibold))
                 Text("live").font(.system(size: 12)).foregroundStyle(Color.symDim)
+                if chrome.workingCount > 0 {
+                    Text("· \(chrome.workingCount) working").font(.system(size: 12)).foregroundStyle(Color.symAccent)
+                }
             }
             .padding(.horizontal, 11).padding(.vertical, 6)
             .floatingCapsule(radius: 10)

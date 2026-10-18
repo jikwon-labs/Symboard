@@ -369,6 +369,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if chrome.resumeCount != pending { chrome.resumeCount = pending }
         let live = model.sessions.liveCount
         if chrome.liveCount != live { chrome.liveCount = live }
+        let working = model.sessions.workingCount
+        if chrome.workingCount != working { chrome.workingCount = working }
         let loops = model.selectedWorkspace.loops.filter(\.enabled).count
         if chrome.loopBadge != loops { chrome.loopBadge = loops }
         captureViewports()

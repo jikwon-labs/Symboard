@@ -66,8 +66,11 @@ final class SessionManager {
 
     func restart(_ nodeID: UUID) {
         guard let s = sessions[nodeID], let spec = model.node(nodeID)?.terminal else { return }
-        s.terminate()
-        launch(s, spec: spec)
+        s.restart { [weak self] in
+            // 기다리는 동안 바뀐 설정(권한 모드 등)을 반영한다.
+            guard let self, let spec = self.model.node(nodeID)?.terminal else { return }
+            self.launch(s, spec: spec)
+        }
     }
 
     private func launch(_ s: TerminalSession, spec: TerminalSpec) {
@@ -114,6 +117,9 @@ final class SessionManager {
 
     /// 프로세스가 살아 있는 콘솔 수.
     var liveCount: Int { sessions.values.filter(\.running).count }
+
+    /// 지금 일하는 콘솔 수.
+    var workingCount: Int { statuses.values.filter { $0 == .working }.count }
 
     /// 살아 있는 모든 콘솔의 프로세스 그룹에 신호를 보낸다. 보낸 개수를 돌려준다.
     @discardableResult

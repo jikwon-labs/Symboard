@@ -168,3 +168,24 @@ enum ScreenSamples {
         #expect(PromptDetector.isWaitingForChoice(s))
     }
 }
+
+@Suite struct PermissionModeTests {
+    @Test func askReplacesAutoFlagsForClaude() {
+        var spec = TerminalSpec(agent: .claude, cwd: "/tmp")
+        spec.extraArgs = ["--model", "opus", "--dangerously-skip-permissions"]
+        spec.extraArgs = PermissionMode.ask.apply(to: spec)
+        #expect(spec.extraArgs == ["--model", "opus", "--permission-mode", "manual"])
+        #expect(PermissionMode.current(for: spec) == .ask)
+        #expect(PermissionMode.label(for: spec) == "ASK")
+        spec.extraArgs = PermissionMode.cliDefault.apply(to: spec)
+        #expect(spec.extraArgs == ["--model", "opus"] && PermissionMode.label(for: spec) == nil)
+    }
+
+    @Test func codexModes() {
+        var spec = TerminalSpec(agent: .codex, cwd: "/tmp")
+        spec.extraArgs = PermissionMode.ask.apply(to: spec)
+        #expect(PermissionMode.current(for: spec) == .ask)
+        spec.extraArgs = PermissionMode.auto.apply(to: spec)
+        #expect(spec.extraArgs == ["--dangerously-bypass-approvals-and-sandbox"] && PermissionMode.label(for: spec) == "AUTO")
+    }
+}

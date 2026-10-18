@@ -14,7 +14,7 @@ public enum NodeStatus: String, Codable, Sendable {
         case .starting: return "Starting"
         case .working: return "Working"
         case .idle: return "Idle"
-        case .waiting: return "Needs input"
+        case .waiting: return "Needs you"
         case .done: return "Done"
         case .exited: return "Exited"
         }

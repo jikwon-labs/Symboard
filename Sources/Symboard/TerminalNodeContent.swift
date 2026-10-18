@@ -53,7 +53,29 @@ final class TerminalNodeContent: NSObject, NodeContent {
          ClosureMenuItem(title: "Add Loop...") { [weak self] in
              guard let self else { return }
              (NSApp.delegate as? AppDelegate)?.windowController.newLoop(for: self.nodeID)
-         }]
+         }] + permissionItems()
+    }
+
+    /// claude·codex 노드의 권한 모드 고르기. 바꾸면 같은 대화로 다시 띄운다.
+    private func permissionItems() -> [NSMenuItem] {
+        guard let spec = model.node(nodeID)?.terminal, spec.agent == .claude || spec.agent == .codex else { return [] }
+        let item = NSMenuItem(title: "Permissions", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        let now = PermissionMode.current(for: spec)
+        for mode in PermissionMode.allCases {
+            let mi = ClosureMenuItem(title: mode.menuTitle) { [weak self] in
+                guard let self, mode != now else { return }
+                self.model.mutateNode(self.nodeID) { n in
+                    if let t = n.terminal { n.terminal?.extraArgs = mode.apply(to: t) }
+                }
+                (NSApp.delegate as? AppDelegate)?.windowController.currentCanvas?.nodeViews[self.nodeID]?.syncFromModel()
+                self.model.sessions.restart(self.nodeID)
+            }
+            mi.state = mode == now ? .on : .off
+            sub.addItem(mi)
+        }
+        item.submenu = sub
+        return [item]
     }
 
     func teardown() {}

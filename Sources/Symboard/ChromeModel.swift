@@ -50,6 +50,7 @@ final class ChromeModel: ObservableObject {
     @Published var tool: BoardTool = .select
     @Published var zoomPercent = 100
     @Published var liveCount = 0
+    @Published var workingCount = 0
     @Published var branch: String?
     @Published var changeCount = 0
     @Published var command = ""

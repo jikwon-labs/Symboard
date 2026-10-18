@@ -84,21 +84,75 @@ public enum NamePool {
     }
 }
 
-/// 권한 묻기를 끄는 실행 옵션이 들어 있는지(헤더 배지용).
-public enum PermissionMode {
+/// 노드별 권한 모드. 실행 옵션으로 넣고, 헤더 배지로 보인다.
+public enum PermissionMode: String, CaseIterable, Sendable {
+    /// 실행 옵션을 넣지 않는다(CLI 설정을 따름).
+    case cliDefault
+    /// 도구를 쓰기 전에 묻는다.
+    case ask
+    /// 묻지 않고 승인한다.
+    case auto
+
     public static let autoFlags = ["--dangerously-skip-permissions", "--yolo", "--dangerously-bypass-approvals-and-sandbox", "--full-auto"]
+
+    public var menuTitle: String {
+        switch self {
+        case .cliDefault: return "Use CLI Setting"
+        case .ask: return "Ask Before Tools"
+        case .auto: return "Auto-Approve"
+        }
+    }
+
+    public static func current(for spec: TerminalSpec) -> PermissionMode {
+        let a = spec.extraArgs
+        if a.contains(where: { autoFlags.contains($0) }) { return .auto }
+        if let v = value(after: ["--permission-mode"], in: a) {
+            return ["bypassPermissions", "auto"].contains(v) ? .auto : (["default", "manual"].contains(v) ? .ask : .cliDefault)
+        }
+        if let v = value(after: ["--ask-for-approval", "-a"], in: a) { return v == "never" ? .auto : .ask }
+        return .cliDefault
+    }
 
     public static func label(for spec: TerminalSpec) -> String? {
         if spec.extraArgs.contains(where: { autoFlags.contains($0) }) { return "AUTO" }
-        if let i = spec.extraArgs.firstIndex(of: "--permission-mode"), i + 1 < spec.extraArgs.count {
-            switch spec.extraArgs[i + 1] {
-            case "bypassPermissions": return "AUTO"
+        if let v = value(after: ["--permission-mode"], in: spec.extraArgs) {
+            switch v {
+            case "bypassPermissions", "auto": return "AUTO"
             case "acceptEdits": return "EDITS"
             case "plan": return "PLAN"
+            case "default", "manual": return "ASK"
             default: return nil
             }
         }
+        if current(for: spec) == .ask { return "ASK" }
         return nil
+    }
+
+    /// 권한 관련 옵션을 모두 빼고 이 모드의 옵션을 넣은 인자 목록.
+    public func apply(to spec: TerminalSpec) -> [String] {
+        var a: [String] = []
+        var i = 0
+        let valued: Set<String> = ["--permission-mode", "--ask-for-approval", "-a", "--sandbox", "-s"]
+        while i < spec.extraArgs.count {
+            let x = spec.extraArgs[i]
+            if valued.contains(x) { i += 2; continue }
+            if Self.autoFlags.contains(x) { i += 1; continue }
+            a.append(x); i += 1
+        }
+        switch (self, spec.agent) {
+        case (.cliDefault, _): break
+        case (.ask, .claude): a += ["--permission-mode", "manual"]
+        case (.auto, .claude): a += ["--permission-mode", "bypassPermissions"]
+        case (.ask, .codex): a += ["--ask-for-approval", "on-request", "--sandbox", "workspace-write"]
+        case (.auto, .codex): a += ["--dangerously-bypass-approvals-and-sandbox"]
+        default: break
+        }
+        return a
+    }
+
+    static func value(after keys: [String], in a: [String]) -> String? {
+        guard let i = a.firstIndex(where: { keys.contains($0) }), i + 1 < a.count else { return nil }
+        return a[i + 1]
     }
 }
 

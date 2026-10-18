@@ -15,3 +15,6 @@
 - 2차: 웹 타일 인스펙터는 WKWebView 내장 인스펙터를 타일 안에 넣을 공개 API 가 없어, 페이지에 JS 를 돌려 만든 Elements·Console 타일로 대신했다(1차의 _inspector 별도 창은 쓰지 않음). 표시 크기 프리셋은 pageZoom 으로 그 폭의 레이아웃을 타일에 줄여 보인다.
 - 3차: 앱이 직접 쓰는 설정(마지막 폴더·마지막 CLI·문서 소요 시간·창 위치)은 모두 상태 폴더의 prefs.json 에 둔다. macOS 열기 패널이 스스로 UserDefaults 에 남기는 값(NSNavPanel…, GoToSheet 위치)은 시스템 패널 몫이라 그대로 둔다. 새 상태 폴더에 노드가 하나도 없으면 홈 화면(Projects · Open folder)으로 시작하고, 고른 폴더는 처음 생긴 빈 작업공간에 붙인다.
 - 3차: 접근성 이름. orca 의 접근성 트리는 SwiftUI 단추의 이름(accessibilityLabel, 단추 글자)을 읽지 못했다(시스템 모양 단추도 같음, AppKit 단추·메뉴는 읽음). 그래서 `.tip(…)`/`.axName(…)` 은 SwiftUI 단추를 접근성에서 숨기고, 같은 자리에 이름 붙은 투명 AppKit 단추(AccessibilityPressProxy)를 겹친다. 이 대역은 마우스를 통과시키고(hitTest nil), 접근성 "누르기" 가 오면 자기 가운데에 클릭 이벤트를 넣어 밑의 SwiftUI 단추가 받게 한다. `.tip` 은 마우스 설명도 같이 단다.
+- 4차: 상태 Done 은 "받은 일을 끝냈는데 사용자가 아직 보지 않음" 이다. 원본 미션 맵(teams.jpg)에서 일을 끝낸 콘솔들이 Idle 27 · Done 0 으로 세어져 있어, 본 뒤에는 Idle 로 돌아가는 뜻으로 읽었다. 노드를 고르거나 Go to 하거나 그 터미널에 초점이 있거나 새 입력을 보내면 Idle 로 풀린다. 끝난 프로세스(Exited)도 미션 맵에서는 Done 칸에 센다. 일반 셸은 명령 하나하나가 일이라 Done 을 쓰지 않는다.
+- 4차: 사용자 선택을 기다리는 화면(폴더 신뢰, 권한 확인, codex 메뉴)은 훅이 없어도 화면 끝 18줄의 글자로 알아낸다. 고르는 표시(❯ ›) + 안내 줄(Enter to confirm, esc quit …), 또는 고르는 표시가 번호 선택지 위에 있으면 기다림이다. 오래된 출력에 남은 문구를 잡지 않으려고 끝부분만 본다.
+- 4차: 노드별 권한 모드는 ⌄ 메뉴 Permissions 로 고른다. 사용자 CLI 설정(~/.claude)은 건드리지 않고 실행 인자로만 바꾼다. claude 2.1.302 의 묻기 모드 이름은 `manual` 이다(`default` 는 없음).

@@ -77,6 +77,22 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         view.terminate()
     }
 
+    /// 다시 띄우기를 기다리는 시작 함수. 옛 프로세스의 종료 알림이 온 뒤에 부른다.
+    private var pendingRestart: (() -> Void)?
+
+    /// 프로세스를 끄고, 끝났다는 알림을 받은 뒤 start 를 부른다.
+    /// 바로 새로 띄우면 옛 프로세스의 늦은 종료 알림이 새 프로세스를 "끝남" 으로 만들어 입력이 막힌다.
+    func restart(then start: @escaping () -> Void) {
+        guard running else { start(); return }
+        pendingRestart = start
+        terminate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self, let p = self.pendingRestart else { return }
+            self.pendingRestart = nil
+            p()
+        }
+    }
+
     /// 앞서 보낸 입력의 Enter 가 끝나는 시각. 연달아 보낸 입력이 섞이지 않게 뒤로 미룬다.
     private var busyUntil = Date.distantPast
 
@@ -195,6 +211,12 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
 
     nonisolated func processTerminated(source: TerminalView, exitCode: Int32?) {
         MainActor.assumeIsolated {
+            if let p = pendingRestart {
+                // 다시 띄우려고 끈 옛 프로세스. 끝남으로 기록하지 않고 새로 띄운다.
+                pendingRestart = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { p() }
+                return
+            }
             running = false
             tracker.noteExit()
             onExit?(exitCode)
