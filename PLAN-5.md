@@ -118,7 +118,11 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, 질문 4): Memory 칩 → 같은 빈 상태 → Scan repo → Claude Code·Codex → Scan with Claude Code → 단계 표시·빈 줄 → 약 40초 뒤 REVIEW PROPOSALS 9 of 9(분류 색·제목·본문·연필, `v8-memory-review.png`) → Add 9 to memory → 목록 → 연필 → EDIT MEMORY(같은 칸들, Rewrite) → Cancel.
   - 쓰는 데 지장 있는 차이(고침): 위 탭 "All repos" 가 모든 레포의 모든 메모리를 세고 보였다(이 레포 9 / All repos 9). 원본은 적용 범위로 나눠 "All repos" 는 모든 레포에 적용되는 것만(0). 같게 고쳤다(목록에서 이 레포 것과 전역 것을 나눠 봄). 확인: 다시 띄워 "All repos 0".
   - 모양 차이(남김): 원본 목록 줄 오른쪽의 켜짐 체크(활성)와 마우스를 올리면 나오는 휴지통(우리는 편집 화면의 Delete), 바닥의 "12 active entries" 문구. 원본 CLI 칩 다섯 개(우리는 깔린 것만). 우리 단계는 Wrap up 이 없다.
-- [ ] V9. node-resume.mp4
+- [x] V9. node-resume.mp4
+  - 원본 조작: 다시 켠 보드, claude 타일마다 "Resume last conversation?" 칩, 오른쪽 위 토스트 "Resume all conversations? 9 consoles…" → Otto 칩 → 그 타일만 WORKING → 지난 대화 → 토스트 "8 consoles" → Yes → 나머지가 차례로 이어짐.
+  - 우리(`env -i`, Workspace 2 를 연 채 Cmd+Q → 다시 띄움): 타일마다 같은 칩(ON HOLD), 토스트 "14 consoles"(`v9-resume-toast.png`) → Iris 칩 Yes → Iris 만 뜸, 토스트 "13 consoles" → 토스트 Yes → 13개가 차례로 떠서 42 live.
+  - 쓰는 데 지장 있는 차이: 없음.
+  - 모양 차이: 이 콘솔들은 질문을 한 적이 없어 이을 대화가 없으므로 claude 첫 화면이 뜬다(원본은 지난 대화). 대화가 있는 콘솔의 이어하기는 3·4차에서 확인. 원본은 이어지는 동안 "Claude lane restored — relaunching." 두 줄을 보이고, 우리는 "Restored — picking up the last conversation..." 한 줄.
 - [ ] V10. node-usage.mp4
 - [ ] V11. node-webtiles.mp4
 - [ ] V12. studio-code.mp4
