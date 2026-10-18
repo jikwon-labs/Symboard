@@ -267,22 +267,42 @@ struct MissionMapView: View {
         .padding(18)
     }
 
+    /// 아무것도 고르지 않았을 때: 원본처럼 Fleet(상태별 수)·Structure(오케스트레이터·팀·콘솔·켜진 루프) 두 카드.
     var overview: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Overview").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
-            ForEach(Array(Self.filters.dropFirst()), id: \.self) { f in
-                HStack {
-                    Circle().fill(Self.color(f)).frame(width: 7, height: 7)
-                    Text(f).foregroundStyle(Color.symText)
-                    Spacer()
-                    Text("\(consoles.filter { Self.bucket(status($0.id)) == f }.count)").font(.system(.body, design: .monospaced)).foregroundStyle(Color.symDim)
+            overviewCard("Fleet", Self.filters.dropFirst().map { f in
+                (f, Self.color(f), consoles.filter { Self.bucket(status($0.id)) == f }.count)
+            })
+            overviewCard("Structure", [
+                ("Orchestrators", nil, orchestrators.count),
+                ("Teams", nil, teams.count),
+                ("Consoles", nil, consoles.count),
+                ("Active loops", nil, ws.loops.filter(\.enabled).count),
+            ])
+            Text("Select a console, a team or an orchestrator to see what it is doing and act on it.")
+                .font(.system(size: 12)).foregroundStyle(Color.symDim).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    func overviewCard(_ title: String, _ rows: [(String, Color?, Int)]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symDim)
+            VStack(spacing: 10) {
+                ForEach(rows, id: \.0) { r in
+                    HStack(spacing: 8) {
+                        if let c = r.1 { Circle().fill(c).frame(width: 7, height: 7) }
+                        Text(r.0).foregroundStyle(Color.symText)
+                        Spacer()
+                        Text("\(r.2)").font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(r.2 == 0 ? Color.symDim : Color.symText)
+                    }
+                    .font(.system(size: 13))
+                    .accessibilityElement(children: .combine)
                 }
-                .font(.system(size: 13))
             }
-            Divider().overlay(Color.symBorder)
-            Text("\(orchestrators.count) orchestrators wire \(Set(links.filter { l in orchestrators.contains { $0.id == l.from } }.map(\.to)).count) targets. \(consoles.filter { orchestrators(of: $0).isEmpty }.count) consoles are only reachable from the command bar.")
-                .font(.system(size: 12)).foregroundStyle(Color.symDim)
-            Text("Select a console or team on the left.").font(.system(size: 12)).foregroundStyle(Color.symDim)
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised.opacity(0.6)))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.symBorder))
         }
     }
 

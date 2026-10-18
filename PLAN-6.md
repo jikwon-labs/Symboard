@@ -81,7 +81,10 @@ STATUS: IN_PROGRESS
   - 원본 장면: `studio-markdown.mp4` 19초. 보드의 마크다운 카드 바닥 왼쪽에 흐린 경로(docs/…/01-threat-model.md), 오른쪽에 아이콘 붙은 글 단추 "Open in Studio" · "PDF".
   - 바꾼 것: `FileCardView` 가 .md 카드 바닥에 프로젝트 기준 경로와 두 글 단추를 그린다. PDF 는 저장 시트로 위치를 고르고 기존 `exportPDF(markdown:to:)` 로 낸다(`exportCardPDF`). 머리의 펼치기 아이콘은 .md 카드에서는 뺐다(코드 카드는 그대로).
   - 확인한 실제 입력(`env -i`, /tmp/symv6-13): Markdown studio → README → Add to Board → 카드 바닥 "README.md · Open in Studio · PDF" → PDF → 저장 시트(README.pdf) → Cmd+Shift+G `/tmp/symv6-13` → Return → Return → `/tmp/symv6-13/README.pdf`(PDF 1쪽, 27KB) → Open in Studio → 마크다운 스튜디오가 README 로 열림. 비교 그림 `compare/13-md-card-footer.png`.
-- [ ] 14. teams: 오른쪽 기본 패널 Fleet / Structure 두 카드
+- [x] 14. teams: 오른쪽 기본 패널 Fleet / Structure 두 카드
+  - 원본 장면: `teams.mp4` 6초. 미션 맵에서 아무것도 고르지 않으면 오른쪽에 "Fleet" 카드(Working·Needs you·Idle·Done 수, 0 은 흐림)와 "Structure" 카드(Orchestrators·Teams·Consoles·Active loops), 아래 안내 한 줄.
+  - 바꾼 것: `MissionMapView.overview` 를 두 카드(`overviewCard`)로. Structure 의 Active loops 는 켜진 루프 수. 예전의 "N orchestrators wire …" 문장은 뺐다(같은 내용이 지도에 보임).
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-1: 그룹 셸 4 + 오케스트레이터 + claude 1): 위 오른쪽 메뉴 → Mission Map → 오른쪽 Fleet(Idle 5, 나머지 0 흐림)·Structure(1·1·5·0)·안내. 비교 그림 `compare/14-mission-overview.png`.
 - [ ] 15. voice: 명령 바 보드 명령 THREAD 패널, 프리셋에 콘솔 말고 다른 노드도
 
 ## 마지막 점검
