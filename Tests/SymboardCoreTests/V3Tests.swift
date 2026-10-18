@@ -120,3 +120,32 @@ import Testing
         #expect(t == "resets 9:00am")
     }
 }
+
+@Suite struct KanbanDropTests {
+    let a = UUID(), b = UUID(), c1 = UUID(), c2 = UUID()
+    var cols: [(id: UUID, frame: Rect)] { [(a, Rect(x: 0, y: 0, w: 200, h: 400)), (b, Rect(x: 210, y: 0, w: 200, h: 400))] }
+
+    @Test func emptyColumnAppends() {
+        let r = Board.dropTarget(x: 300, y: 100, columns: cols, cards: [:])
+        #expect(r?.column == b && r?.index == nil)
+    }
+
+    @Test func aboveACardInsertsBeforeIt() {
+        let cards: [UUID: [(id: UUID, minY: Double, maxY: Double)]] = [a: [(c1, 40, 80), (c2, 90, 130)]]
+        #expect(Board.dropTarget(x: 50, y: 95, columns: cols, cards: cards)?.index == 1)
+        #expect(Board.dropTarget(x: 50, y: 20, columns: cols, cards: cards)?.index == 0)
+        #expect(Board.dropTarget(x: 50, y: 300, columns: cols, cards: cards)?.index == nil)
+    }
+
+    @Test func outsideColumnsIsNil() {
+        #expect(Board.dropTarget(x: 205, y: 100, columns: cols, cards: [:]) == nil)
+    }
+
+    @Test func movedCardLandsInTarget() {
+        var columns = [KanbanColumn(title: "Doing", cards: []), KanbanColumn(title: "Done", cards: [])]
+        columns[0].items = [KanbanCard(title: "Write tests")]
+        let id = columns[0].items![0].id
+        Board.move(card: id, to: columns[1].id, at: nil, in: &columns)
+        #expect(columns[0].allCards.isEmpty && columns[1].allCards.map(\.title) == ["Write tests"])
+    }
+}

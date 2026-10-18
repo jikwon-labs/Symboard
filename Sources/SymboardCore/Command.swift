@@ -128,6 +128,17 @@ public enum Board {
         columns[to].items!.insert(card, at: min(at, columns[to].items!.count))
     }
 
+    /// 끌어 놓은 자리(x, y)가 어느 열의 몇 번째인지. 열 밖이면 nil.
+    /// cards 는 열마다 위에서 아래 순서의 (카드 id, 위쪽 y, 아래쪽 y). 끄는 카드 자신은 빼고 준다.
+    /// 카드의 가운데보다 위에 놓으면 그 카드 앞, 아니면 맨 뒤(index nil).
+    public static func dropTarget(x: Double, y: Double, columns: [(id: UUID, frame: Rect)],
+                                  cards: [UUID: [(id: UUID, minY: Double, maxY: Double)]]) -> (column: UUID, index: Int?)? {
+        guard let col = columns.first(where: { x >= $0.frame.x && x <= $0.frame.x + $0.frame.w && y >= $0.frame.y && y <= $0.frame.y + $0.frame.h }) else { return nil }
+        let list = cards[col.id] ?? []
+        if let i = list.firstIndex(where: { y < ($0.minY + $0.maxY) / 2 }) { return (col.id, i) }
+        return (col.id, nil)
+    }
+
     /// 월 격자(월요일 시작, 6주 42칸). 그달이 아닌 날도 채운다.
     public static func monthGrid(for date: Date, calendar: Calendar) -> [Date] {
         var cal = calendar

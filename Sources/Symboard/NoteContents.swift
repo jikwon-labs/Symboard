@@ -272,6 +272,11 @@ struct KanbanView: View {
     /// 카드 모달: (열 id, 고치는 카드 id 또는 nil)
     @State private var editor: (UUID, UUID?)?
     @State private var dropTarget: UUID?
+    /// 끄는 중인 카드와 커서 자리(칸반 좌표). 시스템 끌어 놓기 대신 보통 마우스 끌기로 옮긴다
+    /// (시스템 끌어 놓기는 실제 커서만 따라가서 확대된 캔버스·자동 입력에서 놓이지 않았다).
+    @State private var drag: (id: UUID, location: CGPoint)?
+    @State private var colFrames: [UUID: CGRect] = [:]
+    @State private var cardFrames: [UUID: CGRect] = [:]
 
     var columns: [KanbanColumn] { box.node.kanban ?? [] }
 
@@ -315,6 +320,18 @@ struct KanbanView: View {
                 }
             }
         }
+        .overlay {
+            if let d = drag, let card = columns.flatMap(\.allCards).first(where: { $0.id == d.id }) {
+                CardView(card: card) {}
+                    .frame(width: 176)
+                    .shadow(color: .black.opacity(0.5), radius: 10, y: 4)
+                    .position(d.location)
+                    .allowsHitTesting(false)
+            }
+        }
+        .coordinateSpace(name: "kanban")
+        .onPreferenceChange(KanbanFrames.Columns.self) { colFrames = $0 }
+        .onPreferenceChange(KanbanFrames.Cards.self) { cardFrames = $0 }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.symSurface)
         .onReceive(NotificationCenter.default.publisher(for: .openCardEditor)) { note in
@@ -359,9 +376,17 @@ struct KanbanView: View {
                                 n.kanban = cols
                             }
                         }
+                        .background(GeometryReader { g in
+                            Color.clear.preference(key: KanbanFrames.Cards.self, value: [card.id: g.frame(in: .named("kanban"))])
+                        })
+                        .opacity(drag?.id == card.id ? 0.3 : 1)
                         .onTapGesture { editor = (col.id, card.id) }
-                        .draggable(card.id.uuidString)
-                        .dropDestination(for: String.self) { ids, _ in drop(ids, to: col.id, before: card.id) }
+                        .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("kanban"))
+                            .onChanged { v in
+                                drag = (card.id, v.location)
+                                dropTarget = target(card.id, at: v.location)?.column
+                            }
+                            .onEnded { v in finishDrag(card.id, at: v.location) })
                     }
                 }
             }
@@ -378,21 +403,35 @@ struct KanbanView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised.opacity(dropTarget == col.id ? 1 : 0.6)))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(dropTarget == col.id ? Color.symAccent.opacity(0.6) : Color.symBorder))
-        .dropDestination(for: String.self) { ids, _ in drop(ids, to: col.id, before: nil) } isTargeted: { on in
-            dropTarget = on ? col.id : (dropTarget == col.id ? nil : dropTarget)
-        }
+        .background(GeometryReader { g in
+            Color.clear.preference(key: KanbanFrames.Columns.self, value: [col.id: g.frame(in: .named("kanban"))])
+        })
     }
 
-    func drop(_ ids: [String], to col: UUID, before: UUID?) -> Bool {
-        guard let s = ids.first, let id = UUID(uuidString: s), id != before else { return false }
+    /// 커서 자리에 놓으면 들어갈 열과 위치. 끄는 카드 자신은 순서 계산에서 뺀다.
+    func target(_ id: UUID, at p: CGPoint) -> (column: UUID, index: Int?)? {
+        let cols = columns.compactMap { c in colFrames[c.id].map { f in (id: c.id, frame: Rect(x: f.minX, y: f.minY, w: f.width, h: f.height)) } }
+        var cards: [UUID: [(id: UUID, minY: Double, maxY: Double)]] = [:]
+        for c in columns {
+            cards[c.id] = c.allCards.filter { $0.id != id }.compactMap { k in cardFrames[k.id].map { (k.id, Double($0.minY), Double($0.maxY)) } }
+        }
+        return Board.dropTarget(x: p.x, y: p.y, columns: cols, cards: cards)
+    }
+
+    func finishDrag(_ id: UUID, at p: CGPoint) {
+        defer { drag = nil; dropTarget = nil }
+        guard let t = target(id, at: p) else { return }
         box.update { n in
             guard var cols = n.kanban else { return }
-            var at: Int?
-            if let b = before, let ci = cols.firstIndex(where: { $0.id == col }) { at = cols[ci].allCards.firstIndex { $0.id == b } }
-            Board.move(card: id, to: col, at: at, in: &cols)
+            // 같은 열에서 순서만 바꿀 때 index 는 "자신을 뺀 목록" 기준이므로, 먼저 빼고 넣는다.
+            Board.move(card: id, to: t.column, at: nil, in: &cols)
+            if let at = t.index, let ci = cols.firstIndex(where: { $0.id == t.column }),
+               let from = cols[ci].items?.firstIndex(where: { $0.id == id }) {
+                let card = cols[ci].items!.remove(at: from)
+                cols[ci].items!.insert(card, at: min(at, cols[ci].items!.count))
+            }
             n.kanban = cols
         }
-        return true
     }
 
     func addColumn() {
@@ -561,5 +600,18 @@ struct CardEditor: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.symSurface))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.symBorder))
         .shadow(color: .black.opacity(0.5), radius: 20, y: 6)
+    }
+}
+
+
+/// 칸반 끌기에 쓰는 열·카드 자리(칸반 좌표).
+enum KanbanFrames {
+    struct Columns: PreferenceKey {
+        static let defaultValue: [UUID: CGRect] = [:]
+        static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) { value.merge(nextValue()) { $1 } }
+    }
+    struct Cards: PreferenceKey {
+        static let defaultValue: [UUID: CGRect] = [:]
+        static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) { value.merge(nextValue()) { $1 } }
     }
 }
