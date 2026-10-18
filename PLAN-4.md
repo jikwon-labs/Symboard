@@ -15,9 +15,10 @@ STATUS: IN_PROGRESS
 | 3 | 4번 작업 중 | Ada | write a 200-word paragraph about ocean tides, no tools (5초 안에 끝나 미션 맵을 못 봄) |
 | 4 | 4번 작업 중 | Ada | write about 600 words on the history of mechanical clocks, no tools |
 | 5 | R 문서 생성 | 문서 스튜디오(/tmp/symsample) | a 5-line README for this repo (실시간 안 그려짐 재현) |
+| 7 | S 다이어그램 | 다이어그램 칸(/tmp/symsample) | how hello.py uses util.py |
 | 6 | R 문서 생성 | 문서 스튜디오(/tmp/symsample) | a 5-line README for this repo (고친 뒤 확인) |
 
-합계: 6
+합계: 7
 
 ## 고칠 것
 
@@ -105,7 +106,9 @@ STATUS: IN_PROGRESS
   - 원인: 종이 웹뷰가 "0.25초 뒤에 그리기" 예약을 조각이 올 때마다 취소하고 다시 걸었다(디바운스). 조각이 0.25초보다 자주 오니 끝날 때까지 한 번도 그려지지 않았다.
   - 고침: 예약이 걸려 있으면 그릴 내용만 바꾸고 예약은 그대로 둔다(0.25초마다 마지막 내용을 그림).
   - 확인(질문 6): 같은 입력 → 0.7초 간격 캡처에서 21s·22s·23s·24s·25s 마다 표·제목·코드 블록이 차례로 늘고 아래로 따라 내려감(`R-live-streaming.png`). 끝나면 문서 목록에 저장(`/tmp/symv4n/docs/…/custom-….md`).
-- [ ] 9. S 다이어그램 생성: 실제 질문 1회, 손그림 스타일, 노드 옮기면 선이 따라옴
+- [x] 9. S 다이어그램 생성: 실제 질문 1회, 손그림 스타일, 노드 옮기면 선이 따라옴
+  - 원본(`studio-diagrams.jpg`, `agent3/diagrams-*.png`): 그리는 동안 보드에 자리표시 틀과 "… is drawing" 알약, 끝나면 손그림 상자·화살표·라벨·그룹 점선 틀이 보드에 바로 놓인다. 우리 쪽이 같다. 차이는 찾지 못했다.
+  - 확인한 실제 입력(질문 7, 새 상태 /tmp/symv4o): 왼쪽 막대 다이어그램 → 열리자마자 설명 칸에 "how hello.py uses util.py" → Return → 약 13초 동안 손그림 자리표시 세 상자와 "Claude Code is drawing"(`S-drawing-placeholder.png`) → 제목·그룹 점선 틀 3개·손그림 상자 8개·라벨 붙은 화살표가 약 1초에 걸쳐 차례로 놓이고 전체 맞춤(`S-diagram.png`) → "stdout" 상자를 실제로 끌어 아래로 옮김 → "prints to" 화살표가 새 자리로 따라옴, 속성 막대(Sketch·Hand)(`S-node-moved.png`).
 
 ## 하루 쓰기 흐름 (새 SYMBOARD_HOME, /tmp/symday)
 
