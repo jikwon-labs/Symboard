@@ -87,3 +87,42 @@ import Testing
         #expect(LoginPath.runProbe(shell: "/nonexistent/shell", arguments: [], timeout: 1) == nil)
     }
 }
+
+@Suite struct UsagePillCLITests {
+    let seoul = TimeZone(identifier: "Asia/Seoul")!
+    func at(_ h: Int, _ m: Int = 0) -> Date {
+        var c = Calendar(identifier: .gregorian); c.timeZone = seoul
+        return c.date(from: DateComponents(year: 2026, month: 10, day: 18, hour: h, minute: m))!
+    }
+    let limits = [PlanLimit(name: "Current session", percent: 4, resets: "9:59pm (Asia/Seoul)"),
+                  PlanLimit(name: "Current week (all models)", percent: 20, resets: "Oct 22 at 8am (Asia/Seoul)")]
+
+    @Test func usesCLIResetAndPercentWhenFresh() {
+        let d = UsagePill.display(limits: limits, readAt: at(17, 20), blockEnds: [at(22)], now: at(17, 30), timeZone: seoul)
+        #expect(d == UsagePill.Display(text: "resets 9:59pm", percent: 4, fromCLI: true))
+    }
+
+    @Test func fallsBackToEstimateAfterCLIResetPassed() {
+        let d = UsagePill.display(limits: limits, readAt: at(17, 20), blockEnds: [at(23)], now: at(22, 5), timeZone: seoul)
+        #expect(!d.fromCLI)
+        #expect(d.percent == nil)
+        #expect(d.text == "resets 11:00pm")
+    }
+
+    @Test func fallsBackWhenNoCLIValue() {
+        let d = UsagePill.display(limits: [], readAt: nil, blockEnds: [at(22)], now: at(17), timeZone: seoul)
+        #expect(d == UsagePill.Display(text: "resets 10:00pm", percent: nil, fromCLI: false))
+    }
+
+    @Test func resetDateRollsToNextDayAndKeepsZone() {
+        #expect(PlanUsageParser.resetDate("10pm (Asia/Seoul)", after: at(17), timeZone: .gmt) == at(22))
+        #expect(PlanUsageParser.resetDate("2am (Asia/Seoul)", after: at(23)) == at(23).addingTimeInterval(3 * 3600))
+        #expect(PlanUsageParser.resetDate("12:30pm", after: at(9), timeZone: seoul) == at(12, 30))
+        #expect(PlanUsageParser.resetDate("Oct 22 at 8am (Asia/Seoul)", after: at(9)) == nil)
+    }
+
+    @Test func shortResetDropsZone() {
+        #expect(PlanUsageParser.shortReset("9:59pm (Asia/Seoul)") == "9:59pm")
+        #expect(PlanUsageParser.shortReset("10PM") == "10pm")
+    }
+}

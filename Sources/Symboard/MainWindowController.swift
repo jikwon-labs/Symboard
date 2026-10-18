@@ -52,9 +52,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         buildUI()
         observe()
         DispatchQueue.main.async { [weak self] in self?.model.usage.refresh() }
+        // 알약이 CLI 와 같은 시각·% 를 보이도록 /usage 도 읽는다(질문 아님). 창이 먼저 뜨게 조금 늦춘다.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.model.usage.refreshLimitsIfStale() }
         // 5시간 묶음이 끝나고 새로 시작한 것도 알약에 보이게 가끔 다시 훑는다.
         usageTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.model.usage.refresh() }
+            MainActor.assumeIsolated {
+                self?.model.usage.refresh()
+                self?.model.usage.refreshLimitsIfStale()
+            }
         }
         showWorkspace(model.selectedWorkspace.id)
         // 열 프로젝트가 없으면(새 상태 폴더) 홈 화면의 폴더 열기로 시작한다.
@@ -373,8 +378,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         sidePanel.refreshStatuses()
         currentCanvas?.layoutGroups()
         StatusBeat.shared.tick &+= 1
-        let reset = model.usage.resetText
-        if chrome.resetText != reset { chrome.resetText = reset }
+        let pill = model.usage.pill
+        if chrome.resetText != pill.text { chrome.resetText = pill.text }
+        if chrome.sessionPercent != pill.percent { chrome.sessionPercent = pill.percent }
         let pending = model.sessions.pendingResume.count
         if chrome.resumeCount != pending { chrome.resumeCount = pending }
         let live = model.sessions.liveCount

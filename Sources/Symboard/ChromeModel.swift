@@ -64,6 +64,8 @@ final class ChromeModel: ObservableObject {
     @Published var toast: String?
     @Published var loopBadge = 0
     @Published var resetText = UsagePill.placeholder
+    /// CLI `/usage` 의 세션 % (없으면 nil, 로그 짐작값만 보일 때).
+    @Published var sessionPercent: Int?
     /// 이어하기 답을 기다리는 콘솔 수와 토스트를 닫았는지.
     @Published var missionOpen = false
     @Published var insertOpen = false

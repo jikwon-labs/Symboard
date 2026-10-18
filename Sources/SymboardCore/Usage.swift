@@ -270,6 +270,26 @@ public enum UsagePill {
         f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = timeZone
         return "resets " + f.string(from: e)
     }
+
+    /// 알약에 보일 것. percent 가 있으면 CLI 가 보여 준 세션 한도(링으로 그린다).
+    public struct Display: Equatable, Sendable {
+        public var text: String
+        public var percent: Int?
+        public var fromCLI: Bool
+        public init(text: String, percent: Int?, fromCLI: Bool) { self.text = text; self.percent = percent; self.fromCLI = fromCLI }
+    }
+
+    /// CLI 한도(`/usage`·`/status`)의 세션 줄이 있고 그 초기화 시각이 아직 안 지났으면 그것을, 아니면 로그로 짐작한 5시간 묶음 끝을 쓴다.
+    public static func display(limits: [PlanLimit], readAt: Date?, blockEnds: [Date], now: Date = Date(),
+                               timeZone: TimeZone = .current) -> Display {
+        if let readAt, let s = limits.first(where: { PlanUsageParser.isSession($0.name) }), let r = s.resets {
+            let due = PlanUsageParser.resetDate(r, after: readAt, timeZone: timeZone)
+            if due.map({ $0 > now }) ?? (now.timeIntervalSince(readAt) < 5 * 3600) {
+                return Display(text: "resets " + PlanUsageParser.shortReset(r), percent: s.percent, fromCLI: true)
+            }
+        }
+        return Display(text: text(blockEnds: blockEnds, now: now, timeZone: timeZone), percent: nil, fromCLI: false)
+    }
 }
 
 /// claude `/usage` 화면에서 읽은 요금제 한도 한 줄.
@@ -289,6 +309,44 @@ public struct PlanLimit: Equatable, Sendable {
 ///   █████████                  18% used
 ///   Resets Oct 22 at 8am (Asia/Seoul)
 public enum PlanUsageParser {
+    /// 5시간 세션 줄인지("Current session", codex 의 "5h limit" 등).
+    public static func isSession(_ name: String) -> Bool {
+        let n = name.lowercased()
+        return n.hasPrefix("current session") || n.hasPrefix("5h") || n.hasPrefix("session")
+    }
+
+    /// "9:59pm (Asia/Seoul)" → "9:59pm". 시간대 괄호를 떼고 Am/PM 을 소문자로.
+    public static func shortReset(_ resets: String) -> String {
+        var t = resets
+        if let r = t.range(of: " (") { t = String(t[..<r.lowerBound]) }
+        return t.replacingOccurrences(of: "AM", with: "am").replacingOccurrences(of: "PM", with: "pm")
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    /// "10pm", "9:59pm (Asia/Seoul)" 처럼 시각만 있는 값을 readAt 뒤 처음 오는 그 시각으로 바꾼다. 날짜가 붙은 값은 nil.
+    public static func resetDate(_ resets: String, after readAt: Date, timeZone: TimeZone = .current) -> Date? {
+        var tz = timeZone
+        if let open = resets.range(of: "("), let close = resets.range(of: ")", range: open.upperBound..<resets.endIndex),
+           let named = TimeZone(identifier: String(resets[open.upperBound..<close.lowerBound])) { tz = named }
+        let t = shortReset(resets).lowercased()
+        guard let m = t.range(of: #"^(\d{1,2})(?::(\d{2}))?(am|pm)$"#, options: .regularExpression), m == t.startIndex..<t.endIndex else { return nil }
+        let pm = t.hasSuffix("pm")
+        let body = t.dropLast(2)
+        let parts = body.split(separator: ":")
+        guard var h = Int(parts[0]), h >= 1, h <= 12 else { return nil }
+        let min = parts.count > 1 ? Int(parts[1]) ?? 0 : 0
+        if h == 12 { h = 0 }
+        if pm { h += 12 }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = tz
+        var day = cal.startOfDay(for: readAt)
+        for _ in 0..<2 {
+            if let d = cal.date(bySettingHour: h, minute: min, second: 0, of: day), d > readAt { return d }
+            day = cal.date(byAdding: .day, value: 1, to: day)!
+        }
+        return nil
+    }
+
     public static func parse(_ screen: String) -> [PlanLimit] {
         let lines = screen.replacingOccurrences(of: "\u{0}", with: " ").split(separator: "\n", omittingEmptySubsequences: false)
             .map { $0.trimmingCharacters(in: .whitespaces) }

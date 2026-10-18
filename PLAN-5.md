@@ -26,7 +26,11 @@ STATUS: IN_PROGRESS
   - 단위 테스트 12개(`V5Tests.swift`): 잡음 섞인 출력, 표식 두 번, 잘린·빈 출력, 합치기, 셸 성공, 실패·시간 초과 대체 경로, nvm 버전 고르기, which, 실제 셸 잡음, 표식 뒤 안 끝나는 셸, 멈춘 셸 시간 초과, 없는 셸.
   - 확인한 실제 입력(`env -i`, SYMBOARD_HOME=/tmp/symv5-1): 로그 `Symboard PATH (shell, 0.37s): /Users/jikwon/.nvm/...`. Open folder → Cmd+Shift+G `/tmp/symsample` → 별 → 메뉴에 Claude Code·Codex·Shell(`1-spawn-menu-envi.png`) → Claude Code → 캔버스 클릭 → Ada 신뢰 화면 NEEDS YOU(`1-claude-node-envi.png`) → ↓ Return → READY. 사용량 알약 클릭 → 4% used, 주간 20%(`1-usage-envi.png`). main 칩 → git 카드 변경 7개·Commit & Push(`1-git-envi.png`). 문서 스튜디오 → Quick → "a 5-line README for this repo" → 22초에 완성(`1-doc-generated-envi.png`). 루프 Start from scratch → "Path check" / "reply with just the word ok, no tools" → ▶ → Ada 에 보내져 답함(1 runs). 앱 다시 띄움 → 이어하기 토스트 Yes → 루프 Edit → 목표 명령 `command -v claude codex > /tmp/symv5-loopgoal.txt` → ▶ → "goal met", 파일에 nvm 의 claude·codex 경로(`1-loop-goal-envi.png`).
   - 대체 경로: `SHELL=/usr/bin/false` 로 띄우면 로그 `PATH (fallback, 0.01s): ~/.nvm/versions/node/v24.17.0/bin:~/.local/bin:~/Library/pnpm:/opt/homebrew/bin:...`.
-- [ ] 2. 사용량 알약과 팝오버의 시각이 다르다 (`/usage` 값 우선, 세션 % 함께)
+- [x] 2. 사용량 알약과 팝오버의 시각이 다르다 (`/usage` 값 우선, 세션 % 함께)
+  - 재현: 알약은 로그로 짐작한 5시간 묶음 끝("resets 10:00pm"), 팝오버는 `/usage` 의 "Resets 9:59pm" 이었다. `/usage` 는 팝오버를 열 때만 읽었다.
+  - 원인: 알약(`UsageStore.resetText`)이 `/usage` 값을 보지 않았다.
+  - 고침: `UsagePill.display`(Core) 가 `/usage` 의 세션 줄과 초기화 시각이 있고 그 시각이 아직 안 지났으면(`PlanUsageParser.resetDate` 로 "9:59pm (Asia/Seoul)" 을 실제 시각으로 바꿔 비교) "resets 9:59pm" 과 세션 % 를, 아니면 짐작값을 쓴다. 알약에는 원본처럼 작은 % 링(`SessionRing`)을 시계 아이콘 옆에 그린다. 앱 시작 3초 뒤와 5분마다 `/usage` 가 15분 넘게 묵었거나 초기화 시각이 지났으면 다시 읽는다(claude 가 깔렸을 때만, 질문 아님). 단위 테스트 5개.
+  - 확인한 실제 입력(`env -i`, /tmp/symv5-1): 띄우고 20초 뒤 알약 "링 5 · resets 10pm". 알약 클릭 → 팝오버 "5% used · Resets 10pm (Asia/Seoul)" 로 같다(`2-pill-matches-usage.png`).
 - [ ] 3. codex 사용량 (X 탭)
 - [ ] 4. 움직임 (스튜디오 → 카드 줄어들기, 다이어그램 노드 미끄러지기, 노드 추가·닫기, 팝오버)
 - [ ] 5. 앱 아이콘과 Dock (번들 아이콘, Dock·Cmd+Tab, 창 닫은 뒤 Dock 클릭으로 다시 열기)

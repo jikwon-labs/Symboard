@@ -45,6 +45,13 @@ final class UsageStore: ObservableObject {
         }
     }
 
+    /// 15분이 지났거나 세션 초기화 시각이 지났으면 /usage 를 다시 읽는다. claude 가 없으면 하지 않는다.
+    func refreshLimitsIfStale() {
+        guard AgentCatalog.shared.installed.contains("claude") else { return }
+        let age = limitsAt.map { Date().timeIntervalSince($0) } ?? .infinity
+        if age > 900 || (limitsAt != nil && !pill.fromCLI) { refreshLimits() }
+    }
+
     func refresh() {
         guard !scanning else { return }
         scanning = true
@@ -104,13 +111,14 @@ final class UsageStore: ObservableObject {
         return (records, count)
     }
 
-    /// 위쪽 알약 문구: 가장 가까운 5시간 묶음 끝. 아직 훑기 전이면 지난번에 구한 값(prefs.json)을 쓴다.
-    var resetText: String {
+    /// 위쪽 알약: claude `/usage` 의 세션 % 와 초기화 시각. 그 값이 없거나 지났으면 가장 가까운 5시간 묶음 끝(짐작).
+    /// 아직 훑기 전이면 지난번에 구한 묶음 끝(prefs.json)을 쓴다.
+    var pill: UsagePill.Display {
         var ends = stats.values.compactMap(\.blockEnd)
         if scannedAt == nil, let cached = Prefs.shared.string("usage.blockEnd").flatMap(Double.init) {
             ends.append(Date(timeIntervalSince1970: cached))
         }
-        return UsagePill.text(blockEnds: ends)
+        return UsagePill.display(limits: limits, readAt: limitsAt, blockEnds: ends)
     }
 }
 
