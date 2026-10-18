@@ -209,3 +209,17 @@ enum ScreenSamples {
         #expect(r?.zoom == 0.5)
     }
 }
+
+@Suite struct KeyInputTests {
+    /// 실제로 찍힌 값: 한글 입력 소스에서 Ctrl+C 는 characters [3], ignoringModifiers [12618 = ㅊ].
+    @Test func koreanLayoutCtrlCSendsETX() {
+        #expect(KeyInput.controlByte(control: true, command: false, option: false, characters: "\u{3}", ignoringModifiers: "\u{314A}") == 3)
+    }
+    @Test func englishLayoutIsLeftToSwiftTerm() {
+        #expect(KeyInput.controlByte(control: true, command: false, option: false, characters: "\u{3}", ignoringModifiers: "c") == nil)
+    }
+    @Test func cmdOrPlainKeysAreIgnored() {
+        #expect(KeyInput.controlByte(control: false, command: false, option: false, characters: "ㅊ", ignoringModifiers: "ㅊ") == nil)
+        #expect(KeyInput.controlByte(control: true, command: true, option: false, characters: "\u{3}", ignoringModifiers: "ㅊ") == nil)
+    }
+}

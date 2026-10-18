@@ -37,3 +37,17 @@ public enum CanvasLayout {
         return (Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2), magnification * min(1, fit))
     }
 }
+
+/// 키 입력 해석.
+public enum KeyInput {
+    /// Ctrl+글자에서 터미널로 보낼 제어 문자. 영문 자판처럼 SwiftTerm 이 스스로 처리할 수 있으면 nil.
+    /// 한글 입력 소스에서는 charactersIgnoringModifiers 가 "ㅊ" 같은 자모로 와서 SwiftTerm 이 아무것도 보내지 않는다.
+    /// 그때는 characters 에 든 제어 문자(Ctrl+C 면 3)를 쓴다.
+    public static func controlByte(control: Bool, command: Bool, option: Bool, characters: String?, ignoringModifiers: String?) -> UInt8? {
+        guard control, !command, !option else { return nil }
+        if let raw = ignoringModifiers?.unicodeScalars.first, raw.isASCII { return nil }
+        guard let scalars = characters?.unicodeScalars, scalars.count == 1,
+              let v = scalars.first?.value, v < 0x20 else { return nil }
+        return UInt8(v)
+    }
+}

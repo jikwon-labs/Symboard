@@ -257,7 +257,17 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             MainActor.assumeIsolated {
+                if let path = ProcessInfo.processInfo.environment["SYMBOARD_KEYLOG"] {
+                    // 시험 도구가 보낸 키가 어떤 모양으로 오는지 확인용.
+                    let line = "key code=\(event.keyCode) chars=\(Array((event.characters ?? "").unicodeScalars).map { $0.value }) raw=\(Array((event.charactersIgnoringModifiers ?? "").unicodeScalars).map { $0.value }) flags=\(event.modifierFlags.rawValue) win=\(event.window?.windowNumber ?? -1)\n"
+                    if let h = FileHandle(forWritingAtPath: path) { h.seekToEndOfFile(); h.write(Data(line.utf8)); try? h.close() }
+                    else { try? line.write(toFile: path, atomically: true, encoding: .utf8) }
+                }
                 guard let self, event.window === self.window else { return event }
+                if let term = self.window?.firstResponder as? SymTerminalView, let byte = SymTerminalView.rawControlByte(event) {
+                    term.send([byte])
+                    return nil
+                }
                 // Esc 는 열린 모달부터 닫는다. 닫지 않으면 다음 클릭이 어두운 배경을 눌러 모달을 닫는 데 쓰여 "첫 클릭 무시" 처럼 보였다.
                 if event.keyCode == 53, self.closeTopOverlay() { return nil }
                 if event.keyCode == 53, self.chrome.tool != .select {

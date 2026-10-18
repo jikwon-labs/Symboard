@@ -1,6 +1,6 @@
 #!/bin/bash
 # orca computer 로 Symboard 에 실제 클릭·키 입력을 보내고, 화면을 /tmp/symui/last.png 로 복사한다.
-# 사용: ui.sh state | click X Y [N] | dclick X Y | rclick X Y | type TEXT | key KEY | hotkey CHORD | drag X1 Y1 X2 Y2 | scroll X Y DIR
+# 사용: ui.sh state | click X Y [N] | wclick WINDOW_ID X Y | dclick X Y | rclick X Y | type TEXT | key KEY | hotkey CHORD | drag X1 Y1 X2 Y2 | scroll X Y DIR
 # 좌표는 창 기준 포인트. 결과로 접근성 트리(이름 있는 것만 줄여서)를 출력한다.
 set -uo pipefail
 export PATH=/Applications/Orca.app/Contents/Resources/bin:$PATH
@@ -12,6 +12,8 @@ case "$cmd" in
   state) run get-app-state --restore-window ;;
   click) n="${3:-1}"; for _ in $(seq 1 "$n"); do run click --x "$1" --y "$2"; done ;;
   dclick) run click --x "$1" --y "$2" --click-count 2 ;;
+  # 확인창(NSAlert)처럼 따로 뜬 창은 창 id(CGWindowList 번호)로 겨눈다. 좌표는 그 창 기준.
+  wclick) run click --window-id "$1" --x "$2" --y "$3" ;;
   rclick) run click --x "$1" --y "$2" --mouse-button right ;;
   type) run type-text --text "$1" ;;
   key) run press-key --key "$1" ;;

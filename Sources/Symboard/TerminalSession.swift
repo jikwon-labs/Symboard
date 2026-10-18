@@ -12,6 +12,16 @@ final class SymTerminalView: LocalProcessTerminalView {
         onOutput?(slice)
     }
 
+    /// Ctrl+글자는 SwiftTerm 이 charactersIgnoringModifiers 의 글자(c)를 제어 문자로 바꿔 보낸다.
+    /// 그런데 입력 소스가 한글이면 그 값이 "ㅊ" 처럼 한글 자모로 와서 SwiftTerm 이 아무것도 보내지 않는다(Ctrl+C 가 안 먹음).
+    /// 이때 event.characters 에는 시스템이 만든 제어 문자(Ctrl+C 면 3)가 들어 있으므로 그것을 돌려준다.
+    /// keyDown 은 덮어쓸 수 없어 창의 키 감시에서 부른다.
+    static func rawControlByte(_ event: NSEvent) -> UInt8? {
+        let flags = event.modifierFlags
+        return KeyInput.controlByte(control: flags.contains(.control), command: flags.contains(.command), option: flags.contains(.option),
+                                    characters: event.characters, ignoringModifiers: event.charactersIgnoringModifiers)
+    }
+
     override func send(source: TerminalView, data: ArraySlice<UInt8>) {
         onUserInput?()
         super.send(source: source, data: data)

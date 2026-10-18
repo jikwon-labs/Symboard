@@ -54,7 +54,12 @@ STATUS: IN_PROGRESS
   - 원인: 3차의 자리 조정(`CanvasLayout.fit`)은 클릭으로 놓는 `place` 에만 있었다.
   - 고침: 인스펙터·복제·다이어그램처럼 다른 노드와 붙은 자리는 옮기면 안 되므로, 노드는 그대로 두고 화면을 옮긴다. `CanvasLayout.reveal`(단위 테스트 3개)이 만든 노드(인스펙터는 웹 타일과 함께)를 담는 사각형이 막대를 뺀 보이는 영역 밖이면 그 가운데로 옮기고, 안 들어가면 배율만 줄인다(키우지 않음). 복제, 인스펙터, 자리 없이 만드는 `addNode`/`addTerminal`, 이미지에 붙였다. 컴포저 그룹(`zoomToFitFrames`)과 다이어그램 결과(`zoomToFit`)는 이미 끝에 막대 여백을 둔 전체 맞춤을 한다.
   - 확인한 실제 입력: 새 상태 /tmp/symv4f → 왼쪽 막대 지구 → 캔버스 오른쪽(1300,450) 클릭 → 웹 타일이 오른쪽 막대 바로 옆 → 타일의 벌레 단추 → 인스펙터와 웹 타일이 모두 보이게 87% 로 옮겨짐, 연결선(`7-inspector-revealed.png`). 인스펙터가 고른 채로 왼쪽 막대 복제 단추 → 복제본이 화면 안에 보이게 옮겨짐(`7-duplicate-revealed.png`). 컴포저 그룹은 1·2번 시험에서 Spawn 뒤 막대에 가리지 않는 것을 봤다.
-- [ ] 8. 셸 Ctrl+C 실제 입력 확인(`sleep 100` 끊기)
+- [x] 8. 셸 Ctrl+C 실제 입력 확인(`sleep 100` 끊기)
+  - 재현: 셸 노드 클릭 → `sleep 100` → Return → orca `hotkey Ctrl+C`(Control+C, ctrl+c, type-text 로 문자 3 도 시도) → 계속 RUNNING, 끊기지 않음.
+  - 원인 찾기: 환경 변수 `SYMBOARD_KEYLOG` 로 창 키 이벤트를 기록해 보니 Ctrl+C 는 창까지 왔다(code 8, characters [3], control). 그런데 charactersIgnoringModifiers 가 12618("ㅊ") 였다. 이 머신 입력 소스가 한글이라서다. SwiftTerm 은 charactersIgnoringModifiers 의 영문 글자로 제어 문자를 만들고, 영문이 아니면 아무것도 보내지 않는다. 시험 도구 문제가 아니라 한글 입력 상태의 실제 사용자도 Ctrl+C·Ctrl+D·Ctrl+R 이 안 먹는 버그다.
+  - 고침: 창 키 감시에서 터미널에 초점이 있고 Ctrl(Cmd·Option 없이)인데 charactersIgnoringModifiers 가 영문이 아니면 characters 의 제어 문자를 그대로 보낸다(`KeyInput.controlByte`, 단위 테스트 3개, 실제로 찍힌 값으로). 영문 자판은 SwiftTerm 그대로.
+  - CGEvent 도구(`scripts/input/cgclick`)는 이 터미널에 이벤트 보내기 권한이 없어(`CGPreflightPostEventAccess` false) 쓰지 않았다. 대신 cgclick 이 팝오버가 아니라 본 창을 기준으로 잡게 고쳐 두었다.
+  - 확인한 실제 입력: 셸 노드 클릭 → "sleep 100" → Return → 3초 뒤 RUNNING(working) → orca `hotkey Ctrl+C` → 화면 `^C`, 프롬프트에 `INT ✘ took 4s`, READY(`8-shell-ctrl-c.png`). 고친 뒤 두 번 확인.
 
 ## 다시 눌러 볼 화면
 
