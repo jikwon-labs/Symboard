@@ -58,6 +58,8 @@ final class ChromeModel: ObservableObject {
     @Published var spawnMenuOpen = false
     @Published var panelOpen = false
     @Published var suggestion: String? = "Try \"@all git status\""
+    /// 모달·팝오버가 하나라도 열려 있으면 true. 안내 알약을 숨긴다.
+    @Published var overlayOpen = false
     @Published var toast: String?
     @Published var loopBadge = 0
     @Published var resetText = UsagePill.placeholder

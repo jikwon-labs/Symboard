@@ -450,13 +450,13 @@ struct BottomBar: View {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.symAccent)
                     Text(cf.message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
                     Button(cf.button) { chrome.confirm = nil; cf.action() }
-                        .buttonStyle(PillButtonStyle(prominent: true))
+                        .buttonStyle(PillButtonStyle(prominent: true)).axName(cf.button)
                     Button("Cancel") { chrome.confirm = nil }.axName("Cancel")
                         .buttonStyle(PillButtonStyle())
                 }
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .floatingCapsule(radius: 14)
-            } else if let s = chrome.suggestion {
+            } else if let s = chrome.suggestion, !chrome.overlayOpen {
                 HStack(spacing: 6) {
                     Button(s) { chrome.command = "@all git status"; focused = true }
                         .buttonStyle(.plainHit).axName(s)

@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 import SymboardCore
 
@@ -168,6 +169,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             loopsHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         loopsObserver = chrome.$loopsPage.sink { page in loopsHost.isHidden = page == nil }
+        // 안내 알약("Try @all …")은 모달·팝오버가 열려 있으면 숨긴다(팝오버 뒤로 비치지 않게).
+        overlayObserver = Publishers.MergeMany(chrome.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+                                               composer.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+                                               studioState.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+                                               memoryHub.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+                                               diagrams.objectWillChange.map { _ in () }.eraseToAnyPublisher())
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.updateOverlayFlag() }
         composerObserver = composer.$open.removeDuplicates().sink { [weak self] open in
             DispatchQueue.main.async { self?.syncComposerPopover(open) }
         }
@@ -962,6 +971,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     weak var composerAnchor: NSView?
     private var composerPopover: NSPopover?
     private var composerObserver: Any?
+    private var overlayObserver: Any?
+
+    private func updateOverlayFlag() {
+        let c = chrome
+        let open = c.spawnMenuOpen || c.insertOpen || c.shapeOpen || c.gitOpen || c.usageOpen || c.accountsOpen
+            || c.missionOpen || c.loopsPage != nil || composer.open || studioState.kind != nil || memoryHub.page != nil
+            || diagrams.open || c.panelOpen
+        if c.overlayOpen != open { c.overlayOpen = open }
+    }
 
     /// 컴포저 카드는 AppKit 팝오버로 띄운다. SwiftUI 팝오버는 타일 줄이 늘 때 위쪽을 고정한 채 아래로 자라
     /// 아래 단추 줄과 명령 입력을 가렸다. AppKit 팝오버는 단추 쪽(아래)을 고정하고 위로 자란다.
