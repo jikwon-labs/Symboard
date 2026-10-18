@@ -616,9 +616,33 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func openSettings() { chrome.flash("Settings: drag folders onto Home to add projects") }
 
     /// 놓기 도구로 캔버스를 눌렀을 때.
+    /// 막대들에 가리지 않는 보드 영역(캔버스 좌표). 위 70, 왼쪽·오른쪽 80, 아래 110 포인트를 뺀다.
+    var safeCanvasRect: Rect {
+        let b = scrollView.contentView.bounds, mag = max(scrollView.magnification, 0.01)
+        let top = 70 / mag, side = 80 / mag, bottom = 110 / mag
+        let r = NSRect(x: b.minX + side, y: b.minY + top, width: max(1, b.width - side * 2), height: max(1, b.height - top - bottom))
+        return CanvasGeometry.modelRect(r)
+    }
+
+    /// 놓는 자리가 가장자리면 막대 밑으로 들어가지 않게 보이는 영역 안으로 옮긴다. 너무 크면 들어오게 축소한다.
+    private func visiblePlacement(_ frame: Rect) -> Rect {
+        let safe = safeCanvasRect
+        let fitted = CanvasLayout.fit(frame, in: safe)
+        if frame.w > safe.w || frame.h > safe.h {
+            let mag = scrollView.magnification
+            let z = mag * min(safe.w / (frame.w + 40), safe.h / (frame.h + 40))
+            scrollView.center(on: Point(x: fitted.x + frame.w / 2, y: fitted.y + frame.h / 2), zoom: z)
+            return CanvasLayout.fit(frame, in: safeCanvasRect)
+        }
+        return fitted
+    }
+
     func place(_ p: Placement, at point: Point) {
         let s = p.size
-        let origin = Point(x: point.x - s.width / 2, y: point.y - 20)
+        let isShape: Bool = { if case .shape = p { return true }; return false }()
+        let raw = Rect(x: point.x - s.width / 2, y: isShape ? point.y - s.height / 2 : point.y - 20, w: s.width, h: s.height)
+        let placed = visiblePlacement(raw)
+        let origin = Point(x: placed.x, y: placed.y)
         switch p {
         case .agent(let id):
             let choice = AgentCatalog.choice(id: id) ?? AgentCatalog.shared.lastChoice
@@ -643,7 +667,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         case .calendar:
             addNode(kind: .calendar, size: s, title: "Calendar", at: origin) { $0.events = [] }
         case .shape(let k):
-            addNode(kind: .shape, size: s, title: k.capitalized, at: Point(x: point.x - s.width / 2, y: point.y - s.height / 2)) {
+            addNode(kind: .shape, size: s, title: k.capitalized, at: origin) {
                 $0.shape = ShapeSpec(kind: k)
                 $0.style = NodeStyle(fontSize: 20, font: "hand", align: "center")
                 $0.text = ""

@@ -64,3 +64,22 @@ import Testing
         #expect(t.status(now: t0.addingTimeInterval(10)) == .idle)
     }
 }
+
+@Suite struct CanvasLayoutTests {
+    let safe = Rect(x: 0, y: 0, w: 1000, h: 600)
+
+    @Test func insideStaysPut() {
+        let f = Rect(x: 100, y: 100, w: 300, h: 200)
+        #expect(CanvasLayout.fit(f, in: safe) == f)
+    }
+
+    @Test func leftAndBottomEdgesArePulledIn() {
+        let f = CanvasLayout.fit(Rect(x: -150, y: 500, w: 300, h: 200), in: safe)
+        #expect(f.x == 0 && f.y == 400)
+    }
+
+    @Test func tooBigAlignsToStart() {
+        let f = CanvasLayout.fit(Rect(x: 400, y: -50, w: 1200, h: 200), in: safe)
+        #expect(f.x == 0 && f.y == 0)
+    }
+}
