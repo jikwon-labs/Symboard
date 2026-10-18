@@ -43,7 +43,11 @@ STATUS: IN_PROGRESS
   - 고침: `collapseStudio`(스튜디오 패널을 찍은 그림을 새 카드 자리로 0.28초에 옮긴 뒤 카드를 보임) — Add to Board·Insert·닫을 때 파일 카드·문서 카드에 씀. `NodeMotion.appear`(층 변환으로 가운데 기준 60%→100%, 투명→불투명 0.2초)·`disappear`(92%·투명 0.15초, 그동안 클릭 안 받음) — 처음 불러올 때는 쓰지 않는다. frame 이 아니라 층 변환이라 터미널 크기가 흔들리지 않는다. 다이어그램 노드는 제목 아래 6개씩 한 줄 자리에서 최종 자리로 0.45초에 미끄러진다(`CanvasView.slideNode`, 그동안 모델 맞추기가 frame 을 덮지 않음). `zoomToFit` 은 0.35초 동안 배율(로그 눈금)과 가운데를 옮긴다(`glide`).
   - 확인한 실제 입력(`env -i`, 화면 녹화 `screencapture -v` 를 20장/초로 뽑음): README 카드 X → 0.15초에 흐려지며 작아짐(`4-node-close-20fps.png`). Markdown 스튜디오 → Add to Board → 패널이 카드 자리로 줄어듦(`4-studio-collapse-20fps.png`). 별 → Shell → 캔버스 클릭 → 점선 미리보기 → 작게 나타나 커짐(`4-node-appear-20fps.png`). 다이어그램 → Components(질문 3) → 노드가 한 줄에서 자리로 미끄러지고 화면이 맞춰짐(`4-diagram-slide-8fps.png`).
   - 남은 것: 다이어그램이 화면 가운데에 그려져 기존 카드 위에 겹친다(원본은 빈 캔버스). V13 에서 다룬다.
-- [ ] 5. 앱 아이콘과 Dock (번들 아이콘, Dock·Cmd+Tab, 창 닫은 뒤 Dock 클릭으로 다시 열기)
+- [x] 5. 앱 아이콘과 Dock (번들 아이콘, Dock·Cmd+Tab, 창 닫은 뒤 Dock 클릭으로 다시 열기)
+  - 재현: `Resources/AppIcon.icns` 가 없어 번들에 아이콘이 없었다(`bundle.sh` 는 있으면 넣게만 돼 있었다). 창을 닫으면 앱이 끝났다(`applicationShouldTerminateAfterLastWindowClosed` true) — 콘솔도 같이 죽는다.
+  - 고침: `scripts/icon/make-icon.swift` 로 직접 그린 아이콘(점 격자 보드 위 이어진 카드 세 장, 하나는 강조색, 반짝임)을 `Resources/AppIcon.icns` 로 만들었다. 창을 닫아도 앱·콘솔은 돌고(`isReleasedWhenClosed = false`), `applicationShouldHandleReopen` 이 창을 다시 연다. DECISIONS.md 에 적음.
+  - 확인한 입력(`env -i`): 번들 `Contents/Resources/AppIcon.icns`, Info.plist `CFBundleIconFile=AppIcon`. 띄운 뒤 화면 캡처에 Dock 아이콘과 실행 점(`5-dock-icon.png`). Cmd+W → 창 0개, 프로세스(pid 62578) 그대로 → 다시 열기 → 같은 pid 로 창이 돌아오고 "2 live" 콘솔 그대로(`5-reopened-after-close.png`). `lsappinfo` 종류 Foreground(Cmd+Tab 에 나오는 종류).
+  - 한계: orca 는 Dock(다른 앱)을 누를 수 없고 CGEvent 도구는 손쉬운 사용 권한이 없어, Dock 클릭은 같은 "다시 열기" Apple Event 를 보내는 `open build/Symboard.app` 로 대신했다. Cmd+Tab 전환기 화면은 키를 누른 채 찍을 방법이 없어 눈으로는 못 봤다. README 의 "직접 눌러 볼 순서" 에 넣는다.
 
 ## 많이 띄우기
 

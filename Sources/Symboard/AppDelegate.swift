@@ -52,7 +52,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// 창을 닫아도 콘솔은 계속 돈다(Cmd+Q 로 끝낸다). Dock 아이콘을 누르면 창을 다시 연다.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { windowController?.showWindow(nil); windowController?.window?.makeKeyAndOrderFront(nil) }
+        return true
+    }
 
     func applicationWillTerminate(_ notification: Notification) {
         windowController?.captureViewports()

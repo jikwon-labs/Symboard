@@ -36,6 +36,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                               styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                               backing: .buffered, defer: false)
         window.title = "Symboard"
+        // 창을 닫아도 앱과 콘솔은 살아 있고, Dock 아이콘을 누르면 같은 창을 다시 연다.
+        window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.appearance = NSAppearance(named: .darkAqua)
