@@ -146,7 +146,11 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, 질문 5, 카드가 많은 Workspace 3): 다이어그램 아이콘 → 같은 꼴 팝오버 → Components → 칩·자리표시 → 노드가 한 줄에서 미끄러져 그룹(USERS·SCRIPTS·DOCS) 꼴로, 손글씨 제목 "symsample repository structure" → 확대 → hello.py 두 번 클릭 → 편집(글 커서, 왼쪽 STROKE·BACKGROUND·TEXT·OPACITY 패널, `v13-diagram-edit.png`).
   - 쓰는 데 지장 있는 차이(고침, 4번에서 본 것): 다이어그램이 화면 가운데의 기존 카드 위에 겹쳐 그려졌다 → 그 자리에 노드가 있으면 보드 오른쪽 빈 곳에 그린다. 확인: 카드 사이에서 생성 → 오른쪽 빈 곳에 그려짐.
   - 모양 차이(남김): 화면 맞춤이 보드 전체를 담아(32%) 원본(다이어그램만, 82%)보다 작다. 다이어그램 노드 편집 때 원본은 글 패널(TEXT COLOR·FONT·SIZE·ALIGN), 우리는 도형 패널(선·배경·글 크기·글꼴).
-- [ ] V14. studio-documents.mp4
+- [x] V14. studio-documents.mp4
+  - 원본 조작: 오른쪽 막대 PDF 아이콘 → GENERATE PDF 메뉴 → Project overview → Documents 창(왼쪽 CLI·Quick/Balanced/Thorough·문서 목록·Ask, 오른쪽 빈 상태 "Generate with Claude") → Thorough → Balanced → Generate → 흰 종이에 실시간 → 끝(단어 수·Export PDF) → 보드에 놓기 아이콘 → DOCUMENT 카드 → 모서리 끌어 키움.
+  - 우리(`env -i`, /tmp/symv5-1, 1번에서 만든 문서 재사용): 오른쪽 막대 문서 아이콘 → 같은 꼴 Documents 창(Quick 0:22) → "symsample Notes" → 흰 종이(276 words · ~1 min read, 읽기·원문·다시·보드·Export PDF) → 보드 아이콘 → 패널이 줄어들며 DOCUMENT 카드 → 오른쪽 아래 모서리 끌기 → 넓어지고 다시 흐름(`v14-document-card.png`). 생성 과정(실시간 종이)은 1번 질문 1 과 4차 R 항목에서 확인.
+  - 쓰는 데 지장 있는 차이: 없음.
+  - 모양 차이(남김): 원본은 오른쪽 막대 아이콘이 먼저 작은 GENERATE PDF 메뉴를 열고, 우리는 바로 Documents 창을 연다. 원본 카드 바닥의 날짜·Export PDF 줄, 우리는 머리에 단어 수.
 - [ ] V15. studio-markdown.mp4
 - [ ] V16. teams.mp4
 - [ ] V17. voice.mp4
