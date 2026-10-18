@@ -314,6 +314,7 @@ struct RightRail: View {
     @ObservedObject var chrome: ChromeModel
     let c: MainWindowController
     @State private var layersOpen = false
+    @State private var docMenuOpen = false
 
     var body: some View {
         VStack(spacing: 4) {
@@ -333,8 +334,14 @@ struct RightRail: View {
                 .buttonStyle(RailButtonStyle()).tip("Code studio")
             Button { c.openStudio(tab: "Markdown") } label: { Image(systemName: "doc.text") }
                 .buttonStyle(RailButtonStyle()).tip("Markdown studio")
-            Button { c.openStudio(tab: "Docs") } label: { Image(systemName: "doc.richtext") }
+            // 원본처럼 먼저 작은 GENERATE PDF 메뉴. 이미 열려 있으면 바로 닫는다.
+            Button {
+                if c.studioState.kind == "Documents" { c.closeStudio() } else { docMenuOpen.toggle() }
+            } label: { Image(systemName: "doc.richtext") }
                 .buttonStyle(RailButtonStyle()).tip("Document studio")
+                .popover(isPresented: $docMenuOpen, arrowEdge: .leading) {
+                    DocGenerateMenu { kind in docMenuOpen = false; c.openDocuments(kind: kind) }
+                }
             Divider().frame(width: 22).overlay(Color.symBorder)
             Button { c.openLoops() } label: {
                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -355,6 +362,40 @@ struct RightRail: View {
         .floatingCapsule(radius: 20)
         .fixedSize()
         .hiddenOnHome(chrome)
+    }
+}
+
+/// 오른쪽 막대 문서 단추의 작은 메뉴. 고르면 그 종류를 고른 채 문서 스튜디오를 연다(바로 쓰지는 않는다).
+/// kind 가 nil 이면 "Ask for anything" — 요청 칸에 초점.
+struct DocGenerateMenu: View {
+    var pick: (String?) -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("GENERATE PDF").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Color.symDim)
+                .padding(.horizontal, 8).padding(.top, 4).padding(.bottom, 4)
+            ForEach(DocKind.all.prefix(3)) { k in row(k.icon, k.title) { pick(k.id) } }
+            Divider().overlay(Color.symBorder).padding(.vertical, 4)
+            row("sparkles", "Ask for anything...") { pick(nil) }
+            Text("Written by your CLI, exported as PDF.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                .padding(.horizontal, 8).padding(.top, 2).padding(.bottom, 4)
+        }
+        .padding(8)
+        .frame(width: 250)
+        .background(Color.symSurface)
+    }
+
+    func row(_ symbol: String, _ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol).frame(width: 18)
+                Text(title).font(.system(size: 13))
+                Spacer()
+            }
+            .foregroundStyle(Color.symText)
+            .padding(.horizontal, 8).padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(HoverRowStyle()).axName(title)
     }
 }
 

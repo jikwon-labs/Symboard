@@ -518,6 +518,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         studioState.kind = kind
     }
 
+    /// 문서 스튜디오를 그 종류를 고른 채 연다. nil 이면 직접 요청(요청 칸이 첫 초점).
+    func openDocuments(kind: String?) {
+        if let kind { docStudio.selected = kind }
+        if studioState.kind != "Documents" { openStudio(tab: "Docs") }
+    }
+
     func openStudio(file: URL) {
         let kind = file.pathExtension.lowercased() == "md" ? "Markdown" : "Code"
         studioState.kind = nil

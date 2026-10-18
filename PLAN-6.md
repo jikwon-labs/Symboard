@@ -73,7 +73,10 @@ STATUS: IN_PROGRESS
   - 바꾼 것: 다이어그램이 만든 노드(그룹 틀·그룹 이름·제목·노드)에 `role = "diagram"` 을 붙이고, 다 그린 뒤 `zoomToFit(frames:)` 로 그 노드들만 담는다(보드 전체 맞춤은 그대로 남김). 글 있는 다이어그램 도형을 고르면 `SelectionPanel` 이 도형 패널 대신 노드 편집 패널을 보인다(크기 S14·M18·L24·XL32 — 처음 크기 18 이 M). 손으로 그린 도형은 예전 도형 패널.
   - 확인한 실제 입력(`env -i`, /tmp/symv6-7, 웹 타일 둘이 있는 보드): 왼쪽 막대 Diagram → STARTER SHAPES Steps(질문 없음) → 다이어그램이 그려지고 화면이 63% 로 Steps 만 담음(웹 타일은 왼쪽 밖으로, `compare/11-diagram-fit.png`) → Step 2 클릭 → 노드 편집 패널(M·가운데 골라짐) → XL → 빨강 → Step 2 글이 크고 빨갛게, state.json fontSize 32·#E8564A(`compare/11-diagram-panel.png`).
   - 처음 한 번 XL 이 안 눌린 것처럼 보였는데 화면 배율(1.094)을 빼먹은 내 좌표 실수였다(디버그 `hit` 로 패널이 클릭을 받는 것 확인).
-- [ ] 12. studio-documents: GENERATE PDF 누르면 작은 메뉴 먼저
+- [x] 12. studio-documents: GENERATE PDF 누르면 작은 메뉴 먼저
+  - 원본 장면: `studio-documents.mp4` 0~1초. 오른쪽 막대 문서 단추 → 옆에 "GENERATE PDF" 작은 메뉴(종류 셋, 선, "Ask for anything...", 바닥 "Written by your CLI, exported as PDF.") → 고르면 그 종류가 골라진 스튜디오와 Generate 단추(바로 쓰지 않음).
+  - 바꾼 것: `DocGenerateMenu`(ChromeViews.swift) — 우리 종류 목록의 앞 셋(Overview·Getting started·Architecture)과 Ask for anything. 고르면 `openDocuments(kind:)` 가 그 종류를 고른 채 스튜디오를 연다. Ask 는 종류를 바꾸지 않고 열어 요청 칸(이미 첫 초점)에 쓰게 한다. 스튜디오가 열려 있을 때 단추를 누르면 메뉴 없이 닫는다. 이름은 우리 종류 이름 그대로(원본 문구를 옮기지 않음).
+  - 확인한 실제 입력(`env -i`, /tmp/symv6-7): 오른쪽 막대 Document studio → 메뉴(`compare/12-docs-menu.png`) → Architecture → 스튜디오가 Architecture 골라진 채 "Generate with Claude Code" 단추(질문 안 보냄) → 다시 막대 단추 → 스튜디오 닫힘.
 - [ ] 13. studio-markdown: 카드 바닥 "Open in Studio · PDF" 글 단추
 - [ ] 14. teams: 오른쪽 기본 패널 Fleet / Structure 두 카드
 - [ ] 15. voice: 명령 바 보드 명령 THREAD 패널, 프리셋에 콘솔 말고 다른 노드도
