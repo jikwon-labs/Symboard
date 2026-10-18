@@ -34,7 +34,8 @@ final class MemoryHub: ObservableObject {
     }
 
     var notes: [MemoryNote] {
-        model.state.memories.filter { allRepos || $0.repoPath == repo || $0.repoPath == nil }
+        // 원본처럼 두 칸은 적용 범위로 나눈다: 이 레포 것 / 모든 레포에 적용되는 것.
+        model.state.memories.filter { allRepos ? $0.repoPath == nil : $0.repoPath == repo }
     }
 
     func newMemory() {
@@ -194,7 +195,8 @@ struct MemoryModalView: View {
                     Text("\(hub.repo.map { ($0 as NSString).lastPathComponent } ?? "This repo") \(model.state.memories.filter { $0.repoPath == hub.repo }.count)")
                 }
                 .buttonStyle(ChipStyle(on: !hub.allRepos))
-                Button("All repos \(model.state.memories.count)") { hub.allRepos = true }.buttonStyle(ChipStyle(on: hub.allRepos)).axName("All repos \(model.state.memories.count)")
+                let globalCount = model.state.memories.filter { $0.repoPath == nil }.count
+                Button("All repos \(globalCount)") { hub.allRepos = true }.buttonStyle(ChipStyle(on: hub.allRepos)).axName("All repos \(globalCount)")
                 Spacer()
             }
             .padding(.horizontal, 18).padding(.top, 12)

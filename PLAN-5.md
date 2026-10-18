@@ -14,8 +14,9 @@ STATUS: IN_PROGRESS
 | 1 | 1번 문서 생성 | 문서 스튜디오 Quick(/tmp/symsample) | a 5-line README for this repo |
 | 2 | 1번 루프 | 루프 Run now → Ada(/tmp/symsample) | reply with just the word ok, no tools |
 | 3 | 4번 다이어그램 움직임 | 다이어그램 Components(/tmp/symsample) | (템플릿 질문) |
+| 4 | V8 메모리 | Memory → Scan with Claude Code(/tmp/symsample) | (스캔 질문) |
 
-합계: 3
+합계: 4
 
 ## 고칠 것
 
@@ -112,7 +113,11 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, Workspace 3): 오른쪽 막대 맨 아래 → 같은 틀 카드 화면 → Start from scratch → 같은 이름·지시 → 스크롤 → When a goal is met → (An agent judges·Claude 가 기본) → "ALL GREEN" → 바닥 요약 "…until Claude judges the goal met." → Create loop → 목록 한 줄 "in 14:59"·▶·토글·…, 루프 아이콘 빨간 1(`v7-loop-list.png`). 질문을 보내지 않으려고 끄고 지웠다.
   - 쓰는 데 지장 있는 차이: 없음.
   - 모양 차이: 틀 카드 이름·설명 글이 원본과 다르다(원본 문구를 옮기지 않으려고 2차에서 바꿈). 원본 목표 기본은 "A command passes", 우리는 "An agent judges". 원본 BEHAVIOR 토글 기본 꺼짐, 우리는 켜짐.
-- [ ] V8. node-memory.mp4
+- [x] V8. node-memory.mp4
+  - 원본 조작: Memory 칩 → 빈 상태 → Scan repo → CLI 고르기(Claude…) → Scan with Claude → 단계(Launch·Read the repo·Write facts·Wrap up)와 사실이 하나씩 → REVIEW PROPOSALS 12 of 12 → Add 12 to memory → 목록(탭 "Votelanding 12 / All repos 0") → 연필 → EDIT MEMORY(분류 칩·제목·Refresh·본문·APPLIES TO·Delete·Cancel·Save memory).
+  - 우리(`env -i`, 질문 4): Memory 칩 → 같은 빈 상태 → Scan repo → Claude Code·Codex → Scan with Claude Code → 단계 표시·빈 줄 → 약 40초 뒤 REVIEW PROPOSALS 9 of 9(분류 색·제목·본문·연필, `v8-memory-review.png`) → Add 9 to memory → 목록 → 연필 → EDIT MEMORY(같은 칸들, Rewrite) → Cancel.
+  - 쓰는 데 지장 있는 차이(고침): 위 탭 "All repos" 가 모든 레포의 모든 메모리를 세고 보였다(이 레포 9 / All repos 9). 원본은 적용 범위로 나눠 "All repos" 는 모든 레포에 적용되는 것만(0). 같게 고쳤다(목록에서 이 레포 것과 전역 것을 나눠 봄). 확인: 다시 띄워 "All repos 0".
+  - 모양 차이(남김): 원본 목록 줄 오른쪽의 켜짐 체크(활성)와 마우스를 올리면 나오는 휴지통(우리는 편집 화면의 Delete), 바닥의 "12 active entries" 문구. 원본 CLI 칩 다섯 개(우리는 깔린 것만). 우리 단계는 Wrap up 이 없다.
 - [ ] V9. node-resume.mp4
 - [ ] V10. node-usage.mp4
 - [ ] V11. node-webtiles.mp4
