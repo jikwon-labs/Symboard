@@ -8,6 +8,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let chrome = ChromeModel()
     let composer = ComposerState()
     let loopDraft = LoopDraft()
+    lazy var studioState = StudioState(root: URL(fileURLWithPath: projectPath))
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
@@ -15,6 +16,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private var missionHost: NSView?
     private var missionObserver: Any?
     private var loopsObserver: Any?
+    private var studioObserver: Any?
     private var canvases: [UUID: CanvasView] = [:]
     private var shownWorkspaceID: UUID?
     private var observers: [NSObjectProtocol] = []
@@ -119,6 +121,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             mission.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         missionObserver = chrome.$missionOpen.sink { [weak self] open in self?.missionHost?.isHidden = !open }
+        // 스튜디오 패널은 보드 위, 위쪽·아래 막대보다는 아래에 둔다.
+        let studioHost = HiddenAwareHostingView(rootView: StudioOverlay(studio: studioState, c: self))
+        studioHost.translatesAutoresizingMaskIntoConstraints = false
+        studioHost.sizingOptions = []
+        studioHost.isHidden = true
+        content.addSubview(studioHost, positioned: .above, relativeTo: homeHost)
+        NSLayoutConstraint.activate([
+            studioHost.topAnchor.constraint(equalTo: content.topAnchor),
+            studioHost.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            studioHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            studioHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+        ])
+        studioObserver = studioState.$kind.sink { k in studioHost.isHidden = k == nil }
         let loopsHost = HiddenAwareHostingView(rootView: LoopsHost(model: model, chrome: chrome, draft: loopDraft, c: self))
         loopsHost.translatesAutoresizingMaskIntoConstraints = false
         loopsHost.sizingOptions = []
@@ -418,13 +433,88 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         currentCanvas?.tool = t
     }
 
+    /// 오른쪽 막대 스튜디오 입구. 지금 프로젝트 폴더에 붙는다.
     func openStudio(tab: String) {
-        showStudio(root: URL(fileURLWithPath: projectPath))
-        studio?.studio.tab = tab
+        let root = URL(fileURLWithPath: projectPath)
+        if studioState.root != root { studioState.root = root; studioState.selected = nil; studioState.text = ""; studioState.savedText = "" }
+        let kind = tab == "Docs" ? "Documents" : tab
+        if studioState.kind == kind { closeStudio(); return }
+        if kind == "Markdown", studioState.selected?.pathExtension.lowercased() != "md" {
+            studioState.selected = nil
+            if let readme = studioState.markdownFiles().first(where: { $0.lastPathComponent.lowercased() == "readme.md" }) { studioState.open(readme) }
+        } else if kind == "Code", studioState.selected?.pathExtension.lowercased() == "md" {
+            studioState.selected = nil
+        }
+        studioState.kind = kind
+    }
+
+    func openStudio(file: URL) {
+        let kind = file.pathExtension.lowercased() == "md" ? "Markdown" : "Code"
+        studioState.kind = nil
+        studioState.root = URL(fileURLWithPath: projectPath)
+        studioState.open(file)
+        studioState.kind = kind
+    }
+
+    /// 닫으면 고친 내용을 저장하고, 열었던 파일은 보드에 작은 카드로 남긴다.
+    func closeStudio() {
+        studioState.save()
+        if let f = studioState.selected, studioState.kind != "Documents",
+           !model.selectedWorkspace.nodes.contains(where: { $0.kind == .file && $0.text == f.path }) {
+            addNode(kind: .file, size: CGSize(width: 380, height: 240), title: f.lastPathComponent) { $0.text = f.path }
+        }
+        studioState.kind = nil
+    }
+
+    func studioInsert() {
+        guard let f = studioState.selected else { return }
+        studioState.save()
+        addNode(kind: .file, size: CGSize(width: 560, height: 420), title: f.lastPathComponent) { $0.text = f.path }
+        studioState.kind = nil
+    }
+
+    func studioAddToBoard() { studioInsert() }
+
+    func studioAddFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        guard let w = window else { return }
+        panel.beginSheetModal(for: w) { [weak self] r in
+            guard r == .OK, let u = panel.url, let self, !self.studioState.extraRoots.contains(u) else { return }
+            self.studioState.extraRoots.append(u)
+        }
+    }
+
+    /// 마크다운을 PDF 로. 저장 위치는 macOS 저장 시트로 고른다.
+    func studioExportPDF() {
+        guard let md = studioState.selected, let w = window else { return }
+        studioState.save()
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = md.deletingPathExtension().lastPathComponent + ".pdf"
+        panel.beginSheetModal(for: w) { [weak self] r in
+            guard r == .OK, let out = panel.url, let self else { return }
+            self.exportPDF(markdown: md, to: out)
+        }
+    }
+
+    private var pdfExporter: StudioModel?
+    func exportPDF(markdown md: URL, to out: URL) {
+        let m = StudioModel(root: md.deletingLastPathComponent())
+        pdfExporter = m
+        chrome.flash("Exporting PDF...")
+        m.exportPDF(from: md, to: out) { [weak self] ok in
+            self?.chrome.flash(ok ? "Saved \(out.lastPathComponent)" : "PDF export failed")
+            self?.pdfExporter = nil
+        }
     }
 
 
-    func openDiagram() { openStudio(tab: "Diagram") }
+    func openDiagram() {
+        showStudio(root: URL(fileURLWithPath: projectPath))
+        studio?.studio.tab = "Diagram"
+    }
 
     func showPanel(tab: String) {
         sidePanel.state.tab = tab

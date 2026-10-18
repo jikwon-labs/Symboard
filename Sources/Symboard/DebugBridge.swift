@@ -489,6 +489,20 @@ final class DebugBridge {
             if let pg = cmd["page"] as? String { NotificationCenter.default.post(name: .usagePage, object: pg) }
             let st = model.usage.stats
             log.append("usage scanning=\(model.usage.scanning) \(model.usage.note) " + st.map { "\($0.key.rawValue): total=\($0.value.totalTokens) sessions=\($0.value.sessions) block=\(String(describing: $0.value.blockEnd))" }.joined(separator: "; "))
+        case "studio2":
+            // kind(Code/Markdown/Docs), file, mode, text, close, insert, expand(폴더 경로들)
+            let st = controller.studioState
+            if let k = cmd["kind"] as? String { if st.kind != (k == "Docs" ? "Documents" : k) { controller.openStudio(tab: k) } }
+            if let ex = cmd["expand"] as? [String] { for e in ex { st.expanded.insert(StudioState.key(URL(fileURLWithPath: e))) } }
+            if let f = cmd["file"] as? String { st.open(URL(fileURLWithPath: f)) }
+            if let m = cmd["mode"] as? String { st.mdMode = m }
+            if let t = cmd["text"] as? String { st.text = t }
+            if let q = cmd["query"] as? String { st.query = q }
+            if cmd["save"] as? Bool == true { st.save() }
+            if cmd["insert"] as? Bool == true { controller.studioInsert() }
+            if cmd["close"] as? Bool == true { controller.closeStudio() }
+            if let out = cmd["pdf"] as? String, let f = st.selected { controller.exportPDF(markdown: f, to: URL(fileURLWithPath: out)) }
+            log.append("studio2 kind=\(st.kind ?? "-") file=\(st.selected?.lastPathComponent ?? "-") dirty=\(st.dirty) lines=\(st.lineCount)")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

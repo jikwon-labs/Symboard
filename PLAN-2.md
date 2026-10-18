@@ -73,10 +73,10 @@ STATUS: IN_PROGRESS
 
 ## O·P·Q. 스튜디오
 
-- [ ] O1. 보드 위 둥근 패널·어두운 뒤·왼쪽 열·닫으면 카드 노드·현재 프로젝트 자동 연결 (agent3/code-16.png, studio-code.jpg r3c3)
-- [ ] P1. 코드 스튜디오: 트리·브레드크럼·언어 배지·줄/바이트·편집·줄 번호·Saved·Insert 코드 카드 (agent3/code-16.png)
-- [ ] Q1. 마크다운: 검색·트리·words/min·Reading/Source/Graph·Export PDF (agent3/markdown-0.8.png)
-- [ ] Q2. 링크 그래프 힘 기반 배치·강조·클릭 이동 (agent3/md-graph.png)
+- [x] O1. 보드 위 둥근 패널·어두운 뒤·왼쪽 열·닫으면 카드 노드·현재 프로젝트 자동 연결 (agent3/code-16.png, studio-code.jpg r3c3)
+- [x] P1. 코드 스튜디오: 트리·브레드크럼·언어 배지·줄/바이트·편집·줄 번호·Saved·Insert 코드 카드 (agent3/code-16.png)
+- [x] Q1. 마크다운: 검색·트리·words/min·Reading/Source/Graph·Export PDF (agent3/markdown-0.8.png)
+- [x] Q2. 링크 그래프 힘 기반 배치·강조·클릭 이동 (agent3/md-graph.png)
 
 ## K·R·S. 에이전트 생성
 
@@ -134,5 +134,8 @@ STATUS: IN_PROGRESS
   - 이 맥 로그 898개를 15~17초에 읽음(백그라운드). 숫자는 3.2K/1.9B 처럼 줄여 표시.
   - 남은 차이: 원본의 한도 %(현재 세션·주간 모델별)는 로그에 없어 표시하지 못한다. CLI 의 /usage 화면을 숨은 터미널로 긁는 방법은 시도하지 않았다(사용 중인 세션 화면을 건드릴 위험). 주간 막대는 한도 대신 최근 7일 토큰.
   - 고친 것: 콘솔이 하나도 없으면 1초 상태 틱이 돌지 않아 알약·루프가 멈추던 문제(시작할 때 세션 관리자 생성). 날짜 표시를 영어 형식으로 고정.
+- O1·P1: 원본 agent3/code-16.png, studio-code.jpg r3c3 / 내 것 `v2/O1-P1-code-studio.png`, `v2/O1-P1-board-cards.png`. 별도 창 대신 보드 위 둥근 패널(뒤 어둡게, 위쪽·아래 막대와 좌우 막대는 그대로 위에 보임), 오른쪽 막대 코드·마크다운·문서 버튼으로 진입, 지금 프로젝트 폴더에 자동 연결. 왼쪽 열: 강조색 배지·스튜디오 이름·프로젝트 이름·+ (폴더 더하기), 종류별 아이콘 나무(선택 줄 강조). 코드: 브레드크럼·언어 배지·"8 lines · 187 B"·• Edited/Saved, 줄 번호 막대와 입력 중 구문 색이 있는 편집기, Add folder·Save(⌘S)·Insert(줄 번호 코드 카드). 닫으면 고친 내용을 저장하고 열었던 파일을 보드에 작은 카드로 남긴다(카드의 ↗ 로 다시 열기). 디버그로 hello.py 를 고쳐 Save 후 디스크 내용 확인.
+- Q1·Q2: 원본 agent3/markdown-0.8.png, agent3/md-graph.png / 내 것 `v2/Q1-markdown-reading.png`, `v2/Q1-markdown-source.png`, `v2/Q2-link-graph.png`. 파일 검색, .md 확장자 숨긴 나무, 위쪽 "README.md 57 words · ~1 min", Reading/Source/Graph, Add to Board, Export PDF(macOS 저장 시트, 디버그로 /tmp 에 27KB PDF 생성 확인). Reading: 제목 아래 짧은 강조색 밑줄, 강조색 모노 인라인 코드, 둥근 카드형 표, NOTE/TIP 콜아웃(Markdown.html 단위 테스트). Source: 줄 번호+마크다운 색. Graph: "Link graph · N notes", 힘 기반 배치(ForceLayout, 같은 입력이면 같은 결과, 단위 테스트), 현재 문서 강조색, 마우스를 올리면 이웃과 선 강조, 누르면 그 문서를 Reading 으로 연다.
+  - 남은 차이: 원본은 닫을 때 카드로 줄어드는 움직임이 있는데 여기는 움직임 없이 카드가 생긴다. 새 카드 자리가 기존 노드와 겹칠 수 있다.
 
 ## 막힌 것

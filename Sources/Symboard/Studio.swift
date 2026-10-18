@@ -65,8 +65,9 @@ extension FileItem {
 
 enum CodeStyle {
     static func attributed(_ text: String, ext: String) -> NSAttributedString {
-        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        let s = NSMutableAttributedString(string: text, attributes: [.font: font, .foregroundColor: NSColor(calibratedWhite: 0.88, alpha: 1)])
+        let font = NSFont.monospacedSystemFont(ofSize: 12.5, weight: .regular)
+        let s = NSMutableAttributedString(string: text, attributes: [.font: font, .foregroundColor: Theme.text])
+        if ext.lowercased() == "md", text.utf16.count < 400_000 { return markdown(s) }
         guard let lang = SyntaxHighlighter.language(forExtension: ext), text.utf16.count < 400_000 else { return s }
         for t in SyntaxHighlighter.tokens(text, language: lang) {
             let color: NSColor
@@ -77,6 +78,25 @@ enum CodeStyle {
             case .number: color = NSColor(srgbRed: 0.82, green: 0.75, blue: 0.45, alpha: 1)
             }
             s.addAttribute(.foregroundColor, value: color, range: t.range)
+        }
+        return s
+    }
+
+    /// 마크다운 원문 색: 제목·인라인 코드·굵게·링크·목록 기호.
+    static func markdown(_ s: NSMutableAttributedString) -> NSAttributedString {
+        let str = s.string as NSString
+        let rules: [(String, NSColor)] = [
+            (#"(?m)^#{1,6} .*$"#, Theme.accent),
+            (#"`[^`\n]+`"#, NSColor(hex: "#E9C46A")),
+            (#"\*\*[^*\n]+\*\*"#, NSColor(hex: "#ECE7E2")),
+            (#"\[[^\]\n]+\]\([^)\n]+\)|\[\[[^\]\n]+\]\]"#, NSColor(hex: "#56A8F5")),
+            (#"(?m)^\s*([-*]|\d+\.) "#, Theme.accent),
+            (#"(?m)^>.*$"#, Theme.textDim),
+            (#"(?m)^\|.*\|$"#, NSColor(hex: "#B48CF2")),
+        ]
+        for (p, col) in rules {
+            guard let re = try? NSRegularExpression(pattern: p) else { continue }
+            for m in re.matches(in: s.string, range: NSRange(location: 0, length: str.length)) { s.addAttribute(.foregroundColor, value: col, range: m.range) }
         }
         return s
     }
@@ -109,7 +129,7 @@ struct CodeTextView: NSViewRepresentable {
     }
 }
 
-/// 보드에 고정한 파일 노드.
+/// 보드에 놓은 파일 카드: 코드는 줄 번호와 구문 색, 마크다운은 읽기 보기.
 final class FileContent: NodeContent {
     let path: String
     let host: NSHostingView<AnyView>
@@ -123,17 +143,47 @@ final class FileContent: NodeContent {
 
     private func reload() {
         let url = URL(fileURLWithPath: path)
-        host.rootView = AnyView(CodeTextView(text: CodeStyle.attributed(CodeStyle.load(url), ext: url.pathExtension)))
+        host.rootView = AnyView(FileCardView(url: url, text: CodeStyle.load(url)).environment(\.colorScheme, .dark))
     }
 
     func sync(node: BoardNode) {}
 
     func menuItems() -> [NSMenuItem] {
-        [ClosureMenuItem(title: "Reload File") { [weak self] in self?.reload() },
+        [ClosureMenuItem(title: "Open in Studio") { [weak self] in
+             guard let self, let c = (NSApp.delegate as? AppDelegate)?.windowController else { return }
+             c.openStudio(file: URL(fileURLWithPath: self.path))
+         },
+         ClosureMenuItem(title: "Reload File") { [weak self] in self?.reload() },
          ClosureMenuItem(title: "Reveal in Finder") { [weak self] in
              guard let self else { return }
              NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: self.path)])
          }]
+    }
+}
+
+struct FileCardView: View {
+    let url: URL
+    @State var text: String
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Text(url.pathExtension.uppercased()).font(.system(size: 9, weight: .bold, design: .monospaced)).foregroundStyle(Color(hex: "#56A8F5"))
+                    .padding(.horizontal, 4).padding(.vertical, 1).background(RoundedRectangle(cornerRadius: 3).fill(Color(hex: "#56A8F5").opacity(0.15)))
+                Text(url.deletingLastPathComponent().lastPathComponent + "/" + url.lastPathComponent).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim).lineLimit(1)
+                Spacer()
+                Text("\(text.split(separator: "\n", omittingEmptySubsequences: false).count - (text.hasSuffix("\n") ? 1 : 0)) lines").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
+                Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
+                    .buttonStyle(.plain).foregroundStyle(Color.symDim).help("Open in studio")
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            if url.pathExtension.lowercased() == "md" {
+                HTMLPreview(html: Markdown.html(text, title: url.lastPathComponent, theme: "dark"), base: url.deletingLastPathComponent())
+            } else {
+                CodeEditor(text: $text, ext: url.pathExtension, editable: false).padding(6)
+            }
+        }
+        .background(Color.symSurface)
     }
 }
 
@@ -450,10 +500,23 @@ struct DocsTab: View {
 
 struct HTMLPreview: NSViewRepresentable {
     var html: String
-    var base: URL
+    var base: URL?
 
-    func makeNSView(context: Context) -> WKWebView { WKWebView() }
-    func updateNSView(_ v: WKWebView, context: Context) { v.loadHTMLString(html, baseURL: base) }
+    final class Coordinator { var last = "" }
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> WKWebView {
+        let w = WKWebView()
+        w.setValue(false, forKey: "drawsBackground")
+        w.underPageBackgroundColor = Theme.terminalBackground
+        return w
+    }
+
+    func updateNSView(_ v: WKWebView, context: Context) {
+        guard context.coordinator.last != html else { return }
+        context.coordinator.last = html
+        v.loadHTMLString(html, baseURL: base)
+    }
 }
 
 struct DiagramTab: View {

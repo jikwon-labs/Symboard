@@ -260,3 +260,32 @@ import Testing
         #expect(UsageStats.short(42) == "42")
     }
 }
+
+@Suite struct MarkdownV2Tests {
+    @Test func tablesAndCallouts() {
+        let md = "| Route | What |\n|---|---|\n| `/` | Home |\n\n> [!NOTE] Keep it short.\n> Second line."
+        let h = Markdown.html(md, theme: "dark")
+        #expect(h.contains("<th>Route</th>"))
+        #expect(h.contains("<td><code>/</code></td>"))
+        #expect(!h.contains("---"))
+        #expect(h.contains("callout note") && h.contains("Keep it short. Second line."))
+    }
+}
+
+@Suite struct StudioV2Tests {
+    @Test func words() {
+        let w = Markdown.wordCount("# Title\n\nHello world, this is **bold**. - * ---")
+        #expect(w.words == 6 && w.minutes == 1)
+    }
+
+    @Test func forceLayoutIsStableAndInBounds() {
+        let a = ForceLayout.run(count: 6, edges: [(0, 1), (1, 2), (3, 4)], width: 400, height: 300)
+        let b = ForceLayout.run(count: 6, edges: [(0, 1), (1, 2), (3, 4)], width: 400, height: 300)
+        #expect(a == b)
+        #expect(a.allSatisfy { $0.x >= 20 && $0.x <= 380 && $0.y >= 20 && $0.y <= 280 })
+        // 이어진 점은 이어지지 않은 점보다 가깝다.
+        let linked = hypot(a[0].x - a[1].x, a[0].y - a[1].y)
+        let far = hypot(a[0].x - a[5].x, a[0].y - a[5].y)
+        #expect(linked < far)
+    }
+}
