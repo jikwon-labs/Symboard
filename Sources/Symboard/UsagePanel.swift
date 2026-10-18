@@ -42,6 +42,9 @@ final class UsageStore: ObservableObject {
                 self.note = "\(result.files) log files · \(String(format: "%.1f", Date().timeIntervalSince(started)))s"
                 self.scannedAt = Date()
                 self.scanning = false
+                if let end = stats.values.compactMap(\.blockEnd).max() {
+                    Prefs.shared.set(String(end.timeIntervalSince1970), for: "usage.blockEnd")
+                }
             }
         }
     }
@@ -81,12 +84,13 @@ final class UsageStore: ObservableObject {
         return (records, count)
     }
 
-    /// 위쪽 알약 문구: 가장 가까운 5시간 묶음 끝.
-    var resetText: String? {
-        let ends = stats.values.compactMap(\.blockEnd).filter { $0 > Date() }
-        guard let e = ends.min() else { return nil }
-        let f = DateFormatter(); f.dateFormat = "h:mma"; f.amSymbol = "am"; f.pmSymbol = "pm"; f.locale = Locale(identifier: "en_US_POSIX")
-        return "resets " + f.string(from: e)
+    /// 위쪽 알약 문구: 가장 가까운 5시간 묶음 끝. 아직 훑기 전이면 지난번에 구한 값(prefs.json)을 쓴다.
+    var resetText: String {
+        var ends = stats.values.compactMap(\.blockEnd)
+        if scannedAt == nil, let cached = Prefs.shared.string("usage.blockEnd").flatMap(Double.init) {
+            ends.append(Date(timeIntervalSince1970: cached))
+        }
+        return UsagePill.text(blockEnds: ends)
     }
 }
 

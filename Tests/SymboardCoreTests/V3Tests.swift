@@ -101,3 +101,22 @@ import Testing
         #expect(Prefs(directory: other).string("lastCwd") == nil)
     }
 }
+
+@Suite struct UsagePillTests {
+    let utc = TimeZone(identifier: "UTC")!
+    let now = Date(timeIntervalSince1970: 1_800_000_000) // 2027-01-15 08:00 UTC
+
+    @Test func unknownShowsPlaceholderInSameShape() {
+        #expect(UsagePill.text(blockEnds: [], now: now) == UsagePill.placeholder)
+        #expect(UsagePill.placeholder.hasPrefix("resets "))
+    }
+
+    @Test func pastBlocksAreIgnored() {
+        #expect(UsagePill.text(blockEnds: [now.addingTimeInterval(-60)], now: now) == UsagePill.placeholder)
+    }
+
+    @Test func nearestFutureEnd() {
+        let t = UsagePill.text(blockEnds: [now.addingTimeInterval(9 * 3600), now.addingTimeInterval(3600)], now: now, timeZone: utc)
+        #expect(t == "resets 9:00am")
+    }
+}

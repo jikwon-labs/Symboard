@@ -60,7 +60,7 @@ final class ChromeModel: ObservableObject {
     @Published var suggestion: String? = "Try \"@all git status\""
     @Published var toast: String?
     @Published var loopBadge = 0
-    @Published var resetText = "usage"
+    @Published var resetText = UsagePill.placeholder
     /// 이어하기 답을 기다리는 콘솔 수와 토스트를 닫았는지.
     @Published var missionOpen = false
     @Published var insertOpen = false

@@ -25,6 +25,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     private var shownWorkspaceID: UUID?
     private var observers: [NSObjectProtocol] = []
     private var gitTimer: Timer?
+    private var usageTimer: Timer?
     /// 지금 창. 시작할 때 저장된 노드를 만드는 동안에는 AppDelegate.windowController 가 아직 비어 있어서 이걸 쓴다.
     private(set) static weak var current: MainWindowController?
 
@@ -49,7 +50,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         _ = model.loops
         buildUI()
         observe()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.model.usage.refresh() }
+        DispatchQueue.main.async { [weak self] in self?.model.usage.refresh() }
+        // 5시간 묶음이 끝나고 새로 시작한 것도 알약에 보이게 가끔 다시 훑는다.
+        usageTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.model.usage.refresh() }
+        }
         showWorkspace(model.selectedWorkspace.id)
         // 열 프로젝트가 없으면(새 상태 폴더) 홈 화면의 폴더 열기로 시작한다.
         if model.selectedWorkspace.projectPath == nil, model.state.workspaces.allSatisfy({ $0.nodes.isEmpty }) { setHome(true) }
@@ -349,7 +354,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         sidePanel.refreshStatuses()
         currentCanvas?.layoutGroups()
         StatusBeat.shared.tick &+= 1
-        let reset = model.usage.resetText ?? "usage"
+        let reset = model.usage.resetText
         if chrome.resetText != reset { chrome.resetText = reset }
         let pending = model.sessions.pendingResume.count
         if chrome.resumeCount != pending { chrome.resumeCount = pending }

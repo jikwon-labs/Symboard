@@ -36,7 +36,10 @@ STATUS: IN_PROGRESS
   - 재현: 빈 `/tmp/symv3` 로 띄우자 위쪽 프로젝트가 symclaude. `defaults read local.symboard.app` 에 `lastCwd = /tmp/symclaude` 가 남아 있었고, 빈 작업공간이 이 값을 프로젝트로 받았다.
   - 원인/고침: lastCwd·lastAgentChoice·docTiming·창 위치를 UserDefaults 대신 상태 폴더의 `prefs.json`(`Prefs`, 단위 테스트 1개)에 둔다. 빈 작업공간에는 프로젝트를 추측해 붙이지 않고, 노드가 하나도 없으면 홈 화면으로 시작한다. 폴더를 열면 처음 생긴 빈 작업공간에 붙인다.
   - 확인(실제 입력): 빈 `/tmp/symv3h` 로 실행 → Projects 화면(Open folder 만) → Open folder 클릭 → 열기 창에서 Cmd+Shift+G, `/tmp/symsample` 입력, Return, Return → 보드가 symsample 로 열림, `prefs.json` 에 lastCwd. Cmd+Q 후 다시 실행 → symsample 로 열림.
-- [ ] 8. 사용량 알약 글자가 "usage" 와 "resets 5:00pm" 사이를 오감
+- [x] 8. 사용량 알약 글자가 "usage" 와 "resets 5:00pm" 사이를 오감
+  - 재현: 재실행할 때마다 처음 몇 초는 "usage", 로그 훑기가 끝나면 "resets 5:00pm"(이번 시험에서 두 가지를 모두 봄). 훑기가 실행 3초 뒤 시작해 12초쯤 걸린다.
+  - 원인/고침: 값이 없을 때 다른 낱말("usage")을 보였다. 늘 "resets …" 꼴로 보이고 모르면 `resets –:––` 자리표시(`UsagePill`, 단위 테스트 3개). 마지막으로 구한 묶음 끝을 prefs.json 에 두어 재실행 직후에도 같은 값을 보이고, 훑기는 바로 시작하며 5분마다 다시 한다.
+  - 확인(실제 입력): Cmd+Q·재실행을 3번, 각각 2초·17초에 화면 → 여섯 번 모두 "resets 5:00pm". 캐시가 없던 첫 실행들은 여섯 번 모두 "resets –:––" 로 같았다.
 - [ ] 9. 이름 없는 접근성 button 40개 이상 → 모든 아이콘 버튼에 accessibilityLabel
 - [ ] 10. 루프 템플릿 7개 이름·설명 다시 쓰기 (원본과 같은 "Commit checkpoint" 등)
 - [ ] 11. 루프 시작 화면 모달 아래 절반이 빔 → 내용 높이에 맞춤

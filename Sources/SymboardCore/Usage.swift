@@ -257,3 +257,17 @@ public struct UsageStats: Equatable, Sendable {
         return "\(n)"
     }
 }
+
+/// 위쪽 사용량 알약 문구. 늘 "resets …" 한 가지 꼴로 보인다.
+public enum UsagePill {
+    public static let placeholder = "resets –:––"
+
+    /// 지금보다 뒤의 가장 가까운 5시간 묶음 끝. 없으면 자리표시.
+    public static func text(blockEnds: [Date], now: Date = Date(), timeZone: TimeZone = .current) -> String {
+        guard let e = blockEnds.filter({ $0 > now }).min() else { return placeholder }
+        let f = DateFormatter()
+        f.dateFormat = "h:mma"; f.amSymbol = "am"; f.pmSymbol = "pm"
+        f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = timeZone
+        return "resets " + f.string(from: e)
+    }
+}
