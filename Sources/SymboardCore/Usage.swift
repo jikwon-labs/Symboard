@@ -271,3 +271,45 @@ public enum UsagePill {
         return "resets " + f.string(from: e)
     }
 }
+
+/// claude `/usage` 화면에서 읽은 요금제 한도 한 줄.
+public struct PlanLimit: Equatable, Sendable {
+    public var name: String
+    public var percent: Int
+    public var resets: String?
+    public init(name: String, percent: Int, resets: String?) { self.name = name; self.percent = percent; self.resets = resets }
+}
+
+/// claude `/usage` 화면 글자를 읽는다. 로컬 로그에는 한도 % 가 없어서, CLI 가 보여 주는 화면을 그대로 읽는다.
+/// 화면 모양(2.1.302):
+///   Current session
+///   ██████████████▍            29% used
+///   Resets 5pm (Asia/Seoul)
+///   Current week (all models)
+///   █████████                  18% used
+///   Resets Oct 22 at 8am (Asia/Seoul)
+public enum PlanUsageParser {
+    public static func parse(_ screen: String) -> [PlanLimit] {
+        let lines = screen.replacingOccurrences(of: "\u{0}", with: " ").split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        var out: [PlanLimit] = []
+        for (i, l) in lines.enumerated() where l.hasPrefix("Current session") || l.hasPrefix("Current week") {
+            let name = l.components(separatedBy: "  ").first ?? l
+            var percent: Int?
+            var resets: String?
+            // 같은 줄 또는 아래 세 줄 안에서 "NN% used" 와 "Resets …" 를 찾는다.
+            for j in i..<min(lines.count, i + 4) {
+                let t = lines[j]
+                if j > i, t.hasPrefix("Current ") { break }
+                if percent == nil, let r = t.range(of: #"(\d{1,3})% used"#, options: .regularExpression) {
+                    percent = Int(t[r].prefix { $0.isNumber })
+                }
+                if resets == nil, let r = t.range(of: "Resets ") {
+                    resets = String(t[r.upperBound...]).trimmingCharacters(in: .whitespaces)
+                }
+            }
+            if let p = percent { out.append(PlanLimit(name: name.trimmingCharacters(in: .whitespaces), percent: p, resets: resets)) }
+        }
+        return out
+    }
+}

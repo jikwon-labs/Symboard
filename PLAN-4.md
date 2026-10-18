@@ -63,8 +63,17 @@ STATUS: IN_PROGRESS
 
 ## 다시 눌러 볼 화면
 
-- [ ] 1. G 계정 프로필: 추가, 바꾸기, 노드에 적용
-- [ ] 2. N 사용량: 팝오버 숫자, 고리, 초기화 시각
+- [x] 1. G 계정 프로필: 추가, 바꾸기, 노드에 적용
+  - 원본(`node-accounts.jpg`)과 같은 점: accounts 머리 + CLI 칩, Keychain 경고, Your sign-in ACTIVE, 프로필 행(머리글자·Use·열기·고치기·지우기), Save your current sign-in, CONNECT ANOTHER ACCOUNT 칸 + Connect.
+  - 다른 점: 노드 머리에 어느 프로필로 떴는지 따로 보이지 않는다(마우스 설명에도 없음). 원본 장면에서도 노드 쪽 표시는 찾지 못해 그대로 둔다.
+  - 고침(찾은 것): 새 프로필 콘솔의 claude 첫 실행 화면("Choose the text style …", 번호·안내 줄 없는 메뉴)이 READY 로 보였다. `PromptDetector` 에 "고르는 줄 바로 위 10줄 안에 Choose/Select 물음이 있고 그 사이에 ──── 입력창 경계가 없으면 기다림" 규칙을 더했다(표본 테스트 2개: 테마 메뉴는 기다림, 답에 choose 가 있고 아래가 입력창이면 아님).
+  - 확인한 실제 입력(새 상태 /tmp/symv4h): 위 계정 단추 → 열리자마자 이름 칸에 "Work" → Return → `/tmp/symv4h/profiles/claude-work-…` 폴더로 claude 콘솔이 뜸(`G-accounts-typed.png`) → 다시 계정 단추 → Work 행 Use → activeProfiles 에 Work(`G-accounts-use.png`) → 팝오버 밖 클릭 → New console → 새 노드 Pip 의 profileID 가 Work, 새 설정 폴더라 첫 실행 화면(`G-profile-applied.png`). 다시 실행해 두 노드 이어하기 → 첫 실행 메뉴에서 둘 다 waiting(`G-onboarding-needs-you.png`).
+- [x] 2. N 사용량: 팝오버 숫자, 고리, 초기화 시각
+  - 원본(`node-usage.jpg`): 고리 "14% used", Current session "Resets 4:09am (지역)", Current week (all models) 9% 막대 + 초기화 시각, Current week (Fable) 17%, 활동 격자, 통계, 바닥 "claude · /usage". 토큰 화면은 막대 그래프와 By agent.
+  - 다른 점(쓰는 데 지장): 우리는 로컬 로그만 읽어 고리가 "? limit", 초기화 시각은 "(estimated)" 였다. 원본 바닥 글자처럼 CLI 의 `/usage` 화면이 출처다.
+  - 고침: `PlanUsageProbe` 가 화면 없는 터미널(SwiftTerm HeadlessTerminal)에 지금 프로젝트 폴더에서 claude 를 띄워 `/usage` 를 치고 화면을 읽은 뒤 닫는다. 모델에 질문하지 않는다. 폴더 신뢰·첫 실행처럼 선택 화면이 나오면 대신 고르지 않고 그만둔다(사용자 설정을 바꾸지 않으려고). `PlanUsageParser`(표본 테스트 2개)가 "Current session 29% used / Resets 5pm (Asia/Seoul)" 와 주간 줄들을 읽는다. 팝오버: 고리에 세션 %, "Resets 5pm (Asia/Seoul)", 주간 한도마다 이름·%·막대·초기화 시각, 바닥 "claude · /usage · local session logs". 팝오버를 열 때(2분 지난 값이면)와 새로 고침 단추에서 읽는다. 다 읽은 뒤 탐침 claude 가 남지 않는 것을 ps 로 확인.
+  - 남은 차이: codex 는 `/status` 를 읽지 않아 로그 통계만 보인다. 위쪽 알약은 3차에서 맞춘 "resets 5:00pm"(로그 기준 추정) 그대로다.
+  - 확인한 실제 입력(새 상태 /tmp/symv4i, 프로젝트 /tmp/symperm): 위 사용량 알약 클릭 → 처음엔 "reading claude /usage…" → 약 10초 뒤 고리 30% used, "Resets 5pm (Asia/Seoul)", Current week (all models) 18% · Resets Oct 22 at 8am(`N-usage.png`). 질문 0회.
 - [ ] 3. H 체크리스트·캘린더: 항목 추가·체크, 일정 추가
 - [ ] 4. I 이미지: 끌어 놓기 또는 붙여 넣기, 크기 조절
 - [ ] 5. C 오케스트레이터: 끌어서 팀과 연결, 연결 끊기, 연결된 팀에만 명령

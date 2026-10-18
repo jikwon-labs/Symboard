@@ -56,6 +56,29 @@ enum ScreenSamples {
       2. Restart with these settings
     › 3. Cancel
     """
+    static let claudeTheme = """
+     Let's get started.
+     Choose the text style that looks best with your terminal
+     To change this later, run /theme
+         Auto (match terminal)
+     ❯ ✔ Dark mode
+         Light mode
+         Dark mode (colorblind-friendly)
+     ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+      1  function greet() {
+      2 -  console.log("Hello, World!");
+      2 +  console.log("Hello, Claude!");
+      3  }
+     ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+      Syntax theme: Monokai Extended (ctrl+t to disable)
+    """
+    static let claudeAnswerThenPrompt = """
+    ⏺ You can choose either option; select the one you like.
+    ────────────────────────────────────────
+    ❯ Try "how do I log an error?"
+    ────────────────────────────────────────
+      ? for shortcuts
+    """
     static let claudePrompt = """
     ╭───────────────────────────────────────╮
     │ ✻ Welcome to Claude Code!             │
@@ -85,6 +108,8 @@ enum ScreenSamples {
     @Test func codexTrustScreenWaits() { #expect(PromptDetector.isWaitingForChoice(ScreenSamples.codexTrust)) }
     @Test func codexUpdateScreenWaits() { #expect(PromptDetector.isWaitingForChoice(ScreenSamples.codexUpdate)) }
     @Test func codexDaemonMenuWaits() { #expect(PromptDetector.isWaitingForChoice(ScreenSamples.codexDaemon)) }
+    @Test func claudeThemeMenuWaits() { #expect(PromptDetector.isWaitingForChoice(ScreenSamples.claudeTheme)) }
+    @Test func answerMentioningChooseAboveInputBoxIsNotWaiting() { #expect(!PromptDetector.isWaitingForChoice(ScreenSamples.claudeAnswerThenPrompt)) }
     @Test func plainPromptIsNotWaiting() { #expect(!PromptDetector.isWaitingForChoice(ScreenSamples.claudePrompt)) }
     @Test func numberedAnswerIsNotWaiting() { #expect(!PromptDetector.isWaitingForChoice(ScreenSamples.claudeAnswerWithList)) }
     @Test func oldDialogScrolledAwayIsIgnored() {
@@ -221,5 +246,38 @@ enum ScreenSamples {
     @Test func cmdOrPlainKeysAreIgnored() {
         #expect(KeyInput.controlByte(control: false, command: false, option: false, characters: "ㅊ", ignoringModifiers: "ㅊ") == nil)
         #expect(KeyInput.controlByte(control: true, command: true, option: false, characters: "\u{3}", ignoringModifiers: "ㅊ") == nil)
+    }
+}
+
+@Suite struct PlanUsageParserTests {
+    /// claude 2.1.302 `/usage` 화면에서 옮긴 표본.
+    static let screen = """
+      Settings    Status   Config   Usage   Stats
+
+      Current session
+      ██████████████▍                                      29% used
+      Resets 5pm (Asia/Seoul)
+
+      Current week (all models)
+      █████████                                            18% used
+      Resets Oct 22 at 8am (Asia/Seoul)
+
+      What's contributing to your limits usage?
+
+      Current week (Fable)
+                                                           0% used
+      Resets Oct 22 at 8am (Asia/Seoul)
+    """
+
+    @Test func readsThreeLimits() {
+        let l = PlanUsageParser.parse(Self.screen)
+        #expect(l.map(\.name) == ["Current session", "Current week (all models)", "Current week (Fable)"])
+        #expect(l.map(\.percent) == [29, 18, 0])
+        #expect(l.first?.resets == "5pm (Asia/Seoul)")
+        #expect(l[1].resets == "Oct 22 at 8am (Asia/Seoul)")
+    }
+
+    @Test func emptyWhenNoUsageScreen() {
+        #expect(PlanUsageParser.parse(ScreenSamples.claudePrompt).isEmpty)
     }
 }

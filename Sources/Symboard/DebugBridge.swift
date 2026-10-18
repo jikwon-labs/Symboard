@@ -237,6 +237,8 @@ final class DebugBridge {
         case "windowID":
             // screencapture -l 로 이 창만 찍을 때 쓴다.
             log.append("windowID \(controller.window?.windowNumber ?? 0)")
+        case "usageProbe":
+            log.append("limits=\(model.usage.limits) note=\(model.usage.limitsNote)\n\(model.usage.probe.lastScreen)")
         case "windows":
             // 키 창·메인 창과 열린 창 목록(시험 도구가 "초점 창 없음" 이라고 할 때 원인 확인용).
             log.append("active=\(NSApp.isActive) key=\(NSApp.keyWindow.map { "\(type(of: $0)) \($0.windowNumber)" } ?? "nil") main=\(NSApp.mainWindow?.windowNumber ?? 0)")

@@ -10,6 +10,11 @@ final class UsageStore: ObservableObject {
     @Published var scanning = false
     @Published var note = ""
     @Published var scannedAt: Date?
+    /// claude `/usage` 에서 읽은 요금제 한도(세션·주간 %, 초기화 시각).
+    @Published var limits: [PlanLimit] = []
+    @Published var limitsNote = ""
+    @Published var limitsAt: Date?
+    let probe = PlanUsageProbe()
     unowned let model: AppModel
 
     init(model: AppModel) { self.model = model }
@@ -23,6 +28,21 @@ final class UsageStore: ObservableObject {
             if p.agent == .codex { codex.append(p.configDir) }
         }
         return (Array(Set(claude)), Array(Set(codex)))
+    }
+
+    /// claude 를 화면 없이 띄워 `/usage` 를 읽는다. 질문을 보내지 않는다.
+    func refreshLimits() {
+        guard !probe.running else { return }
+        let ws = model.selectedWorkspace
+        // 신뢰 확인이 이미 끝난 폴더여야 하므로 지금 프로젝트 폴더에서 띄운다.
+        let cwd = ws.projectPath ?? NSHomeDirectory()
+        let profile = model.profiles.active(for: .claude).flatMap { id in model.state.profiles.first { $0.id == id } }
+        limitsNote = "reading claude /usage…"
+        probe.run(cwd: cwd, configDir: profile?.configDir) { [weak self] limits, error in
+            guard let self else { return }
+            if !limits.isEmpty { self.limits = limits; self.limitsAt = Date() }
+            self.limitsNote = error ?? ""
+        }
     }
 
     func refresh() {
@@ -121,7 +141,7 @@ struct UsagePopover: View {
             Divider().overlay(Color.symBorder)
             HStack(spacing: 6) {
                 Circle().fill(tint).frame(width: 6, height: 6)
-                Text("local session logs").font(.system(size: 10, design: .monospaced))
+                Text(agent == .claude && !store.limits.isEmpty ? "claude · /usage · local session logs" : "local session logs").font(.system(size: 10, design: .monospaced))
                 Spacer()
                 Text(store.note).font(.system(size: 10))
             }
@@ -132,7 +152,10 @@ struct UsagePopover: View {
         .background(Color.symSurface)
         .environment(\.locale, Locale(identifier: "en_US"))
         .onReceive(NotificationCenter.default.publisher(for: .usagePage)) { n in if let p = n.object as? String { page = p } }
-        .onAppear { if store.stats.isEmpty || (store.scannedAt.map { Date().timeIntervalSince($0) > 120 } ?? true) { store.refresh() } }
+        .onAppear {
+            if store.stats.isEmpty || (store.scannedAt.map { Date().timeIntervalSince($0) > 120 } ?? true) { store.refresh() }
+            if store.limitsAt.map({ Date().timeIntervalSince($0) > 120 }) ?? true { store.refreshLimits() }
+        }
     }
 
     var header: some View {
@@ -152,7 +175,7 @@ struct UsagePopover: View {
             Spacer()
             Button { page = page == "tokens" ? "overview" : "tokens" } label: { Image(systemName: "chart.bar.fill") }
                 .buttonStyle(.plainHit).tip("Token details")
-            Button { store.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).tip("Rescan logs")
+            Button { store.refresh(); store.refreshLimits() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).tip("Rescan logs and /usage")
             Button(action: close) { Image(systemName: "xmark") }.buttonStyle(.plainHit)
         }
         .foregroundStyle(Color.symText)
@@ -176,26 +199,54 @@ struct UsagePopover: View {
     var overview: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                let limits = agent == .claude ? store.limits : []
+                let session = limits.first { $0.name.hasPrefix("Current session") }
                 HStack(spacing: 14) {
                     ZStack {
                         Circle().stroke(Color.symBorder, lineWidth: 5)
-                        Circle().trim(from: 0, to: 0.02).stroke(tint, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
+                        Circle().trim(from: 0, to: max(0.02, Double(session?.percent ?? 0) / 100))
+                            .stroke(tint, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
                         VStack(spacing: 0) {
-                            Text("?").font(.system(size: 16, weight: .bold)).foregroundStyle(Color.symText)
-                            Text("limit").font(.system(size: 9)).foregroundStyle(Color.symDim)
+                            Text(session.map { "\($0.percent)%" } ?? "?").font(.system(size: 16, weight: .bold)).foregroundStyle(Color.symText)
+                            Text(session == nil ? "limit" : "used").font(.system(size: 9)).foregroundStyle(Color.symDim)
                         }
                     }
                     .frame(width: 62, height: 62)
-                    .hint("Plan limits are not written to local logs, so the percentage is unknown.")
+                    .hint(session == nil ? "Plan limits are read from claude /usage. Open this once the project folder is trusted." : "From claude /usage")
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Current session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
-                        if let end = stats.blockEnd {
+                        if let r = session?.resets {
+                            Text("Resets \(r)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                        } else if let end = stats.blockEnd {
                             Text("\(UsageStats.short(stats.blockTokens)) tokens · resets \(end.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Self.en))) (estimated)")
                                 .font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                         } else {
                             Text("No activity in the last 5 hours").font(.system(size: 11)).foregroundStyle(Color.symDim)
                         }
-                        Text("Limit % is not in local logs").font(.system(size: 10)).foregroundStyle(Color.symDim.opacity(0.7))
+                        if session == nil, agent == .claude {
+                            Text(store.limitsNote.isEmpty ? "Limit % comes from claude /usage" : store.limitsNote)
+                                .font(.system(size: 10)).foregroundStyle(Color.symDim.opacity(0.7))
+                        }
+                    }
+                }
+                // 주간 한도(모든 모델, 모델별): 원본처럼 이름 · % · 막대 · 초기화 시각.
+                ForEach(limits.filter { !$0.name.hasPrefix("Current session") }, id: \.name) { l in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(l.name).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
+                            Spacer()
+                            Text("\(l.percent)%").font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
+                        }
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.symRaised)
+                                Capsule().fill(tint).frame(width: g.size.width * min(1, Double(l.percent) / 100))
+                            }
+                        }
+                        .frame(height: 5)
+                        if let r = l.resets {
+                            Text("Resets \(r)").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
+                        }
                     }
                 }
                 VStack(alignment: .leading, spacing: 4) {

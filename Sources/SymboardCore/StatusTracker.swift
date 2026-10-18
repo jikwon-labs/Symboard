@@ -130,7 +130,7 @@ public enum PromptDetector {
     ]
     static let questionPatterns = [
         "do you want to", "would you like to", "trust this folder", "i trust this folder",
-        "allow command", "approve", "proceed?",
+        "allow command", "approve", "proceed?", "choose ", "select ",
     ]
 
     public static func isWaitingForChoice(_ screen: String) -> Bool {
@@ -158,6 +158,19 @@ public enum PromptDetector {
         // 고르는 표시가 번호 붙은 선택지 위에 있으면 안내 줄이 없어도 메뉴다(codex 데몬 설정 화면).
         let selectedNumbered = selected.contains { l in numbered.contains(l) }
         if selectedNumbered && numbered.count >= 2 { return true }
+        // 번호도 안내 줄도 없는 메뉴(claude 첫 실행의 테마 고르기): 고르는 줄 바로 위에 물음이 있으면 기다림.
+        // claude 의 평소 입력창도 "❯ …" 로 시작하지만 위아래가 ──── 경계라, 그 사이에 경계가 있으면 메뉴로 보지 않는다.
+        let tailArr = Array(tail)
+        for (i, l) in tailArr.enumerated() where selected.contains(l) {
+            var j = i - 1
+            while j >= max(0, i - 10) {
+                let t = tailArr[j]
+                if t.hasPrefix("─") || t.hasPrefix("╭") || t.hasPrefix("╰") { break }
+                let low = t.lowercased()
+                if questionPatterns.contains(where: { low.contains($0) }) { return true }
+                j -= 1
+            }
+        }
         if numbered.count >= 2 && (hasHint || hasQuestion) && (!selected.isEmpty || hasQuestion) { return true }
         return false
     }
