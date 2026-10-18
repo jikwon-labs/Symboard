@@ -9,7 +9,7 @@ enum NodeContentFactory {
         case .sticky:
             return HostedContent(node: node, model: model, menu: StickyColors.menu) { StickyView(box: $0, isSticky: true) }
         case .text:
-            return HostedContent(node: node, model: model) { StickyView(box: $0, isSticky: false) }
+            return HostedContent(node: node, model: model) { TitleTextView(box: $0) }
         case .checklist:
             return HostedContent(node: node, model: model) { ChecklistView(box: $0) }
         case .kanban:

@@ -30,6 +30,21 @@ public enum NodeKind: String, Codable, Sendable, CaseIterable {
     case file
 }
 
+/// 글자·도형 노드의 겉모양. 비어 있는 값은 노드 종류의 기본값을 쓴다.
+public struct NodeStyle: Codable, Equatable, Sendable {
+    public var fontSize: Double?
+    /// "hand" 손글씨, "sans", "serif", "mono".
+    public var font: String?
+    public var textColorHex: String?
+    public var align: String?
+    public var opacity: Double?
+    public init(fontSize: Double? = nil, font: String? = nil, textColorHex: String? = nil,
+                align: String? = nil, opacity: Double? = nil) {
+        self.fontSize = fontSize; self.font = font; self.textColorHex = textColorHex
+        self.align = align; self.opacity = opacity
+    }
+}
+
 /// 터미널 노드가 실행하는 프로그램 종류.
 public enum AgentKind: String, Codable, Sendable, CaseIterable {
     case shell
@@ -120,6 +135,7 @@ public struct BoardNode: Codable, Equatable, Sendable, Identifiable {
 
     public var teamID: UUID?
     public var role: String?
+    public var style: NodeStyle?
 
     public init(id: UUID = UUID(), kind: NodeKind, frame: Rect, title: String,
                 terminal: TerminalSpec? = nil, text: String? = nil, colorHex: String? = nil,
@@ -185,11 +201,13 @@ public struct Workspace: Codable, Equatable, Sendable, Identifiable {
     public var teams: [Team]
     public var strokes: [Stroke]
     public var loops: [LoopRule]
+    /// 이 작업공간이 속한 프로젝트 폴더. 1차 상태 파일에는 없다.
+    public var projectPath: String?
 
     public init(id: UUID = UUID(), name: String, nodes: [BoardNode] = [], viewport: Viewport = Viewport(),
-                teams: [Team] = [], strokes: [Stroke] = [], loops: [LoopRule] = []) {
+                teams: [Team] = [], strokes: [Stroke] = [], loops: [LoopRule] = [], projectPath: String? = nil) {
         self.id = id; self.name = name; self.nodes = nodes; self.viewport = viewport
-        self.teams = teams; self.strokes = strokes; self.loops = loops
+        self.teams = teams; self.strokes = strokes; self.loops = loops; self.projectPath = projectPath
     }
 }
 

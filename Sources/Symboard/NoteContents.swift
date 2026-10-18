@@ -72,6 +72,49 @@ struct StickyView: View {
     }
 }
 
+/// 캔버스 위 큰 글자. 바탕 없이 글자만 보인다.
+struct TitleTextView: View {
+    @ObservedObject var box: NodeBox
+
+    var style: NodeStyle { box.node.style ?? NodeStyle() }
+
+    var body: some View {
+        TextEditor(text: Binding(get: { box.node.text ?? "" }, set: { v in box.update { $0.text = v } }))
+            .font(Font(TextStyleFonts.font(style)))
+            .multilineTextAlignment(TextStyleFonts.alignment(style))
+            .scrollContentBackground(.hidden)
+            .scrollIndicators(.never)
+            .foregroundStyle(Color(hex: style.textColorHex ?? "#ECE7E2"))
+            .opacity(style.opacity ?? 1)
+            .overlay(alignment: .topLeading) {
+                if (box.node.text ?? "").isEmpty {
+                    Text("Type something").font(Font(TextStyleFonts.font(style))).foregroundStyle(Color.symDim.opacity(0.5))
+                        .padding(.leading, 5).allowsHitTesting(false)
+                }
+            }
+            .background(Color.clear)
+    }
+}
+
+enum TextStyleFonts {
+    static let sizes: [(String, Double)] = [("S", 20), ("M", 28), ("L", 44), ("XL", 64)]
+    static let fonts: [(String, String)] = [("hand", "Hand"), ("sans", "Sans"), ("serif", "Serif"), ("mono", "Mono")]
+
+    static func font(_ s: NodeStyle) -> NSFont {
+        let size = CGFloat(s.fontSize ?? 28)
+        switch s.font ?? "hand" {
+        case "sans": return .systemFont(ofSize: size, weight: .medium)
+        case "serif": return NSFont(name: "NewYork-Regular", size: size) ?? NSFont(name: "Georgia", size: size) ?? .systemFont(ofSize: size)
+        case "mono": return .monospacedSystemFont(ofSize: size, weight: .regular)
+        default: return Theme.handwriting(size: size)
+        }
+    }
+
+    static func alignment(_ s: NodeStyle) -> TextAlignment {
+        switch s.align { case "center": return .center; case "right": return .trailing; default: return .leading }
+    }
+}
+
 enum StickyColors {
     static let all: [(String, String)] = [("Yellow", "#FFD60A"), ("Pink", "#FF9FC6"), ("Green", "#9BE59B"), ("Blue", "#9CCBFF"), ("Purple", "#C9B3FF")]
 

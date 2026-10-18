@@ -44,8 +44,8 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         super.init()
         view.processDelegate = self
         view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        view.nativeBackgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1)
-        view.nativeForegroundColor = NSColor(calibratedWhite: 0.9, alpha: 1)
+        view.nativeBackgroundColor = Theme.terminalBackground
+        view.nativeForegroundColor = Theme.text
         view.onOutput = { [weak self] slice in
             MainActor.assumeIsolated { self?.handleOutput(slice) }
         }
@@ -94,6 +94,16 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
             }
         }
     }
+
+    /// 자식 프로세스 그룹에 신호를 보낸다(일시정지 SIGSTOP, 재개 SIGCONT).
+    func signal(_ sig: Int32) -> Bool {
+        let pid = view.process.shellPid
+        guard running, pid > 0 else { return false }
+        paused = sig == SIGSTOP
+        return killpg(getpgid(pid), sig) == 0 || kill(pid, sig) == 0
+    }
+
+    private(set) var paused = false
 
     func currentStatus(now: Date = Date()) -> NodeStatus {
         pollStatusFile()

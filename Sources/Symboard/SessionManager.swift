@@ -77,4 +77,17 @@ final class SessionManager {
     }
 
     func status(of nodeID: UUID) -> NodeStatus? { statuses[nodeID] }
+
+    /// 프로세스가 살아 있는 콘솔 수.
+    var liveCount: Int { sessions.values.filter(\.running).count }
+
+    /// 살아 있는 모든 콘솔의 프로세스 그룹에 신호를 보낸다. 보낸 개수를 돌려준다.
+    @discardableResult
+    func signalAll(_ sig: Int32) -> Int {
+        var n = 0
+        for s in sessions.values where s.running {
+            if s.signal(sig) { n += 1 }
+        }
+        return n
+    }
 }

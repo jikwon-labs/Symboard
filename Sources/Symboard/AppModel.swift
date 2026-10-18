@@ -93,6 +93,15 @@ final class AppModel: ObservableObject {
         scheduleSave()
     }
 
+    /// 프로젝트 폴더가 없는(1차) 작업공간에 폴더를 붙인다.
+    func assignProjects(fallback: String) {
+        guard state.workspaces.contains(where: { $0.projectPath == nil }) else { return }
+        for i in state.workspaces.indices where state.workspaces[i].projectPath == nil {
+            state.workspaces[i].projectPath = Projects.inferPath(for: state.workspaces[i], fallback: fallback)
+        }
+        scheduleSave()
+    }
+
     // MARK: 노드
 
     func node(_ id: UUID) -> BoardNode? {
@@ -128,6 +137,17 @@ final class AppModel: ObservableObject {
                 return
             }
         }
+    }
+
+    /// 노드를 맨 앞(배열 끝) 또는 맨 뒤(배열 처음)로 옮긴다.
+    func moveLayer(_ id: UUID, toFront: Bool) {
+        guard let wsID = workspaceID(containing: id) else { return }
+        mutateWorkspace(wsID) { ws in
+            guard let i = ws.nodes.firstIndex(where: { $0.id == id }) else { return }
+            let n = ws.nodes.remove(at: i)
+            if toFront { ws.nodes.append(n) } else { ws.nodes.insert(n, at: 0) }
+        }
+        NotificationCenter.default.post(name: .nodesChanged, object: wsID)
     }
 
     /// 새 노드를 놓을 자리: 현재 화면 중앙 근처에서 기존 노드와 덜 겹치게 조금씩 비켜 놓는다.

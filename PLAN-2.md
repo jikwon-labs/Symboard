@@ -8,16 +8,16 @@ STATUS: IN_PROGRESS
 
 ## A. 화면 뼈대와 테마
 
-- [ ] A1. 짙은 따뜻한 바탕·점 격자·주황빨강 강조색, 노드 얇은 강조 테두리·둥근 모서리 (agent3/diagrams-0.5.png, agent1/board-0.jpg)
-- [ ] A2. 떠 있는 위쪽 왼쪽 바: 홈으로·프로젝트 드롭다운·작업공간 탭(강조 테두리·노드 수 배지·닫기)·+·닫기 (agent1/board-0.jpg)
-- [ ] A3. 위쪽 오른쪽: N live 알약·사용량 재설정 알약·계정·설정·도구 메뉴 (agent1/resume-top.jpg)
-- [ ] A4. 왼쪽 세로 도구 막대(선택·에이전트·복제·텍스트·펜·지우개·도형·다이어그램·웹·이미지) (agent3/diagrams-0.5.png)
-- [ ] A5. 오른쪽 세로 막대(레이어·삽입·설정·스튜디오 입구·루프 배지) (board.jpg r2c1, agent1/resume-top.jpg)
-- [ ] A6. 아래 명령 바: 알약 버튼 줄 + 둥근 명령 입력(@ 대상) + 제안 알약 (node-composer.jpg r1c1, board.jpg r2c2)
-- [ ] A7. 아래 왼쪽 git 브랜치 칩 + 변경 수, 아래 오른쪽 배율 "− N% +" (board.jpg r3c2)
-- [ ] A8. 에이전트 생성: 강조 버튼 → CLI 목록 팝오버 → 캔버스 클릭 → 점선 자리표시 → 노드 (agent1/board-0.jpg, board.jpg r1c1)
-- [ ] A9. 캔버스 손글씨풍 큰 제목 텍스트 (board.jpg r1c1)
-- [ ] A10. 선택 객체 옆 속성 팝오버(색·굵기·글꼴·레이어/복제/삭제) (agent2/k-shape.jpg)
+- [x] A1. 짙은 따뜻한 바탕·점 격자·주황빨강 강조색, 노드 얇은 강조 테두리·둥근 모서리 (agent3/diagrams-0.5.png, agent1/board-0.jpg)
+- [x] A2. 떠 있는 위쪽 왼쪽 바: 홈으로·프로젝트 드롭다운·작업공간 탭(강조 테두리·노드 수 배지·닫기)·+·닫기 (agent1/board-0.jpg)
+- [x] A3. 위쪽 오른쪽: N live 알약·사용량 재설정 알약·계정·설정·도구 메뉴 (agent1/resume-top.jpg)
+- [x] A4. 왼쪽 세로 도구 막대(선택·에이전트·복제·텍스트·펜·지우개·도형·다이어그램·웹·이미지) (agent3/diagrams-0.5.png)
+- [x] A5. 오른쪽 세로 막대(레이어·삽입·설정·스튜디오 입구·루프 배지) (board.jpg r2c1, agent1/resume-top.jpg)
+- [x] A6. 아래 명령 바: 알약 버튼 줄 + 둥근 명령 입력(@ 대상) + 제안 알약 (node-composer.jpg r1c1, board.jpg r2c2)
+- [x] A7. 아래 왼쪽 git 브랜치 칩 + 변경 수, 아래 오른쪽 배율 "− N% +" (board.jpg r3c2)
+- [x] A8. 에이전트 생성: 강조 버튼 → CLI 목록 팝오버 → 캔버스 클릭 → 점선 자리표시 → 노드 (agent1/board-0.jpg, board.jpg r1c1)
+- [x] A9. 캔버스 손글씨풍 큰 제목 텍스트 (board.jpg r1c1)
+- [x] A10. 선택 객체 옆 속성 팝오버(색·굵기·글꼴·레이어/복제/삭제) (agent2/k-shape.jpg)
 
 ## B. 터미널 노드와 그룹
 
@@ -96,5 +96,10 @@ STATUS: IN_PROGRESS
 - [ ] Z1. 1차 완료 기준 재확인(터미널 3 → vim → claude → 종료 → 재실행, 토스트 거쳐), release 빌드, README·REPORT-2
 
 ## 메모
+
+- A1~A7 (2026-10-18): 원본 agent1/board-0.jpg, agent1/resume-top.jpg, agent3/diagrams-0.5.png, board.jpg r2c2·r3c2 / 내 것 `v2/A1-A7-board-chrome.png`, `v2/A2-home.png`. 창 전체가 캔버스, 위쪽 바·좌우 세로 막대·아래 명령 바·브랜치 칩·배율이 떠 있다. 프로젝트(폴더)마다 작업공간 묶음, 홈은 프로젝트 카드 목록. 아래 명령 바 `@all echo` 가 셸 2개에 들어간 것 확인.
+  - 남은 차이: 설정 버튼은 아직 안내 문구만(설정 화면 없음). 사용량 알약은 재설정 시각 대신 "usage"(N 에서). 도형·다이어그램 버튼은 H6·S 전까지 임시 동작. 오른쪽 막대 스튜디오 입구는 O 전까지 별도 창. 원본 마이크 자리는 보내기 버튼으로 바꿈.
+- A8: 원본 agent1/board-0.jpg, board.jpg r1c1 / 내 것 `v2/A8-spawn-menu.png`, `v2/A8-drop-placeholder.png`. CLI 목록(로그인 셸 command -v 로 설치 확인, All agents 로 전체), 고르면 점선 자리표시가 마우스를 따라오고 누른 자리에 노드. 남은 차이: 로고 대신 글자 배지.
+- A9·A10: 원본 board.jpg r1c1, node-kanban.mp4 40초(속성 패널은 왼쪽 막대 옆에 붙음) / 내 것 `v2/A9-A10-title-text-panel.png`, `v2/A10-sticky-panel.png`. 글자·스티키·이미지는 헤더 없음, 몸통 끌어 이동, 두 번 눌러 편집, Delete 로 삭제. 패널: 색 6+사용자 색, 글꼴 4, S/M/L/XL, 정렬, 불투명도, 앞으로/뒤로/복제/삭제. 1차 확인: vim 열고 닫기, sleep 에 Ctrl-C 정상.
 
 ## 막힌 것

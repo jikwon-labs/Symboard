@@ -20,11 +20,6 @@ enum CanvasGeometry {
     static func viewPoint(_ p: Point) -> NSPoint { NSPoint(x: p.x + origin, y: p.y + origin) }
 }
 
-enum BoardTool {
-    case select
-    case pen
-}
-
 /// 이동·확대/축소가 되는 보드. 확대/축소는 NSScrollView 의 magnification 을 쓴다.
 final class BoardScrollView: NSScrollView {
     override init(frame frameRect: NSRect) {
@@ -32,12 +27,12 @@ final class BoardScrollView: NSScrollView {
         allowsMagnification = true
         minMagnification = CanvasGeometry.minZoom
         maxMagnification = CanvasGeometry.maxZoom
-        hasHorizontalScroller = true
-        hasVerticalScroller = true
+        hasHorizontalScroller = false
+        hasVerticalScroller = false
         autohidesScrollers = true
         scrollerStyle = .overlay
         drawsBackground = true
-        backgroundColor = NSColor(calibratedWhite: 0.13, alpha: 1)
+        backgroundColor = Theme.canvas
         horizontalScrollElasticity = .none
         verticalScrollElasticity = .none
     }
@@ -80,7 +75,16 @@ final class BoardScrollView: NSScrollView {
 final class CanvasView: NSView {
     let workspaceID: UUID
     unowned let model: AppModel
-    var tool: BoardTool = .select { didSet { window?.invalidateCursorRects(for: self) } }
+    var tool: BoardTool = .select {
+        didSet {
+            window?.invalidateCursorRects(for: self)
+            if case .place = tool {} else { hoverPoint = nil }
+            needsDisplay = true
+        }
+    }
+    weak var controller: MainWindowController?
+    /// 놓기 도구일 때 마우스 위치(뷰 좌표). 점선 자리표시를 그린다.
+    private var hoverPoint: NSPoint?
     private(set) var nodeViews: [UUID: NodeView] = [:]
     private var panStart: (NSPoint, NSPoint)?
     private var currentStroke: [Point]?
@@ -119,7 +123,23 @@ final class CanvasView: NSView {
             nodeViews[node.id] = v
         }
         for node in ws.nodes { nodeViews[node.id]?.syncFromModel() }
+        applyOrder(ws)
         needsDisplay = true
+    }
+
+    /// 모델 배열 순서대로 겹침 순서를 맞춘다(뒤에 있을수록 위).
+    private func applyOrder(_ ws: Workspace) {
+        var rank: [ObjectIdentifier: Int] = [:]
+        for (i, n) in ws.nodes.enumerated() { if let v = nodeViews[n.id] { rank[ObjectIdentifier(v)] = i } }
+        let current = subviews.compactMap { rank[ObjectIdentifier($0)] }
+        guard current != current.sorted() else { return }
+        let box = Unmanaged.passRetained(RankBox(rank))
+        sortSubviews({ a, b, ctx in
+            let r = Unmanaged<RankBox>.fromOpaque(ctx!).takeUnretainedValue().rank
+            let ra = r[ObjectIdentifier(a)] ?? -1, rb = r[ObjectIdentifier(b)] ?? -1
+            return ra < rb ? .orderedAscending : (ra > rb ? .orderedDescending : .orderedSame)
+        }, context: box.toOpaque())
+        box.release()
     }
 
     func bringToFront(_ v: NodeView) {
@@ -136,20 +156,21 @@ final class CanvasView: NSView {
     func select(_ id: UUID?) {
         selectedNodeID = id
         for (nid, v) in nodeViews { v.isSelected = nid == id }
-        if let id, let v = nodeViews[id] { bringToFront(v) }
+        // 글자·스티키·이미지는 레이어 순서를 지킨다. 콘솔 같은 창형 노드만 누르면 앞으로 온다.
+        if let id, let v = nodeViews[id], !v.headerless { bringToFront(v) }
         onSelect?(id)
     }
 
     // MARK: 그리기
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor(calibratedWhite: 0.13, alpha: 1).setFill()
+        Theme.canvas.setFill()
         dirtyRect.fill()
         // 점 격자. 너무 작게 축소되면 그리지 않는다.
         let mag = enclosingScrollView?.magnification ?? 1
         if mag > 0.25 {
-            let step: CGFloat = 40
-            NSColor(calibratedWhite: 0.24, alpha: 1).setFill()
+            let step: CGFloat = 36
+            Theme.dot.setFill()
             var x = floor(dirtyRect.minX / step) * step
             while x < dirtyRect.maxX {
                 var y = floor(dirtyRect.minY / step) * step
@@ -165,6 +186,46 @@ final class CanvasView: NSView {
         if let cur = currentStroke {
             Self.draw(stroke: Stroke(points: cur, colorHex: penColor), offset: CanvasGeometry.origin)
         }
+        if case .place(let p) = tool, let h = hoverPoint {
+            let s = p.size
+            let r = NSRect(x: h.x - s.width / 2, y: h.y - 20, width: s.width, height: s.height)
+            let path = NSBezierPath(roundedRect: r, xRadius: 12, yRadius: 12)
+            path.lineWidth = 1.5 / max(mag, 0.2)
+            path.setLineDash([6 / max(mag, 0.2), 5 / max(mag, 0.2)], count: 2, phase: 0)
+            Theme.accent.withAlphaComponent(0.08).setFill()
+            path.fill()
+            Theme.accent.withAlphaComponent(0.8).setStroke()
+            path.stroke()
+            if case .agent(let id) = p, let choice = AgentCatalog.choice(id: id) {
+                let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 15, weight: .semibold),
+                                                            .foregroundColor: NSColor(hex: choice.colorHex)]
+                let str = NSAttributedString(string: choice.name, attributes: attrs)
+                let sz = str.size()
+                str.draw(at: NSPoint(x: r.midX - sz.width / 2, y: r.midY - sz.height / 2))
+            }
+        }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for t in trackingAreas { removeTrackingArea(t) }
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .activeInKeyWindow, .inVisibleRect], owner: self))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        guard case .place = tool else { return }
+        hoverPoint = convert(event.locationInWindow, from: nil)
+        needsDisplay = true
+    }
+
+    /// 지우개: 누른 자리 가까이 지나는 보드 획을 지운다.
+    private func erase(at p: Point) {
+        guard let ws = workspace else { return }
+        let r = 10 / max(enclosingScrollView?.magnification ?? 1, 0.2)
+        let hit = ws.strokes.lastIndex { s in s.points.contains { hypot($0.x - p.x, $0.y - p.y) < r + s.width } }
+        guard let i = hit else { return }
+        model.mutateWorkspace(workspaceID) { $0.strokes.remove(at: i) }
+        needsDisplay = true
     }
 
     static func draw(stroke: Stroke, offset: CGFloat) {
@@ -186,6 +247,14 @@ final class CanvasView: NSView {
         window?.makeFirstResponder(self)
         select(nil)
         let p = convert(event.locationInWindow, from: nil)
+        if case .place(let placement) = tool {
+            controller?.place(placement, at: CanvasGeometry.modelPoint(p))
+            return
+        }
+        if tool == .eraser {
+            erase(at: CanvasGeometry.modelPoint(p))
+            return
+        }
         if tool == .pen {
             currentStroke = [CanvasGeometry.modelPoint(p)]
             return
@@ -200,6 +269,10 @@ final class CanvasView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        if tool == .eraser {
+            erase(at: CanvasGeometry.modelPoint(convert(event.locationInWindow, from: nil)))
+            return
+        }
         if tool == .pen, currentStroke != nil {
             currentStroke?.append(CanvasGeometry.modelPoint(convert(event.locationInWindow, from: nil)))
             needsDisplay = true
@@ -230,7 +303,10 @@ final class CanvasView: NSView {
     }
 
     override func resetCursorRects() {
-        if tool == .pen { addCursorRect(visibleRect, cursor: .crosshair) }
+        switch tool {
+        case .pen, .place, .eraser: addCursorRect(visibleRect, cursor: .crosshair)
+        case .select: break
+        }
     }
 
     // MARK: 이미지 끌어다 놓기
@@ -246,7 +322,7 @@ final class CanvasView: NSView {
         for url in urls {
             let size = NSImage(contentsOf: url)?.size ?? CGSize(width: 400, height: 300)
             let scale = min(1, 520 / max(size.width, 1))
-            let node = BoardNode(kind: .image, frame: Rect(x: p.x, y: p.y, w: size.width * scale, h: size.height * scale + NodeView.headerHeight),
+            let node = BoardNode(kind: .image, frame: Rect(x: p.x, y: p.y, w: size.width * scale, h: size.height * scale),
                                  title: url.lastPathComponent, text: url.path, strokes: [])
             model.addNode(node, to: workspaceID)
             p.x += 30; p.y += 30
@@ -258,6 +334,11 @@ final class CanvasView: NSView {
         let opts: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingContentsConformToTypes: ["public.image"]]
         return info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: opts) as? [URL] ?? []
     }
+}
+
+private final class RankBox {
+    let rank: [ObjectIdentifier: Int]
+    init(_ r: [ObjectIdentifier: Int]) { rank = r }
 }
 
 extension Notification.Name {

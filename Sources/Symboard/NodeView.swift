@@ -31,7 +31,19 @@ final class NodeView: NSView {
     private let resizeHandle = ResizeHandleView()
     private let teamBadge = NSTextField(labelWithString: "")
 
-    var isSelected = false { didSet { updateBorder() } }
+    var isSelected = false {
+        didSet {
+            updateBorder()
+            if !isSelected && editing { setEditing(false) }
+        }
+    }
+
+    /// 헤더 없이 본문만 보이는 노드(글자·스티키·이미지). 몸통을 끌어 옮기고 두 번 눌러 편집한다.
+    let headerless: Bool
+    private let shield = MoveShieldView()
+    private(set) var editing = false
+
+    static func isHeaderless(_ kind: NodeKind) -> Bool { [.text, .sticky, .image].contains(kind) }
 
     static func make(node: BoardNode, model: AppModel) -> NodeView {
         let content: NodeContent
@@ -46,15 +58,23 @@ final class NodeView: NSView {
         self.nodeID = node.id
         self.model = model
         self.content = content
+        self.headerless = Self.isHeaderless(node.kind)
         super.init(frame: CanvasGeometry.viewRect(node.frame))
         wantsLayer = true
-        layer?.cornerRadius = 8
+        layer?.cornerRadius = 12
+        layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
         layer?.borderWidth = 1
-        layer?.backgroundColor = NSColor(calibratedWhite: 0.1, alpha: 1).cgColor
+        layer?.backgroundColor = Theme.terminalBackground.cgColor
 
         addSubview(content.view)
         addSubview(header)
+        if headerless {
+            header.isHidden = true
+            layer?.backgroundColor = NSColor.clear.cgColor
+            shield.nodeView = self
+            addSubview(shield)
+        }
         addSubview(resizeHandle)
         header.nodeView = self
         resizeHandle.nodeView = self
@@ -83,8 +103,10 @@ final class NodeView: NSView {
 
     private func layoutParts() {
         let b = bounds
+        let top = headerless ? 0 : Self.headerHeight
         header.frame = NSRect(x: 0, y: 0, width: b.width, height: Self.headerHeight)
-        content.view.frame = NSRect(x: 0, y: Self.headerHeight, width: b.width, height: max(0, b.height - Self.headerHeight))
+        content.view.frame = NSRect(x: 0, y: top, width: b.width, height: max(0, b.height - top))
+        shield.frame = b
         resizeHandle.frame = NSRect(x: b.width - 16, y: b.height - 16, width: 16, height: 16)
         header.needsLayout = true
     }
@@ -111,8 +133,14 @@ final class NodeView: NSView {
     }
 
     private func updateBorder() {
-        layer?.borderColor = (isSelected ? NSColor.controlAccentColor : NSColor(calibratedWhite: 0.3, alpha: 1)).cgColor
-        layer?.borderWidth = isSelected ? 2 : 1
+        if headerless {
+            layer?.borderColor = Theme.accent.cgColor
+            layer?.borderWidth = isSelected ? 1.5 : 0
+            resizeHandle.isHidden = !isSelected
+            return
+        }
+        layer?.borderColor = (isSelected ? Theme.accent : Theme.nodeBorder).cgColor
+        layer?.borderWidth = isSelected ? 1.5 : 1
     }
 
     // MARK: 동작
@@ -178,6 +206,25 @@ final class NodeView: NSView {
         syncFromModel()
     }
 
+    /// 편집 중이면 가림막을 치우고 본문에 입력 초점을 준다.
+    func setEditing(_ on: Bool) {
+        guard headerless else { return }
+        editing = on
+        shield.isHidden = on
+        if on {
+            canvas?.select(nodeID)
+            if let tv = Self.firstTextView(in: content.view) { window?.makeFirstResponder(tv) }
+        } else if let w = window, let fr = w.firstResponder as? NSView, fr.isDescendant(of: self) {
+            w.makeFirstResponder(canvas)
+        }
+    }
+
+    private static func firstTextView(in v: NSView) -> NSView? {
+        if v is NSTextView { return v }
+        for s in v.subviews { if let t = firstTextView(in: s) { return t } }
+        return nil
+    }
+
     func beginInteraction() {
         canvas?.select(nodeID)
     }
@@ -207,9 +254,9 @@ final class NodeHeaderView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.backgroundColor = NSColor(calibratedWhite: 0.19, alpha: 1).cgColor
+        layer?.backgroundColor = Theme.surface.cgColor
         titleLabel.font = .systemFont(ofSize: 12, weight: .medium)
-        titleLabel.textColor = NSColor(calibratedWhite: 0.92, alpha: 1)
+        titleLabel.textColor = Theme.text
         titleLabel.lineBreakMode = .byTruncatingTail
         statusLabel.font = .systemFont(ofSize: 10)
         statusLabel.textColor = NSColor(calibratedWhite: 0.7, alpha: 1)
@@ -294,6 +341,45 @@ final class NodeHeaderView: NSView {
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .openHand)
+    }
+}
+
+/// 헤더 없는 노드 위의 투명 가림막. 누르면 선택, 끌면 이동, 두 번 누르면 편집.
+final class MoveShieldView: NSView {
+    weak var nodeView: NodeView?
+    private var dragStart: (NSPoint, NSPoint)?
+    private var moved = false
+
+    override var isFlipped: Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // 펜으로 이미지 위에 그릴 때는 본문이 받는다.
+        if nodeView?.canvas?.tool == .pen { return nil }
+        return super.hitTest(point)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let nv = nodeView, let sv = nv.superview else { return }
+        nv.beginInteraction()
+        if event.clickCount == 2 {
+            dragStart = nil
+            nv.setEditing(true)
+            return
+        }
+        moved = false
+        dragStart = (sv.convert(event.locationInWindow, from: nil), nv.frame.origin)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let nv = nodeView, let (start, origin) = dragStart, let sv = nv.superview else { return }
+        let p = sv.convert(event.locationInWindow, from: nil)
+        moved = true
+        nv.setFrameOrigin(NSPoint(x: round(origin.x + p.x - start.x), y: round(origin.y + p.y - start.y)))
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        if dragStart != nil && moved { nodeView?.commitFrame() }
+        dragStart = nil
     }
 }
 

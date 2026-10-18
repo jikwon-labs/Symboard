@@ -252,6 +252,58 @@ final class DebugBridge {
         case "perform":
             // 도구 막대 동작을 이름으로 부른다.
             if let sel = cmd["selector"] as? String { NSApp.sendAction(Selector(sel), to: controller, from: nil) }
+        case "openProject":
+            controller.openProject(cmd["path"] as? String ?? "/tmp")
+            log.append("project \(controller.projectPath)")
+        case "home":
+            if cmd["on"] as? Bool ?? true { controller.goHome() } else { controller.setHome(false) }
+        case "tool":
+            // select / pen / eraser / text / sticky / checklist / kanban / web / agent:<id>
+            let t = cmd["tool"] as? String ?? "select"
+            let tool: BoardTool
+            switch t {
+            case "pen": tool = .pen
+            case "eraser": tool = .eraser
+            case "text": tool = .place(.text)
+            case "sticky": tool = .place(.sticky)
+            case "checklist": tool = .place(.checklist)
+            case "kanban": tool = .place(.kanban)
+            case "web": tool = .place(.web)
+            default: tool = t.hasPrefix("agent:") ? .place(.agent(String(t.dropFirst(6)))) : .select
+            }
+            controller.setTool(tool)
+            log.append("tool \(t)")
+        case "spawnMenu":
+            controller.chrome.spawnMenuOpen = cmd["open"] as? Bool ?? true
+        case "mouse":
+            // 캔버스 좌표로 마우스를 옮기거나(move) 누른다(click).
+            if let canvas = controller.currentCanvas {
+                let p = canvas.convert(CanvasGeometry.viewPoint(Point(x: cmd["x"] as? Double ?? 0, y: cmd["y"] as? Double ?? 0)), to: nil)
+                let kinds: [NSEvent.EventType] = (cmd["click"] as? Bool ?? false) ? [.leftMouseDown, .leftMouseUp] : [.mouseMoved]
+                for type in kinds {
+                    if let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: controller.window?.windowNumber ?? 0, context: nil,
+                                                  eventNumber: 0, clickCount: 1, pressure: 1) {
+                        if type == .mouseMoved { canvas.mouseMoved(with: e) } else { controller.window?.sendEvent(e) }
+                    }
+                }
+                log.append("mouse")
+            }
+        case "select":
+            if let n = node(cmd) { controller.currentCanvas?.select(n.id) }
+        case "command":
+            controller.chrome.command = cmd["text"] as? String ?? ""
+            if cmd["send"] as? Bool ?? true { controller.runCommand() }
+            log.append("command toast=\(controller.chrome.toast ?? "-")")
+        case "chrome":
+            let ch = controller.chrome
+            log.append("chrome tool=\(ch.tool) zoom=\(ch.zoomPercent) live=\(ch.liveCount) branch=\(ch.branch ?? "-") changes=\(ch.changeCount) home=\(ch.showingHome)")
+        case "setText":
+            if let n = node(cmd) {
+                model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }
+                controller.currentCanvas?.nodeViews[n.id]?.syncFromModel()
+                log.append("setText")
+            }
         case "quit":
             write((log + ["quit"]).joined(separator: "\n"))
             NSApp.terminate(nil)
