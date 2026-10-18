@@ -289,3 +289,13 @@ import Testing
         #expect(linked < far)
     }
 }
+
+@Suite struct FactStreamTests {
+    @Test func streamsAcrossChunks() {
+        var f = FactStream()
+        #expect(f.feed("```jsonl\n{\"category\":\"commands\",\"title\":\"Run\",\"bo").isEmpty)
+        let got = f.feed("dy\":\"python3 src/hello.py\"}\nnot json\n{\"title\":\"Note\",\"body\":\"x\"}")
+        #expect(got == [FactStream.Fact(category: "Commands", title: "Run", body: "python3 src/hello.py")])
+        #expect(f.finish() == [FactStream.Fact(category: "Context", title: "Note", body: "x")])
+    }
+}

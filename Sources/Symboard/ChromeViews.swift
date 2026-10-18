@@ -428,6 +428,7 @@ struct LayersList: View {
         case .calendar: return "calendar"
         case .shape: return "square.on.circle"
         case .inspector: return "ladybug"
+        case .memory: return "brain"
         }
     }
 }

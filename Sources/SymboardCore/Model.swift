@@ -32,6 +32,7 @@ public enum NodeKind: String, Codable, Sendable, CaseIterable {
     case calendar
     case shape
     case inspector
+    case memory
 }
 
 /// 글자·도형 노드의 겉모양. 비어 있는 값은 노드 종류의 기본값을 쓴다.
@@ -325,8 +326,10 @@ public struct MemoryNote: Codable, Equatable, Sendable, Identifiable {
     public var repoPath: String?
     public var title: String
     public var body: String
-    public init(id: UUID = UUID(), repoPath: String? = nil, title: String, body: String) {
-        self.id = id; self.repoPath = repoPath; self.title = title; self.body = body
+    /// Architecture, Structure, Commands, Conventions, Gotchas, Context 중 하나(2차).
+    public var category: String?
+    public init(id: UUID = UUID(), repoPath: String? = nil, title: String, body: String, category: String? = nil) {
+        self.id = id; self.repoPath = repoPath; self.title = title; self.body = body; self.category = category
     }
 }
 

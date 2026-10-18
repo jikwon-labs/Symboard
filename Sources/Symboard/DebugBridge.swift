@@ -503,6 +503,21 @@ final class DebugBridge {
             if cmd["close"] as? Bool == true { controller.closeStudio() }
             if let out = cmd["pdf"] as? String, let f = st.selected { controller.exportPDF(markdown: f, to: URL(fileURLWithPath: out)) }
             log.append("studio2 kind=\(st.kind ?? "-") file=\(st.selected?.lastPathComponent ?? "-") dirty=\(st.dirty) lines=\(st.lineCount)")
+        case "memory2":
+            // page, agent, scan(실제 CLI 호출), accept, card
+            let h = controller.memoryHub
+            if let p = cmd["page"] as? String { h.page = p }
+            if let e = cmd["edit"] as? Int, e < h.notes.count { h.editing = h.notes[e]; h.page = "edit" }
+            if let a = cmd["agent"] as? String { h.agent = a }
+            if cmd["scan"] as? Bool == true { h.startScan() }
+            if cmd["accept"] as? Bool == true { h.acceptProposals() }
+            if cmd["card"] as? Bool == true { controller.placeMemoryCard() }
+            if let fake = cmd["fake"] as? Int {
+                h.page = "scan"; h.phase = 2
+                for i in 0..<fake { h.proposals.append(MemoryHub.Proposal(fact: FactStream.Fact(category: FactStream.categories[i % 6], title: "Fact \(i)", body: "Body of fact \(i) with src/hello.py."))) }
+            }
+            if let t = cmd["add"] as? String { h.save(MemoryNote(repoPath: h.repo, title: t, body: cmd["body"] as? String ?? "", category: cmd["category"] as? String)) }
+            log.append("memory2 page=\(h.page ?? "-") phase=\(h.phase) proposals=\(h.proposals.count) notes=\(h.notes.count) error=\(h.scanError ?? "-")")
         case "setText":
             if let n = node(cmd) {
                 model.mutateNode(n.id) { $0.text = cmd["text"] as? String ?? "" }

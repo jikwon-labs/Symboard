@@ -9,6 +9,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let composer = ComposerState()
     let loopDraft = LoopDraft()
     lazy var studioState = StudioState(root: URL(fileURLWithPath: projectPath))
+    lazy var memoryHub: MemoryHub = { let h = MemoryHub(model: model); h.c = self; return h }()
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
@@ -17,6 +18,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private var missionObserver: Any?
     private var loopsObserver: Any?
     private var studioObserver: Any?
+    private var memObserver: Any?
     private var canvases: [UUID: CanvasView] = [:]
     private var shownWorkspaceID: UUID?
     private var observers: [NSObjectProtocol] = []
@@ -43,7 +45,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         _ = model.loops
         buildUI()
         observe()
-        sidePanel.addTab("Memory", view: AnyView(MemoryPanelView(memory: model.memory, panel: sidePanel.state)))
         sidePanel.addTab("Profiles", view: AnyView(ProfilesPanelView(profiles: model.profiles) { [weak self] p in
             self?.addTerminal(spec: TerminalSpec(agent: p.agent, cwd: self?.projectPath ?? NewTerminalDialog.lastCwd, profileID: p.id), at: nil,
                               title: "\(p.agent.displayName) (\(p.name))")
@@ -134,6 +135,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             studioHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         studioObserver = studioState.$kind.sink { k in studioHost.isHidden = k == nil }
+        let memHost = HiddenAwareHostingView(rootView: MemoryModalView(hub: memoryHub, model: model))
+        memHost.translatesAutoresizingMaskIntoConstraints = false
+        memHost.sizingOptions = []
+        memHost.isHidden = true
+        content.addSubview(memHost)
+        NSLayoutConstraint.activate([
+            memHost.topAnchor.constraint(equalTo: content.topAnchor),
+            memHost.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            memHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            memHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+        ])
+        memObserver = memoryHub.$page.sink { p in memHost.isHidden = p == nil }
         let loopsHost = HiddenAwareHostingView(rootView: LoopsHost(model: model, chrome: chrome, draft: loopDraft, c: self))
         loopsHost.translatesAutoresizingMaskIntoConstraints = false
         loopsHost.sizingOptions = []
@@ -532,7 +545,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     func openUsage() { chrome.usageOpen.toggle() }
     func openProfiles() { togglePanel(tab: "Profiles") }
     func openLoops() { chrome.loopsPage = chrome.loopsPage == nil ? "list" : nil }
-    func openMemory() { togglePanel(tab: "Memory") }
+    func openMemory() { memoryHub.page = memoryHub.page == nil ? "list" : nil }
+
+    /// 메모리 카드를 보드에 놓는다(지금 레포 메모).
+    func placeMemoryCard() {
+        memoryHub.page = nil
+        addNode(kind: .memory, size: CGSize(width: 360, height: 300), title: "Memory") { $0.text = self.memoryHub.repo }
+    }
     func openMission() { chrome.missionOpen.toggle() }
 
     /// 그룹 프레임 전체가 보이게 맞춘다.

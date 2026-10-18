@@ -80,8 +80,8 @@ STATUS: IN_PROGRESS
 
 ## K·R·S. 에이전트 생성
 
-- [ ] K1. 메모리 모달·레포 필터·편집 화면·보드에 카드로 놓기 (node-memory.jpg, agent2/m-edit.jpg)
-- [ ] K2. 레포 스캔(CLI 백그라운드)·단계 표시·제안 검토 (agent2/m-review.jpg)
+- [x] K1. 메모리 모달·레포 필터·편집 화면·보드에 카드로 놓기 (node-memory.jpg, agent2/m-edit.jpg)
+- [x] K2. 레포 스캔(CLI 백그라운드)·단계 표시·제안 검토 (agent2/m-review.jpg)
 - [ ] R1. 문서 스튜디오 왼쪽(CLI·깊이·템플릿)·빈 상태 (agent3/documents-2.6.png)
 - [ ] R2. 생성 중 칩·Stop·실시간 종이·결과 종이·보드 문서 카드 (agent3/doc-gen.png, documents-19.png)
 - [ ] S1. 다이어그램 팝오버(CLI·스타일·유형 6·자유 설명·시작 도형) (agent3/diag-pop-1.2.png)
@@ -137,5 +137,9 @@ STATUS: IN_PROGRESS
 - O1·P1: 원본 agent3/code-16.png, studio-code.jpg r3c3 / 내 것 `v2/O1-P1-code-studio.png`, `v2/O1-P1-board-cards.png`. 별도 창 대신 보드 위 둥근 패널(뒤 어둡게, 위쪽·아래 막대와 좌우 막대는 그대로 위에 보임), 오른쪽 막대 코드·마크다운·문서 버튼으로 진입, 지금 프로젝트 폴더에 자동 연결. 왼쪽 열: 강조색 배지·스튜디오 이름·프로젝트 이름·+ (폴더 더하기), 종류별 아이콘 나무(선택 줄 강조). 코드: 브레드크럼·언어 배지·"8 lines · 187 B"·• Edited/Saved, 줄 번호 막대와 입력 중 구문 색이 있는 편집기, Add folder·Save(⌘S)·Insert(줄 번호 코드 카드). 닫으면 고친 내용을 저장하고 열었던 파일을 보드에 작은 카드로 남긴다(카드의 ↗ 로 다시 열기). 디버그로 hello.py 를 고쳐 Save 후 디스크 내용 확인.
 - Q1·Q2: 원본 agent3/markdown-0.8.png, agent3/md-graph.png / 내 것 `v2/Q1-markdown-reading.png`, `v2/Q1-markdown-source.png`, `v2/Q2-link-graph.png`. 파일 검색, .md 확장자 숨긴 나무, 위쪽 "README.md 57 words · ~1 min", Reading/Source/Graph, Add to Board, Export PDF(macOS 저장 시트, 디버그로 /tmp 에 27KB PDF 생성 확인). Reading: 제목 아래 짧은 강조색 밑줄, 강조색 모노 인라인 코드, 둥근 카드형 표, NOTE/TIP 콜아웃(Markdown.html 단위 테스트). Source: 줄 번호+마크다운 색. Graph: "Link graph · N notes", 힘 기반 배치(ForceLayout, 같은 입력이면 같은 결과, 단위 테스트), 현재 문서 강조색, 마우스를 올리면 이웃과 선 강조, 누르면 그 문서를 Reading 으로 연다.
   - 남은 차이: 원본은 닫을 때 카드로 줄어드는 움직임이 있는데 여기는 움직임 없이 카드가 생긴다. 새 카드 자리가 기존 노드와 겹칠 수 있다.
+- K1·K2: 원본 node-memory.jpg, agent2/m-review.jpg, agent2/m-edit.jpg / 내 것 `v2/K1-memory-empty.png`, `v2/K1-memory-list.png`, `v2/K1-memory-edit.png`, `v2/K1-memory-card.png`, `v2/K2-scan-pick.png`, `v2/K2-scanning.png`, `v2/K2-review-real-scan.png`. 아래 바 Memory → 모달. 헤더 Scan repo / New memory, 레포 칩(이 레포 N / 모든 레포 N), 빈 상태(같은 두 버튼), 목록(분류 태그·제목·본문·연필), 편집(분류 탭 6개·제목·본문·Rewrite·적용 범위 이 레포/모든 레포·Delete/Cancel/Save memory), "Place card on board" → 메모리 카드(고른 메모를 고른 콘솔에, Enter 여부 선택, Send 를 눌렀을 때만).
+  - 레포 스캔: CLI 고르기(Claude/Codex) → `claude -p --output-format stream-json --verbose --include-partial-messages --no-session-persistence --permission-mode dontAsk --tools Read,Glob,Grep` 를 레포 폴더에서 백그라운드로 실행, 단계 표시(Launch → Read the repo(도구 사용 이벤트) → Write facts(글 조각)), 한 줄 JSON 사실을 FactStream(단위 테스트)으로 꺼내 실시간으로 늘린다. 검토: "8 of 8 selected", 체크·분류·제목·본문·연필, Discard / Add N to memory.
+  - 실제 호출: /tmp/symsample 에서 claude 로 2회. 1회째는 앱이 죽었다(내 보조 함수 이름 tag(_:) 가 SwiftUI View.tag 와 겹쳐 모달이 자기 안에 끝없이 들어감 → categoryTag 로 바꿔 해결, 가짜 제안으로 재현·확인). 2회째 약 25초에 사실 8개(실제 경로·명령 인용) → 모두 추가해 state.json 에 분류와 함께 저장 확인.
+  - 남은 차이: 이번 실행에서는 에이전트가 사실을 마지막에 한꺼번에 써서 목록이 끝에 한 번에 찼다(조각 단위 표시 자체는 단위 테스트로만 확인). 메모리 카드의 Send, Rewrite 버튼은 자동 확인하지 않았다(Rewrite 는 사용량 때문에 실행하지 않음).
 
 ## 막힌 것

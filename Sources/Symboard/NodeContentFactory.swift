@@ -20,6 +20,8 @@ enum NodeContentFactory {
             return WebContent(node: node, model: model)
         case .git:
             return GitContent(node: node, model: model)
+        case .memory:
+            return MemoryCardContent(node: node, model: model)
         case .inspector:
             return InspectorContent(node: node, model: model)
         case .shape:
