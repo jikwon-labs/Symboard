@@ -202,7 +202,7 @@ struct LeftRail: View {
                 .buttonStyle(RailToolStyle(active: { if case .place(.shape) = chrome.tool { return true } else { return false } }()))
                 .tip("Shapes")
                 .popover(isPresented: $chrome.shapeOpen, arrowEdge: .trailing) {
-                    ShapePicker { k in chrome.shapeOpen = false; c.setTool(.place(.shape(k))) }
+                    ShapePicker { k in chrome.shapeOpen = false; c.setTool(.place(k == "sticky" ? .sticky : .shape(k))) }
                 }
             DiagramRailButton(maker: c.diagrams)
             toolButton("globe", "Web tile", active: chrome.tool == .place(.web)) { c.setTool(.place(.web)) }

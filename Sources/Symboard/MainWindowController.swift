@@ -783,6 +783,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             }
         case .sticky:
             addNode(kind: .sticky, size: s, title: "Note", at: origin) { $0.text = ""; $0.colorHex = "#C9A227" }
+            // 원본처럼 놓자마자 글을 쓸 수 있게 편집 상태로.
+            if let id = currentCanvas?.selectedNodeID {
+                DispatchQueue.main.async { [weak self] in self?.currentCanvas?.nodeViews[id]?.setEditing(true) }
+            }
         case .checklist:
             addNode(kind: .checklist, size: s, title: "Checklist", at: origin) { $0.checklist = [] }
         case .kanban:

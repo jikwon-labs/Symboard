@@ -146,7 +146,7 @@ final class UsageStore: ObservableObject {
         var paths = Set<String>()
         func stamp(_ path: String, _ m: Date) -> UsageFileCache.Stamp {
             let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? Int) ?? 0
-            return .init(modified: m, size: size ?? 0)
+            return .init(modified: m, size: size)
         }
         for root in claudeRoots {
             for (path, m) in files(under: root + "/projects") {

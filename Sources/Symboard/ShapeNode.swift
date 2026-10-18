@@ -156,7 +156,7 @@ struct ShapePicker: View {
     var pick: (String) -> Void
     var body: some View {
         HStack(spacing: 4) {
-            ForEach([("rect", "rectangle"), ("ellipse", "circle"), ("diamond", "diamond"), ("arrow", "arrow.right")], id: \.0) { k in
+            ForEach([("rect", "rectangle"), ("ellipse", "circle"), ("diamond", "diamond"), ("arrow", "arrow.right"), ("sticky", "note.text")], id: \.0) { k in
                 Button { pick(k.0) } label: { Image(systemName: k.1).font(.system(size: 16)).frame(width: 40, height: 36) }
                     .buttonStyle(ChipStyle(on: false))
                     .tip(k.0.capitalized)

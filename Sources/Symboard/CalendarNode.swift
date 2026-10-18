@@ -8,6 +8,10 @@ struct CalendarNodeView: View {
     @State private var month = Date()
     /// 팝오버: (날짜, 고치는 일정 id)
     @State private var editing: (Date, UUID?)?
+    /// 끌고 있는 일정과 그 아래 칸 번호(0~41).
+    @State private var dragging: UUID?
+    @State private var hoverCell: Int?
+    @State private var gridSize: CGSize = .zero
 
     static let colors = ["#F05A38", "#E9C46A", "#6FCF97", "#56A8F5", "#B48CF2", "#F28AB2"]
     var cal: Calendar { var c = Calendar.current; c.firstWeekday = 2; return c }
@@ -37,10 +41,13 @@ struct CalendarNodeView: View {
                     VStack(spacing: 0) {
                         ForEach(0..<6, id: \.self) { r in
                             HStack(spacing: 0) {
-                                ForEach(0..<7, id: \.self) { c in cell(grid[r * 7 + c], height: h) }
+                                ForEach(0..<7, id: \.self) { c in cell(grid[r * 7 + c], index: r * 7 + c, grid: grid, height: h) }
                             }
                         }
                     }
+                    .coordinateSpace(name: "calgrid")
+                    .onAppear { gridSize = geo.size }
+                    .onChange(of: geo.size) { _, v in gridSize = v }
                 }
             }
             .padding(12)
@@ -66,7 +73,24 @@ struct CalendarNodeView: View {
         }
     }
 
-    func cell(_ day: Date, height: CGFloat) -> some View {
+    /// 격자 좌표의 칸 번호(밖이면 nil).
+    func cellIndex(at p: CGPoint) -> Int? {
+        guard gridSize.width > 0, gridSize.height > 0, p.x >= 0, p.y >= 0, p.x < gridSize.width, p.y < gridSize.height else { return nil }
+        return Int(p.y / (gridSize.height / 6)) * 7 + Int(p.x / (gridSize.width / 7))
+    }
+
+    /// 일정을 다른 날로 옮긴다(시각은 그대로).
+    func move(_ id: UUID, to day: Date) {
+        box.update { n in
+            guard var list = n.events, let i = list.firstIndex(where: { $0.id == id }) else { return }
+            let old = list[i].day
+            let offset = old.timeIntervalSince(cal.startOfDay(for: old))
+            list[i].day = cal.startOfDay(for: day).addingTimeInterval(offset)
+            n.events = list
+        }
+    }
+
+    func cell(_ day: Date, index: Int, grid: [Date], height: CGFloat) -> some View {
         let inMonth = cal.isDate(day, equalTo: month, toGranularity: .month)
         let today = cal.isDateInToday(day)
         let dayEvents = events.filter { cal.isDate($0.day, inSameDayAs: day) }
@@ -83,13 +107,22 @@ struct CalendarNodeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: 3).fill(Color(hex: ev.colorHex).opacity(0.25)))
                     .overlay(alignment: .leading) { Rectangle().fill(Color(hex: ev.colorHex)).frame(width: 2) }
+                    .opacity(dragging == ev.id ? 0.4 : 1)
                     .onTapGesture { editing = (ev.day, ev.id) }
+                    // 원본처럼 일정을 끌어 다른 날에 놓는다.
+                    .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("calgrid"))
+                        .onChanged { v in dragging = ev.id; hoverCell = cellIndex(at: v.location) }
+                        .onEnded { v in
+                            if let i = cellIndex(at: v.location), i < grid.count { move(ev.id, to: grid[i]) }
+                            dragging = nil; hoverCell = nil
+                        })
             }
             Spacer(minLength: 0)
         }
         .padding(3)
         .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .top)
         .overlay(Rectangle().stroke(Color.symBorder.opacity(0.5), lineWidth: 0.5))
+        .background(hoverCell == index && dragging != nil ? Color.symAccent.opacity(0.15) : Color.clear)
         .contentShape(Rectangle())
         .onTapGesture { editing = (cal.startOfDay(for: day), nil) }
     }

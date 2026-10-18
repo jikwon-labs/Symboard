@@ -102,7 +102,11 @@ STATUS: IN_PROGRESS
   - 우리(`env -i`, 새 탭 Workspace 3): 왼쪽 그림 도구 → 열기 창 Cmd+Shift+G `/tmp/symsample/sample-image.png` → 그림 노드 → 펜(같은 COLOR·WIDTH 패널) → 빨강 → orca 끌기로 그림 위 사각 둘레, 그림 밖으로 꺾인 선, 화살촉(`v5-ink.png`). 획이 끌면서 바로 그려지고 그림 밖 캔버스에도 그려진다.
   - 쓰는 데 지장 있는 차이: 없음.
   - 모양 차이: orca 끌기는 직선만 보내 원본 같은 둥근 타원·손글씨는 시험 도구로 못 그렸다(펜이 곡선을 부드럽게 잇는 것은 2차에서 확인). 그림이 골라진 채 펜을 고르면 그림 속성 패널이 펜 패널 아래에 잠깐 겹쳐 보이다가 첫 획에서 사라진다(원본은 펜 패널만).
-- [ ] V6. node-kanban.mp4
+- [x] V6. node-kanban.mp4
+  - 원본 조작: 칸반 TO DO "+ Add card" → NEW CARD(제목·메모·Today/Tomorrow/Next week·None/Low/Med/High) → "Research market trends" → Today → Low → Add card → IN PROGRESS → DONE 로 끌기 → 오른쪽 막대 둘째 INSERT TO-DO → Checklist → Calendar → + New → 날짜·파랑·메모·"Coordinate" → Add event → 일정을 12일로 끌기 → 일정 눌러 고치기 → 왼쪽 도형 → Sticky → 놓자마자 "Prepare some things about the app." → Arrow·Rectangle·"ROI %".
+  - 우리(`env -i`, Workspace 3): 오른쪽 막대 둘째 → Board → TO DO Add card → 같은 대화상자, 같은 글 → Today → Low → Add card(초록 막대·Today·Low) → IN PROGRESS → DONE 끌기(DONE 1). Calendar → + New → "Coordinate" → 파랑 → Add event(18일) → 24일로 끌기. 도형 → Sticky → 클릭 → 바로 타이핑(`v6-sticky-typed.png`).
+  - 쓰는 데 지장 있는 차이(고침): ① 캘린더 일정을 다른 날로 끌 수 없었다 → 일정 끌기(놓을 칸 강조, 시각 유지). ② 스티커를 놓은 뒤 글을 바로 칠 수 없었다(두 번 눌러야 편집) → 놓자마자 편집 상태. ③ 도형 메뉴에 Sticky 가 없었다(Insert 에만) → 원본처럼 도형 메뉴에도.
+  - 모양 차이(남김): 원본 날짜 칸은 Today 를 누르면 날짜 입력으로 바뀌고 dd/mm/yyyy, 우리는 칩 그대로. 원본 일정 기본색은 노랑, 우리는 주황. 스티커 PAPER 패널이 새 스티커를 가린다(원본도 왼쪽 패널이지만 스티커가 화면 가운데라 겹치지 않음).
 - [ ] V7. node-loops.mp4
 - [ ] V8. node-memory.mp4
 - [ ] V9. node-resume.mp4
