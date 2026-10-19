@@ -1,4 +1,4 @@
-STATUS: IN_PROGRESS
+STATUS: DONE
 
 # Symboard 8차 진행표
 
@@ -11,7 +11,7 @@ STATUS: IN_PROGRESS
 | 때 | claude | codex |
 |----|--------|-------|
 | 시작 | 2.1.303 (프롬프트의 2.1.302 와 다름. 시작 시점에 이미 2.1.303) | 0.163.0 |
-| 끝 | | |
+| 끝 | 2.1.303 | 0.163.0 (업데이트·신뢰 화면은 열지 않았다) |
 
 ## 실제 claude 질문 수 (한도 12)
 
@@ -20,8 +20,11 @@ STATUS: IN_PROGRESS
 | 1 | 10-20 01:38 | 1번 스크롤 시험. "print the numbers 1 to 150, one per line, nothing else" |
 | 2 | 10-20 02:10 | 4번 여러 줄 한 메시지 시험. "Reply with only the word OK." + 세 줄 |
 | 3 | 10-20 02:20 | 3번 보드 도구 시험. 프롬프트의 시험 질문 그대로 |
+| 4 | 10-20 02:23 | 완료 기준 3(첫 판). 같은 질문. 통과했으나 claude 가 결과를 읽고 두 콘솔을 닫아 안내 글을 고침 |
+| 5 | 10-20 02:26 | 완료 기준 3(다시, 고친 안내로). 같은 질문 |
+| 6 | 10-20 02:26 | 완료 기준 4. "Reply with only the word OK." + 세 줄 |
 
-합계: 3
+합계: 6
 
 ## 할 일
 
@@ -70,4 +73,21 @@ STATUS: IN_PROGRESS
 
 ## 막힌 것
 
+- 막힌 항목은 없다. 다만 이 맥에서는 Cmd+3 과 Ctrl+Tab 이 HID 실제 키로는 앱에 오지 않는다(다른 프로그램의 전역 단축키로 보임, 어느 것인지는 못 찾음, DECISIONS 8차-10). 같은 키 이벤트를 앱 프로세스에 바로 보내면 동작한다.
+
 ## 완료 기준 실제 입력 기록
+
+`release` 번들, 한 인스턴스(`SYMBOARD_HOME=/tmp/symv8-9`)에서 2026-10-20 02:22~02:28 에 이어서 했다(첫 판 3번에서 claude 가 띄운 콘솔을 닫아 안내 글을 고친 뒤, 새 번들·새 인스턴스로 처음부터 다시). 준비만 DebugBridge(`openProject /tmp/symsample`, 셸 Ada(0,0)·셸 Pip(700,0)·claude Maya(1400,0), 화면 옮기기). 판정은 모두 실제 클릭·키(orca type·scroll, `cgclick`).
+
+1. 통과. Ada 를 누르고 `seq 1 500` 타이핑 + Return → Ada 위 휠 40번 → 화면 맨 위 `seq 1 500`·`1`, 오른쪽 아래 "↓ Bottom". 다른 노드 자리·배율 60% 그대로(`final-1-console-wheel.png`). 빈 캔버스 위 휠 3번 → 보드가 움직임(`final-1-outside-wheel.png`).
+2. 통과. 노드 3개 보드에서 화면을 (-2500,2500) 빈 곳으로(`final-2-empty-view.png`) → `New console` 클릭 → 위 줄이 차서 Ada 아래 (0,440) 에 Iris, 화면이 그쪽으로 옮겨 감, 배율 그대로(`final-2-new-console.png`).
+3. 통과. 명령 바 `@Maya symboard 도구로 셸 콘솔 2개를 띄워 각각 echo a, echo b 를 보내고 결과를 읽어 한 줄로 알려줘` + Return(질문 5) → "Called symboard 6 times", 보드에 셸 Dax(a)·Rafa(b), Maya 와 옅은 선, 답 "셸 콘솔 Dax는 echo a에 a를, Rafa는 echo b에 b를 출력했습니다. 두 콘솔은 열어 두었습니다."(`final-3-claude-spawned.png`).
+4. 통과. Maya 를 고른 채 명령 바에 Shift+Enter 로 네 줄 → 3줄 높이, 안에서 스크롤돼 끝 줄 보임(`final-4-bar-four-lines.png`) → ⇧⌘E 큰 편집 칸 "Message Maya"(`final-4-editor.png`) → ⇧⌘E 닫기 → 네 줄 그대로(`final-4-closed-kept.png`) → Return → claude 에 네 줄이 한 메시지, 답 OK 한 번(질문 6).
+5. 통과. `@Ada echo one @Pip echo two` + Return → Ada 에 one, Pip 에 two, Iris·Dax·Rafa 에는 없음(`final-5-per-target.png`).
+6. 통과. `?` 단추 클릭 → 단축키 표(`final-6-button.png`), Esc, 빈 캔버스 클릭 뒤 Shift+/ → 표(`final-6-key.png`).
+7. 통과. claude Iris 입력 줄, ABC: `alpha beta gamma` → Option+← x → `alpha beta xgamma`, Cmd+← y → `yalpha…`, Cmd+→·Option+Backspace → `yalpha beta `, Cmd+Backspace → 빈 줄. 한글 2벌식: `안녕 하세`+조합 `요` → Option+← (요 확정 뒤 단어 앞) ㄱ → `안녕 ㄱ 하세요`, Cmd+← ㄴ → `ㄴ 안녕 ㄱ 하세요`, Cmd+→·Option+Backspace → `ㄴ 안녕 ㄱ `, Cmd+Backspace → 빈 줄.
+8. 통과. 고치기 전·후 같은 한글 문장, 기본·Pretendard × 12·14 (`8-compare-*.png`, 위 항목 8).
+9. 통과. Iris 에 한글 `dkssud gktpdy` → `안녕 하세` 뒤 밑줄 친 조합 중 `요`(`final-9-composing.png`).
+
+7차까지 된 것 다시 확인(같은 인스턴스): 한글 입력으로 `@Pip echo 안녕` → Pip 에만 `안녕`. 앱을 끄고 같은 상태 폴더로 다시 켬 → "Resume all conversations?" 와 claude 노드 말풍선, 옅은 선도 남음, Maya Yes → `claude --resume <id> --mcp-config …` 로 지난 대화(위 질문들) 그대로. Finder 환경(PATH 최소)에서 claude 를 찾아 띄움. `swift build -c release` 통과, `swift test` 204개 통과(7차 177).
+

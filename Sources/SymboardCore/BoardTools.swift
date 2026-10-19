@@ -17,7 +17,8 @@ public enum BoardTools {
         When a task splits into parts that can run in parallel, prefer the symboard tools over your built-in subagents: \
         open a console per part with spawn_console (agent "claude", "codex" or "shell", with the instructions as prompt), \
         or send work to an existing console with send_to_console. The user can see and steer every console. \
-        Collect results with read_console, combine them in your answer, and close consoles you no longer need with close_console.
+        Collect results with read_console and combine them in your answer. Leave the consoles open so the user can look at them; \
+        use close_console only when the user asks.
         """
 
     public static func claudeArgs(configPath: String) -> [String] {

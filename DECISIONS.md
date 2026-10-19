@@ -61,5 +61,5 @@
 - 8차-5: 글 중간의 @이름은 글이 알려진 @이름으로 시작할 때만 대상으로 본다(`@Ada 고쳐 @Pip 테스트`). 고른 콘솔에 보내는 평소 글(`look at @src/main.swift` 등)은 예전처럼 통째로 간다. 앞에 빈칸이 없거나(`a@b.com`) 알려진 이름이 아니면(`@types/node`) 글이다. 맨 앞부터 모르는 이름이면 예전처럼 "No console named" 로 알린다.
 - 8차-5: THREAD 문구는 앱 글자가 영어라 "→ Ada: 글", "Nothing to send to Pip · not sent" 로 쓴다. 대상이 둘 이상이거나 빠진 대상이 있을 때만 THREAD 를 펼친다(한 대상에 보낼 때는 기록만).
 - 8차-3: 보드 도구는 앱 상태 폴더의 유닉스 소켓(`bridge.sock`, 0600)과 앱 번들 안 `symboard-mcp`(stdio MCP) 로 만든다. 콘솔마다 `status/<노드>.mcp.json` 을 만들어 `--mcp-config` 로 주고, 부른 콘솔은 그 json 의 환경 변수(SYMBOARD_CALLER)로 안다. `--strict-mcp-config` 는 쓰지 않아 사용자 MCP 도 그대로 뜬다.
-- 8차-3: 덧붙이는 안내(`BoardTools.systemPrompt`)는 claude 가 읽는 글이라 영어로 썼다. 뜻: 나눌 수 있는 일은 내장 하위 에이전트보다 spawn_console 로 콘솔을 띄워 맡기고, read_console 로 결과를 모으고, 다 쓴 콘솔은 닫아라.
+- 8차-3: 덧붙이는 안내(`BoardTools.systemPrompt`)는 claude 가 읽는 글이라 영어로 썼다. 뜻: 나눌 수 있는 일은 내장 하위 에이전트보다 spawn_console 로 콘솔을 띄워 맡기고, read_console 로 결과를 모아라. 띄운 콘솔은 사용자가 볼 수 있게 열어 두고, 사용자가 말할 때만 닫아라(처음 판은 "다 쓴 콘솔은 닫아라" 였는데, 마지막 점검에서 claude 가 결과를 읽자마자 두 콘솔을 닫아 보드에 남지 않았다).
 - 8차-3: spawn_console 에 prompt 가 있으면 새 콘솔이 시작 중을 벗어날 때(최대 45초)까지 기다렸다가 보내고 답한다. 새 콘솔이 "needs you"(폴더 신뢰 질문 등)면 대신 답하지 않고 보내지 않았다고 알린다. 새 콘솔은 부른 콘솔 옆(2번 규칙)에 놓고, 고른 콘솔은 부른 콘솔로 되돌려 명령 바 대상이 바뀌지 않게 한다. 자기 자신에게 보내기·닫기는 막는다.

@@ -73,12 +73,17 @@ open /Applications/Symboard.app
 | 메모리 | 모달에서 레포 스캔(CLI 가 사실을 한 줄씩) → 검토 → 저장, 분류·적용 범위 편집, 보드 메모리 카드에서 골라 콘솔로 보내기 |
 | 계정 | 머리에 CLI 아이콘 다섯(이 맥에 없는 것은 흐리게, 누르면 안내만). CLI 별 프로필(설정 폴더) 목록, Use 로 새 콘솔 기본 계정 지정, Connect 로 새 계정 콘솔 열어 로그인 |
 | 명령 바 THREAD | `spawn 4 shell`, `add an orchestrator wired to group 1`, `put me preset 4`, `delete the group called group 1` 같은 보드 명령의 친 글·계획·결과가 명령 바 위 THREAD 카드에 쌓인다. 그룹 닫기는 그 안의 Confirm · N 으로 확인. 입력칸 옆 꺾쇠로 접고 편다 |
-| 배치 | 새로 놓는 노드·카드가 그룹 프레임이나 다른 노드와 겹치면 가장 가까운 빈 자리로 민다(글·도형은 그대로). 웹 도구는 끌어서 크기를 정한다 |
+| 배치 | 새로 놓는 노드·카드가 그룹 프레임이나 다른 노드와 겹치면 가장 가까운 빈 자리로 민다(글·도형은 그대로). 웹 도구는 끌어서 크기를 정한다. New console·Spawn·spawn 명령은 기존 노드 옆 빈 칸(같은 줄 오른쪽, 차면 아래 줄)에 놓고 화면을 부드럽게 옮긴다 |
+| 콘솔 입력(8차) | 콘솔 위 휠·트랙패드는 지난 줄(claude 처럼 마우스를 받는 프로그램이면 그 프로그램에), 올려 둔 동안 출력이 와도 그대로, "↓ Bottom". ⌥←/→ 단어, ⌘←/→ 줄 끝, ⌥⌫·⌘⌫ 지우기(한글 입력 포함). 조합 중 한글을 밑줄로 보이고, 한글 글자 사이 틈을 줄였다 |
+| 콘솔 옮겨 다니기(8차) | ⌃Tab·⌃⇧Tab 다음·이전, ⌘1~⌘9 N 번째(⌘ 누르는 동안 번호 배지), Zoom to Fit 은 ⇧⌘1 |
+| 명령 바(8차) | ⇧Enter 여러 줄(3줄까지 자람), ⇧⌘E 전체 화면 편집, claude·codex 에는 여러 줄을 한 메시지로. `@Ada 글 @Pip 글` 은 대상마다 다른 글. 왼쪽 아래 ? 단추·? 키로 단축키 표 |
+| 보드 도구(8차) | claude 콘솔에 MCP 도구(list/spawn/send/read/close_console)를 인자로만 붙여, claude 가 보드에 콘솔을 띄우고 일을 맡기고 결과를 읽는다. 띄운 콘솔은 부른 콘솔과 옅은 선. 설정 창 "Let agents open consoles on the board" 로 끈다 |
 
 ## 구조
 
 - `Sources/SymboardCore`: UI 없는 로직과 단위 테스트 대상. 모델·저장, 실행 계획(이어하기·훅 주입), 상태 판정, 명령 대상 해석, 루프 판정·요약, git·사용량·CLI 스트림 파싱, 마크다운·다이어그램 배치·힘 기반 배치.
 - `Sources/Symboard`: AppKit 앱. `MainWindowController`(떠 있는 막대 배치), `BoardView`(캔버스·그룹 프레임·연결선·펜 층), `NodeView`(헤더), 각 노드 본문, 모달(미션 맵·루프·메모리), 스튜디오 패널, `AgentJob`(CLI 백그라운드 실행).
+- `Sources/SymboardMCP`: claude 콘솔에 붙이는 stdio MCP 서버 `symboard-mcp`(앱 소켓 `bridge.sock` 에 도구 호출을 넘긴다). 번들 `Contents/MacOS` 에 함께 들어간다.
 - `scripts/bundle.sh`: `.app` 번들. `scripts/drive.sh`: 자동 확인용 디버그 통로.
 
 ### 디버그 통로
@@ -91,4 +96,5 @@ open /Applications/Symboard.app
 - 2차(원본과 같게 보이고 움직이게): `PLAN-2.md`(항목마다 비교한 원본 장면·스크린샷·남은 차이), `REPORT-2.md`, 스크린샷 `docs/screens/v2/`.
 - 3~5차: `PLAN-3.md`~`PLAN-5.md`, `REPORT-3.md`~`REPORT-5.md`.
 - 6차(영상별 작은 차이): `PLAN-6.md`, `REPORT-6.md`. 원본과 나란히 둔 그림은 `docs/screens/v6/compare/`(커밋하지 않음).
+- 7차·8차(실제로 써 보고 요청한 것): `PLAN-7.md`·`PLAN-8.md`, `REPORT-7.md`·`REPORT-8.md`, 스크린샷 `docs/screens/v8/`.
 - 결정 기록: `DECISIONS.md`.
