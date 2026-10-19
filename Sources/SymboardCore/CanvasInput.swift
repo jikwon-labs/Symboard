@@ -60,6 +60,40 @@ public enum CanvasLayout {
         return out
     }
 
+    /// 자리를 정해 주지 않고 만든 노드(New console·Spawn·에이전트가 띄운 콘솔)를 놓을 자리.
+    /// 기준 노드(reference, 없으면 마지막 장애물)와 같은 줄 오른쪽의 첫 빈 칸, 줄이 maxRowWidth 를 넘으면 아래 줄 왼쪽부터.
+    /// 보드가 비어 있으면 nil(부르는 쪽이 화면 가운데에 놓는다).
+    public static func besideSlot(w: Double, h: Double, reference: Rect?, obstacles: [Rect],
+                                  gap: Double = 40, maxRowWidth: Double = 2100) -> Rect? {
+        guard let ref = reference ?? obstacles.last else { return nil }
+        let clearance = 24.0
+        func blockers(_ f: Rect) -> [Rect] {
+            obstacles.filter { o in
+                f.x < o.x + o.w + clearance && o.x < f.x + f.w + clearance && f.y < o.y + o.h + clearance && o.y < f.y + f.h + clearance
+            }
+        }
+        func band(_ y: Double, _ hh: Double) -> [Rect] { obstacles.filter { $0.y < y + hh && y < $0.y + $0.h } }
+        let firstRow = band(ref.y, ref.h)
+        let rowLeft = min(firstRow.map(\.x).min() ?? ref.x, ref.x)
+        var y = ref.y
+        var x = ref.x + ref.w + gap
+        for _ in 0..<12 {
+            var tries = 0
+            while x + w - rowLeft <= maxRowWidth || x == rowLeft, tries < 30 {
+                let f = Rect(x: x, y: y, w: w, h: h)
+                let b = blockers(f)
+                if b.isEmpty { return f }
+                x = (b.map { $0.x + $0.w }.max() ?? x) + gap
+                tries += 1
+            }
+            // 이 줄은 찼다. 이 줄에 걸친 것들의 아래로 내려가 왼쪽부터 다시.
+            let row = band(y, max(h, y == ref.y ? ref.h : h))
+            y = (row.map { $0.y + $0.h }.max() ?? (y + h)) + gap
+            x = rowLeft
+        }
+        return nearestFree(Rect(x: rowLeft, y: y, w: w, h: h), avoiding: obstacles)
+    }
+
     /// frame 이 obstacles 와 (gap 만큼 띄워서) 겹치지 않는 가장 가까운 자리. 겹치지 않으면 그대로.
     /// 후보는 원래 x·y 와 각 장애물의 네 변에 gap 을 두고 붙인 x·y 의 조합이라, 장애물 사이 틈도 찾는다.
     public static func nearestFree(_ frame: Rect, avoiding obstacles: [Rect], gap: Double = 24) -> Rect {

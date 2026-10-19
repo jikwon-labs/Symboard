@@ -1143,7 +1143,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     @discardableResult
     func addTerminal(spec: TerminalSpec, at point: Point?, size: CGSize = CGSize(width: 640, height: 400),
-                     title: String? = nil, teamID: UUID? = nil, role: String? = nil, applyActiveProfile: Bool = true) -> BoardNode {
+                     title: String? = nil, teamID: UUID? = nil, role: String? = nil, applyActiveProfile: Bool = true,
+                     near: UUID? = nil) -> BoardNode {
         var spec = spec
         // 새 콘솔은 그 CLI 에 고른 계정 프로필을 따른다.
         if applyActiveProfile, spec.profileID == nil, spec.agent == .claude || spec.agent == .codex {
@@ -1151,13 +1152,41 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         let frame: Rect
         if let point { frame = Rect(x: point.x, y: point.y, w: size.width, h: size.height) }
-        else { frame = model.suggestedFrame(size: size, near: scrollView.visibleCenter) }
+        else { frame = besideFrame(w: size.width, h: size.height, near: near) }
         let name = title ?? nextName()
         let node = BoardNode(kind: .terminal, frame: frame, title: name, terminal: spec, teamID: teamID, role: role)
         model.addNode(node)
         currentCanvas?.select(node.id)
-        if point == nil { reveal([frame]) }
+        if point == nil { glideReveal([frame]) }
         return node
+    }
+
+    /// 자리를 정하지 않은 새 콘솔(묶음)의 자리: 기준 노드(near → 고른 노드 → 마지막 노드) 옆 빈 칸. 보드가 비었으면 화면 가운데.
+    func besideFrame(w: Double, h: Double, near: UUID? = nil) -> Rect {
+        let ws = model.selectedWorkspace
+        let refID = near ?? currentCanvas?.selectedNodeID
+        var ref = refID.flatMap { id in ws.nodes.first { $0.id == id } }
+        if ref.map({ NodeView.isHeaderless($0.kind) }) ?? false { ref = nil }
+        var refRect = ref?.frame ?? ws.nodes.last(where: { !NodeView.isHeaderless($0.kind) })?.frame
+        // 기준이 그룹에 들었으면 그룹 프레임 전체를 기준으로(그룹 안에 끼어들지 않게).
+        let obstacles = CanvasLayout.obstacles(nodes: ws.nodes, teams: ws.teams)
+        if let r = refRect, let box = obstacles.first(where: { $0.x <= r.x && $0.y <= r.y && $0.x + $0.w >= r.x + r.w && $0.y + $0.h >= r.y + r.h }) {
+            refRect = box
+        }
+        if let slot = CanvasLayout.besideSlot(w: w, h: h, reference: refRect, obstacles: obstacles) { return slot }
+        return model.suggestedFrame(size: CGSize(width: w, height: h), near: scrollView.visibleCenter)
+    }
+
+    /// 새로 놓은 노드로 화면을 부드럽게 옮긴다. 배율은 그대로 두되, 화면보다 크면 들어오게 줄인다.
+    func glideReveal(_ frames: [Rect], duration: TimeInterval = 0.35) {
+        guard let first = frames.first else { return }
+        var minX = first.x, minY = first.y, maxX = first.x + first.w, maxY = first.y + first.h
+        for f in frames.dropFirst() { minX = min(minX, f.x); minY = min(minY, f.y); maxX = max(maxX, f.x + f.w); maxY = max(maxY, f.y + f.h) }
+        let safe = safeCanvasRect, mag = Double(scrollView.magnification)
+        let fit = min(safe.w / (maxX - minX + 80), safe.h / (maxY - minY + 80))
+        let z = max(Double(scrollView.minMagnification), mag * min(1, fit))
+        // 보이는 영역(막대를 뺀 곳)의 가운데는 화면 가운데보다 20pt 위다(reveal 과 같은 보정).
+        scrollView.glide(to: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / z), zoom: z, duration: duration)
     }
 
     /// 이 작업공간에서 아직 안 쓴 짧은 이름.
@@ -1297,19 +1326,30 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let color = colorHex ?? Composer.teamColors[model.selectedWorkspace.teams.count % Composer.teamColors.count]
         let team = Team(name: teamName, colorHex: color)
         model.mutateWorkspace(wsID) { $0.teams.append(team) }
-        let frames = Composer.frames(count: specs.count, center: freeSpotCenter(count: specs.count), size: (w: 520, h: 330))
+        let frames = Composer.frames(count: specs.count, center: stagger ? freeSpotCenter(count: specs.count) : teamSlotCenter(count: specs.count),
+                                     size: (w: 520, h: 330))
         for (i, f) in frames.enumerated() {
             let role = i < roles.count ? roles[i] : nil
             let add = { [weak self] in
                 guard let self else { return }
                 self.addTerminal(spec: specs[i], at: Point(x: f.x, y: f.y), size: CGSize(width: f.w, height: f.h),
                                  teamID: team.id, role: role)
-                if i == frames.count - 1 { self.zoomToFit(nil) }
+                if i == frames.count - 1, !stagger { self.glideReveal(frames) }
             }
             if stagger && i > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 0.18 * Double(i), execute: add) } else { add() }
         }
         if stagger { zoomToFitFrames(frames) }
         return team
+    }
+
+    /// Spawn N·spawn 명령의 묶음 자리: 기존 노드 옆 빈 칸(그룹 프레임 여백·머리 포함 크기로). 보드가 비었으면 화면 가운데.
+    private func teamSlotCenter(count: Int) -> Point {
+        let cols = Double(Int(ceil(Double(count).squareRoot())))
+        let rows = ceil(Double(count) / cols)
+        let innerW = cols * 544 - 24, innerH = rows * 354 - 24
+        let pad = 14.0, head = 30.0
+        let slot = besideFrame(w: innerW + pad * 2, h: innerH + pad * 2 + head)
+        return Point(x: slot.x + pad + innerW / 2, y: slot.y + pad + head + innerH / 2)
     }
 
     /// 새 묶음을 놓을 자리: 화면 가운데가 비어 있으면 거기, 아니면 기존 노드 오른쪽.
