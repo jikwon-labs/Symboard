@@ -2,7 +2,7 @@
 // 사용: cgclick click X Y [count]   (Symboard 창 기준 포인트)
 //       cgclick drag X1 Y1 X2 Y2
 //       cgclick move X Y        (누르지 않고 마우스만 옮긴다. 커서 모양 시험용)
-//       cgclick key CODE [cmd,opt,shift,ctrl]  (키 코드 하나를 수정 키와 함께)
+//       cgclick key CODE [cmd,opt,shift,ctrl]  (키 코드 하나를 수정 키와 함께. CGCLICK_TOPID=1 이면 앱 프로세스에 바로)
 //       cgclick keys LETTERS    (ABC 자판 자리의 실제 키 코드로 친다. 입력기를 거치므로 한글 입력 상태면 dkssud → 안녕)
 // 같은 앱이 여러 개 떠 있으면 SYMBOARD_PID 로 시험 인스턴스를 고른다.
 // 창 위치는 CGWindowList 에서 local.symboard.app 창을 찾아 더한다.
@@ -75,7 +75,12 @@ if args.count >= 3, args[1] == "key" {
     let k = CGKeyCode(args[2])!
     let down = CGEvent(keyboardEventSource: nil, virtualKey: k, keyDown: true)!; down.flags = flags
     let up = CGEvent(keyboardEventSource: nil, virtualKey: k, keyDown: false)!; up.flags = flags
-    down.post(tap: .cghidEventTap); usleep(40_000); up.post(tap: .cghidEventTap); usleep(40_000)
+    if ProcessInfo.processInfo.environment["CGCLICK_TOPID"] == "1", let app = targetApp() {
+        // 다른 프로그램의 전역 단축키가 먼저 가져가는 조합(이 맥의 Cmd+3·Ctrl+Tab)을 앱 프로세스에 바로 보낸다.
+        down.postToPid(app.processIdentifier); usleep(40_000); up.postToPid(app.processIdentifier); usleep(40_000)
+    } else {
+        down.post(tap: .cghidEventTap); usleep(40_000); up.post(tap: .cghidEventTap); usleep(40_000)
+    }
     for (code, f) in mods.reversed() {
         flags.remove(f)
         let e = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false)!; e.flags = flags

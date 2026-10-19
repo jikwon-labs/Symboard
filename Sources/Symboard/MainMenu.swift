@@ -40,7 +40,21 @@ enum MainMenu {
         viewMenu.addItem(withTitle: "Zoom In", action: #selector(MainWindowController.zoomIn(_:)), keyEquivalent: "=")
         viewMenu.addItem(withTitle: "Zoom Out", action: #selector(MainWindowController.zoomOut(_:)), keyEquivalent: "-")
         viewMenu.addItem(withTitle: "Actual Size", action: #selector(MainWindowController.zoomReset(_:)), keyEquivalent: "0")
-        viewMenu.addItem(withTitle: "Zoom to Fit", action: #selector(MainWindowController.zoomToFit(_:)), keyEquivalent: "9")
+        // Cmd+1~9 는 콘솔 이동에 쓰므로 Zoom to Fit 은 Cmd+Shift+1. 실제 키 처리는 창 키 감시(키 코드)가 한다.
+        let fit = viewMenu.addItem(withTitle: "Zoom to Fit", action: #selector(MainWindowController.zoomToFit(_:)), keyEquivalent: "1")
+        fit.keyEquivalentModifierMask = [.command, .shift]
+        viewMenu.addItem(.separator())
+        let nextConsole = viewMenu.addItem(withTitle: "Next Console", action: #selector(MainWindowController.nextConsole(_:)), keyEquivalent: "\t")
+        nextConsole.keyEquivalentModifierMask = [.control]
+        let prevConsole = viewMenu.addItem(withTitle: "Previous Console", action: #selector(MainWindowController.previousConsole(_:)), keyEquivalent: "\t")
+        prevConsole.keyEquivalentModifierMask = [.control, .shift]
+        let goItem = viewMenu.addItem(withTitle: "Go to Console", action: nil, keyEquivalent: "")
+        let goMenu = NSMenu(title: "Go to Console")
+        for i in 1...9 {
+            let it = goMenu.addItem(withTitle: "Console \(i)", action: #selector(MainWindowController.goToConsoleMenu(_:)), keyEquivalent: "\(i)")
+            it.tag = i
+        }
+        goItem.submenu = goMenu
         viewMenu.addItem(.separator())
         let next = viewMenu.addItem(withTitle: "Next Workspace", action: #selector(MainWindowController.nextWorkspace(_:)), keyEquivalent: "]")
         next.keyEquivalentModifierMask = [.command, .shift]

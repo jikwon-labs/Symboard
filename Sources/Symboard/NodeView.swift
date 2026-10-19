@@ -327,6 +327,8 @@ final class NodeHeaderView: NSView {
     let statusDot = NSView()
     let statusPill = PillLabel()
     let permBadge = PillLabel()
+    /// Cmd 를 누르고 있는 동안 보이는 콘솔 번호(Cmd+1~9).
+    let numberBadge = PillLabel()
     let accountBadge = PillLabel()
     let restartButton = NSButton()
     let duplicateButton = NSButton()
@@ -352,6 +354,7 @@ final class NodeHeaderView: NSView {
         statusPill.isHidden = true
         permBadge.isHidden = true
         accountBadge.isHidden = true
+        numberBadge.isHidden = true
         permBadge.set(text: "AUTO", color: Theme.accent, filled: true)
         kindIcon.contentTintColor = Theme.textDim
         for (b, sym, tip) in [(closeButton, "xmark", "Close"), (menuButton, "ellipsis", "More"),
@@ -364,7 +367,7 @@ final class NodeHeaderView: NSView {
             b.contentTintColor = Theme.textDim
             b.toolTip = tip
         }
-        [glyph, chevron, accountBadge, statusDot, titleLabel, roleLabel, permBadge, statusPill, restartButton, duplicateButton,
+        [glyph, chevron, accountBadge, statusDot, titleLabel, numberBadge, roleLabel, permBadge, statusPill, restartButton, duplicateButton,
          closeButton, menuButton, kindIcon].forEach(addSubview)
         applyKind()
     }
@@ -420,8 +423,21 @@ final class NodeHeaderView: NSView {
         titleLabel.sizeToFit()
         let tw = min(titleLabel.frame.width, max(10, right - x))
         titleLabel.frame = NSRect(x: x, y: mid(16), width: tw, height: 16)
-        let rx = x + tw + 6
+        var rx = x + tw + 6
+        if !numberBadge.isHidden {
+            let w = max(16, numberBadge.fittingWidth)
+            numberBadge.frame = NSRect(x: rx, y: mid(16), width: w, height: 16)
+            rx += w + 6
+        }
         roleLabel.frame = NSRect(x: rx, y: mid(15), width: max(0, right - rx), height: 15)
+    }
+
+    /// 콘솔 번호 배지. nil 이면 숨긴다.
+    func setNumber(_ n: Int?) {
+        if let n { numberBadge.set(text: "\(n)", color: Theme.accent, filled: true) }
+        guard numberBadge.isHidden != (n == nil) else { return }
+        numberBadge.isHidden = n == nil
+        needsLayout = true
     }
 
     func setStatus(_ status: NodeStatus?) {

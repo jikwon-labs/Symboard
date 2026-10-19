@@ -49,7 +49,10 @@ STATUS: IN_PROGRESS
   - 고침: 조합 중 글자를 커서 자리에 밑줄과 함께 겹쳐 그림, 커서를 따라감, 커서 뷰 위로.
   - 처음 고친 판에서 `gktpdy`(하세요) 를 치면 `요` 가 `세` 자리에 겹쳤다 — `세` 확정과 `요` 조합 시작이 한 키에 일어나 셸 메아리 전의 커서 자리에 놓였기 때문. 커서 이동 때 다시 놓게 고쳤다. claude 에서는 claude 가 다시 붙인 커서 뷰가 조합 글자를 덮어 그 위로 올리게 고쳤다.
   - 확인한 실제 입력(한글 2벌식, `cgclick keys dkssud gktpdy`): zsh `안녕 하세` 뒤 밑줄 친 `요`(`9-shell-composing.png`), claude 입력 줄 같은 모습(`9-claude-composing.png`, `-crop`). 조합 중 Enter → `안녕` 한 번만 실행(command not found: 안녕).
-- [ ] 10. Ctrl+Tab·Cmd+1~9 로 콘솔 사이 옮기기, 번호 배지, Zoom to Fit 은 Cmd+Shift+1
+- [x] 10. Ctrl+Tab·Cmd+1~9 로 콘솔 사이 옮기기, 번호 배지, Zoom to Fit 은 Cmd+Shift+1
+  - 만든 것: `ConsoleOrder`(SymboardCore, 단위 테스트 3개: 위→아래·왼→오른쪽 순서, 끝에서 처음으로 돌기, 숫자 키 코드). 창 키 감시 + 창 `sendEvent`(BoardWindow)에서 키 코드로 Ctrl+Tab / Ctrl+Shift+Tab / Cmd+1~9 / Cmd+Shift+1 을 처리. 옮겨 가면 그 콘솔을 고르고 터미널을 첫 응답자로(바로 타이핑), 화면을 0.35초 동안 그 콘솔로. View 메뉴: Zoom to Fit ⇧⌘1, Next/Previous Console, Go to Console 1~9. Cmd 를 누르고 있는 동안 콘솔 머리 이름 옆에 번호 배지. 그냥 Tab 은 가로채지 않는다.
+  - 확인한 실제 입력(symv8-10, 셸 5개 Pip(0,0)·Maya(700,20)·Ada(1400,0)·Iris(0,480)·Dax(700,480), ABC 입력): Pip 에서 Ctrl+Tab 다섯 번 → Maya, Ada, Iris, Dax, Pip(한 바퀴, 매번 [keyboard] = 키 입력 받는 상태). Cmd+3 → Ada 로, 바로 `echo hi` + Enter → Ada 에 `hi`, 명령 바 "Message Ada"(`10-cmd3-echo-hi.png`). Cmd 누르고 있는 동안 번호 배지(`10-cmd-badges.png`), 떼면 사라짐. Ada 에서 `ech` + Tab → 셸이 `echo` 로 완성(가로채지 않음). Cmd+Shift+1 → 150% 에서 맞춤 60%, Cmd+0 → 100%. 한글 입력 상태 Ctrl+Shift+Tab → Iris 로(키 코드 기준).
+  - 주의: 이 맥에서는 HID 로 보낸 Cmd+3·Ctrl+Tab 이 앱에 오지 않는다(DECISIONS 8차-10). 위 Ctrl+Tab 다섯 번과 Cmd+3 은 같은 키 이벤트를 앱 프로세스에 바로 보내서 확인했다. Cmd+1·2·4·5 와 Ctrl+Shift+Tab 은 HID 실제 키로 동작했다.
 
 ## 막힌 것
 

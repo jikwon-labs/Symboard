@@ -98,8 +98,11 @@ final class DebugBridge {
                 log.append("--- screen \(n.title) status=\(model.sessions.status(of: n.id)?.rawValue ?? "-")\n\(s.screenText())\n---")
             }
         case "state":
+            let firstResponder = controller.window?.firstResponder
             for (i, n) in nodes.enumerated() {
-                log.append("\(i) \(n.kind.rawValue) \(n.title) frame=\(Int(n.frame.x)),\(Int(n.frame.y)),\(Int(n.frame.w)),\(Int(n.frame.h)) status=\(model.sessions.status(of: n.id)?.rawValue ?? "-") session=\(n.terminal?.sessionID ?? "-")")
+                let sel = controller.currentCanvas?.selectedNodeID == n.id ? " [selected]" : ""
+                let foc = (model.sessions.session(for: n.id)?.view).map { $0 === firstResponder } ?? false ? " [keyboard]" : ""
+                log.append("\(i) \(n.kind.rawValue) \(n.title)\(sel)\(foc) frame=\(Int(n.frame.x)),\(Int(n.frame.y)),\(Int(n.frame.w)),\(Int(n.frame.h)) status=\(model.sessions.status(of: n.id)?.rawValue ?? "-") session=\(n.terminal?.sessionID ?? "-")")
             }
         case "drag":
             // 진짜 마우스 이벤트를 창에 넣어 노드 헤더(이동)나 손잡이(크기 조절)를 끈다. dx·dy 는 캔버스 단위.

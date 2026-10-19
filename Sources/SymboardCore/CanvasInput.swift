@@ -155,3 +155,29 @@ public enum KeyInput {
         return UInt8(v)
     }
 }
+
+/// 키보드로 콘솔 사이를 옮겨 다닐 때의 순서(Ctrl+Tab·Cmd+1~9).
+public enum ConsoleOrder {
+    /// 화면 위치 순: 위 → 아래 줄, 줄 안에서 왼 → 오른쪽. 윗변 차이가 rowTolerance 안이면 같은 줄로 본다.
+    public static func order(_ items: [(id: UUID, frame: Rect)], rowTolerance: Double = 120) -> [UUID] {
+        let byY = items.sorted { $0.frame.y < $1.frame.y }
+        var rows: [[(id: UUID, frame: Rect)]] = []
+        for it in byY {
+            if let top = rows.last?.first, it.frame.y - top.frame.y < rowTolerance { rows[rows.count - 1].append(it) }
+            else { rows.append([it]) }
+        }
+        return rows.flatMap { $0.sorted { $0.frame.x < $1.frame.x }.map(\.id) }
+    }
+
+    /// 지금 콘솔에서 다음(또는 이전) 콘솔. 끝에서는 처음으로 돈다. 지금 것이 목록에 없으면 처음(이전이면 끝).
+    public static func step(from current: UUID?, in ids: [UUID], forward: Bool) -> UUID? {
+        guard !ids.isEmpty else { return nil }
+        guard let c = current, let i = ids.firstIndex(of: c) else { return forward ? ids.first : ids.last }
+        return ids[(i + (forward ? 1 : ids.count - 1)) % ids.count]
+    }
+
+    /// Cmd+1~9 의 키 코드(ANSI 자판 숫자 줄) → 1~9.
+    public static func digit(keyCode: UInt16) -> Int? {
+        [18: 1, 19: 2, 20: 3, 21: 4, 23: 5, 22: 6, 26: 7, 28: 8, 25: 9][keyCode]
+    }
+}

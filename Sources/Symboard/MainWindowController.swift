@@ -4,6 +4,16 @@ import SwiftUI
 import SymboardCore
 
 /// 메인 창: 꽉 찬 보드 위에 떠 있는 막대들(위쪽 바, 좌우 세로 막대, 아래 명령 바, 배율, 브랜치 칩).
+/// 본 창. Ctrl+Tab 은 키 감시(local monitor)·메뉴까지 오지 않고 창의 키 보기 순환에 먼저 쓰여서, 창이 받기 전에 가로챈다.
+final class BoardWindow: NSWindow {
+    var keyIntercept: ((NSEvent) -> Bool)?
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, let f = keyIntercept, f(event) { return }
+        super.sendEvent(event)
+    }
+}
+
 final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopoverDelegate {
     let model: AppModel
     let chrome = ChromeModel()
@@ -32,7 +42,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     init(model: AppModel) {
         self.model = model
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1400, height: 880),
+        let window = BoardWindow(contentRect: NSRect(x: 0, y: 0, width: 1400, height: 880),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                               backing: .buffered, defer: false)
         window.title = "Symboard"
@@ -241,6 +251,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     private var eventMonitor: Any?
     private var keyMonitor: Any?
+    private var flagsMonitor: Any?
 
     private func observe() {
         // 노드 안 어디를 눌러도 그 노드를 선택한다. Option/Cmd 스크롤은 노드 안에서도 보드로 보낸다.
@@ -280,6 +291,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                     else { try? line.write(toFile: path, atomically: true, encoding: .utf8) }
                 }
                 guard let self, event.window === self.window else { return event }
+                if self.handleConsoleNavigation(event) { return nil }
                 if let term = self.window?.firstResponder as? SymTerminalView, let byte = SymTerminalView.rawControlByte(event) {
                     term.send([byte])
                     return nil
@@ -311,7 +323,21 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                 return event
             }
         }
+        (window as? BoardWindow)?.keyIntercept = { [weak self] event in
+            MainActor.assumeIsolated { self?.handleConsoleNavigation(event) ?? false }
+        }
+        // Cmd 를 누르고 있는 동안 콘솔 머리에 번호(Cmd+1~9)를 보인다.
+        flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self, event.window === self.window else { return event }
+                self.showConsoleNumbers(event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command)
+                return event
+            }
+        }
         let nc = NotificationCenter.default
+        observers.append(nc.addObserver(forName: NSWindow.didResignKeyNotification, object: window, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.showConsoleNumbers(false) }
+        })
         observers.append(nc.addObserver(forName: .workspacesChanged, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.workspacesChanged() }
         })
@@ -1459,6 +1485,60 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     }
 
     /// 보드 위 모든 노드가 보이게 맞춘다. 떠 있는 막대에 가리지 않게 여백을 둔다.
+    // MARK: 키보드로 콘솔 사이 옮겨 다니기(Ctrl+Tab · Cmd+1~9)
+
+    /// 지금 작업공간 콘솔의 화면 위치 순서(위 → 아래, 왼 → 오른쪽).
+    func consoleOrder() -> [UUID] {
+        ConsoleOrder.order(model.selectedWorkspace.nodes.filter { $0.kind == .terminal }.map { (id: $0.id, frame: $0.frame) })
+    }
+
+    /// 콘솔을 고르고 키보드 입력을 바로 받게 한 뒤 화면을 그쪽으로 옮긴다.
+    func focusConsole(_ id: UUID) {
+        guard let n = model.node(id) else { return }
+        currentCanvas?.select(id)
+        if let t = model.sessions.session(for: id)?.view { window?.makeFirstResponder(t) }
+        glideReveal([n.frame])
+    }
+
+    @objc func nextConsole(_ sender: Any?) { cycleConsole(forward: true) }
+    @objc func previousConsole(_ sender: Any?) { cycleConsole(forward: false) }
+
+    func cycleConsole(forward: Bool) {
+        if let id = ConsoleOrder.step(from: currentCanvas?.selectedNodeID, in: consoleOrder(), forward: forward) { focusConsole(id) }
+    }
+
+    @objc func goToConsoleMenu(_ sender: NSMenuItem) { goToConsole(number: sender.tag) }
+
+    func goToConsole(number: Int) {
+        let ids = consoleOrder()
+        guard number >= 1, number <= ids.count else { return }
+        focusConsole(ids[number - 1])
+    }
+
+    /// Ctrl+Tab / Ctrl+Shift+Tab, Cmd+1~9, Cmd+Shift+1(Zoom to Fit). 키 코드로 봐서 한글 입력 상태에서도 같다.
+    /// 그냥 Tab 은 건드리지 않는다(콘솔 안 프로그램의 자동완성).
+    func handleConsoleNavigation(_ event: NSEvent) -> Bool {
+        let f = event.modifierFlags.intersection([.command, .control, .option, .shift])
+        if event.keyCode == 48, f == .control || f == [.control, .shift] {
+            cycleConsole(forward: !f.contains(.shift))
+            return true
+        }
+        if let d = ConsoleOrder.digit(keyCode: event.keyCode) {
+            if f == .command { goToConsole(number: d); return true }
+            if f == [.command, .shift], d == 1 { zoomToFit(nil); return true }
+        }
+        return false
+    }
+
+    func showConsoleNumbers(_ show: Bool) {
+        guard let canvas = currentCanvas else { return }
+        let ids = consoleOrder()
+        for (id, v) in canvas.nodeViews where v.header.isTerminal {
+            let i = ids.firstIndex(of: id)
+            v.header.setNumber(show && i != nil && i! < 9 ? i! + 1 : nil)
+        }
+    }
+
     @objc func zoomToFit(_ sender: Any?) {
         let nodes = model.selectedWorkspace.nodes
         guard !nodes.isEmpty else { scrollView.center(on: Point(x: 0, y: 0), zoom: 1); return }
