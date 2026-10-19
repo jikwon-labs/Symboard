@@ -845,6 +845,7 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     
     // NSTextInputClient protocol implementation
     open func insertText(_ string: Any, replacementRange: NSRange) {
+        clearMarkedText()
         insertText(string, replacementRange: replacementRange, isPaste: false)
     }
     
@@ -861,15 +862,84 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         // TODO: I do not think we actually need this needsDisplay, the data fed should bubble this up
         // needsDisplay = true
     }
-    
+
+    // Symboard: 입력기(한글 등)가 조합 중인 글자. 원래 setMarkedText 가 아무 일도 하지 않아
+    // 조합 중 글자가 확정되기 전까지 보이지 않았다. 커서 자리에 밑줄과 함께 겹쳐 그린다.
+    private var markedTextString = ""
+    private lazy var markedTextLabel: NSTextField = {
+        let l = NSTextField(labelWithString: "")
+        l.drawsBackground = true
+        l.isBezeled = false
+        l.isEditable = false
+        l.isSelectable = false
+        l.lineBreakMode = .byClipping
+        l.cell?.usesSingleLineMode = true
+        addSubview(l)
+        return l
+    }()
+
+    private func clearMarkedText() {
+        guard !markedTextString.isEmpty else { return }
+        markedTextString = ""
+        markedTextLabel.isHidden = true
+    }
+
+    /// Symboard: 조합 중 글자를 확정해 보낸다(다른 키로 커서를 옮기기 전에). 입력기의 조합 상태도 버린다.
+    public func commitMarkedText() {
+        guard !markedTextString.isEmpty else { return }
+        let text = markedTextString
+        clearMarkedText()
+        inputContext?.discardMarkedText()
+        send (txt: text)
+    }
+
+    private func updateMarkedTextLabel() {
+        guard !markedTextString.isEmpty, let caret = caretView else { clearMarkedText(); return }
+        let font = fontSet.normal
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: nativeForegroundColor,
+            .underlineStyle: NSUnderlineStyle.single.rawValue,
+            .underlineColor: nativeForegroundColor,
+        ]
+        let str = NSAttributedString(string: markedTextString, attributes: attrs)
+        let label = markedTextLabel
+        label.attributedStringValue = str
+        label.backgroundColor = nativeBackgroundColor
+        var cells = 0
+        for ch in markedTextString.unicodeScalars { cells += max(1, UnicodeUtil.columnWidth(rune: ch)) }
+        let w = max(CGFloat(cells) * cellDimension.width, ceil(str.size().width))
+        label.frame = NSRect(x: caret.frame.minX, y: caret.frame.minY, width: w + 1, height: caret.frame.height)
+        label.isHidden = false
+        addSubview(label, positioned: .above, relativeTo: caret.superview === self ? caret : nil)
+    }
+
+    func repositionMarkedText() {
+        guard !markedTextString.isEmpty, let caret = caretView else { return }
+        markedTextLabel.frame.origin = caret.frame.origin
+        // 커서 뷰가 다시 붙으면(프로그램이 커서를 숨겼다 보임) 그 위로 다시 올린다.
+        if caret.superview === self, let i = subviews.firstIndex(of: caret), let j = subviews.firstIndex(of: markedTextLabel), j < i {
+            addSubview(markedTextLabel, positioned: .above, relativeTo: caret)
+        }
+    }
+
     // NSTextInputClient protocol implementation
     open func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
-        // nothing
+        if let a = string as? NSAttributedString {
+            markedTextString = a.string
+        } else if let s = string as? String {
+            markedTextString = s
+        } else if let s = string as? NSString {
+            markedTextString = s as String
+        } else {
+            markedTextString = ""
+        }
+        updateMarkedTextLabel()
     }
     
     // NSTextInputClient protocol implementation
     open func unmarkText() {
-        // nothing
+        clearMarkedText()
     }
     
     // NSTextInputClient protocol implementation
@@ -894,17 +964,16 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     
     // NSTextInputClient protocol implementation
     open func markedRange() -> NSRange {
-        print ("markedRange: This should return the actual range from the selection")
-        
-        // This means "no marked" - when we fix, we should address
-        return NSRange.empty
+        // Symboard: 조합 중 글자가 있으면 그 길이(UTF-16)만큼.
+        if !markedTextString.isEmpty {
+            return NSRange(location: 0, length: (markedTextString as NSString).length)
+        }
+        return NSRange(location: NSNotFound, length: 0)
     }
     
     // NSTextInputClient protocol implementation
     open func hasMarkedText() -> Bool {
-        // print ("hasMarkedText: This should return the actual range from the selection")
-        // TODO
-        return false
+        return !markedTextString.isEmpty
     }
     
     // NSTextInputClient protocol implementation

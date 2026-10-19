@@ -284,6 +284,16 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                     term.send([byte])
                     return nil
                 }
+                // 콘솔 안 Option·Cmd + ←/→/Backspace 는 macOS 터미널 관례대로 단어·줄 이동과 지우기로 보낸다.
+                if let term = self.window?.firstResponder as? SymTerminalView {
+                    let f = event.modifierFlags
+                    if let bytes = KeyInput.editBytes(keyCode: event.keyCode, command: f.contains(.command), option: f.contains(.option),
+                                                      control: f.contains(.control), shift: f.contains(.shift)) {
+                        term.commitMarkedText()
+                        term.send(bytes)
+                        return nil
+                    }
+                }
                 // 입력칸의 @ 목록이 열려 있으면 Esc 는 그 목록만 닫는다(입력칸이 받는다).
                 if event.keyCode == 53, MentionTextField.listOpen(for: self.window?.firstResponder) { return event }
                 // Esc 는 열린 모달부터 닫는다. 닫지 않으면 다음 클릭이 어두운 배경을 눌러 모달을 닫는 데 쓰여 "첫 클릭 무시" 처럼 보였다.

@@ -1386,6 +1386,10 @@ extension TerminalView {
         #endif
         caretView.frame.origin = CGPoint(x: lineOrigin.x + (cellDimension.width * doublePosition * CGFloat(buffer.x)), y: lineOrigin.y)
         caretView.setText (ch: buffer.lines [vy][buffer.x])
+        #if os(macOS)
+        // Symboard: 조합 중 글자 표시도 커서를 따라간다(확정 글자가 프로그램을 거쳐 늦게 찍히는 경우).
+        repositionMarkedText()
+        #endif
     }
     
     // Does not use a default argument and merge, because it is called back

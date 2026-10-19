@@ -127,6 +127,23 @@ public enum CanvasLayout {
 
 /// 키 입력 해석.
 public enum KeyInput {
+    /// 콘솔 안 macOS 터미널 관례 키(단어·줄 이동과 지우기)를 터미널에 보낼 바이트로.
+    /// Option+←/→ 단어 이동(ESC b / ESC f), Cmd+←/→ 줄 처음·끝(Ctrl+A / Ctrl+E),
+    /// Option+Backspace 앞 단어 지우기(ESC DEL), Cmd+Backspace 줄 처음까지 지우기(Ctrl+U). 해당 없으면 nil.
+    /// 키 코드로 보므로 입력 소스(한글·영문)와 상관없다.
+    public static func editBytes(keyCode: UInt16, command: Bool, option: Bool, control: Bool, shift: Bool) -> [UInt8]? {
+        guard !control, !shift, command != option else { return nil }
+        switch (keyCode, command) {
+        case (123, false): return [0x1b, 0x62]   // ESC b
+        case (124, false): return [0x1b, 0x66]   // ESC f
+        case (51, false): return [0x1b, 0x7f]    // ESC DEL
+        case (123, true): return [0x01]          // Ctrl+A
+        case (124, true): return [0x05]          // Ctrl+E
+        case (51, true): return [0x15]           // Ctrl+U
+        default: return nil
+        }
+    }
+
     /// Ctrl+글자에서 터미널로 보낼 제어 문자. 영문 자판처럼 SwiftTerm 이 스스로 처리할 수 있으면 nil.
     /// 한글 입력 소스에서는 charactersIgnoringModifiers 가 "ㅊ" 같은 자모로 와서 SwiftTerm 이 아무것도 보내지 않는다.
     /// 그때는 characters 에 든 제어 문자(Ctrl+C 면 3)를 쓴다.

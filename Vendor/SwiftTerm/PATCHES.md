@@ -24,3 +24,8 @@
    - `AppleTerminalView.scrollTo`: 맨 아래가 아니면 `Terminal.userScrolling` 을 켠다. 원래 이 값을 켜는 곳이 없어 출력이 올 때마다 화면이 맨 아래로 튀었다.
    - `MacTerminalView.ensureCaretIsVisible`: 입력을 보내면 커서가 화면 안에 있어도 맨 아래로 돌린다.
    - `isScrolledBack`·`scrollToBottom()` 을 공개로 더했다("맨 아래로" 단추용).
+5. 입력기 조합 중 글자 표시(Symboard 8차 9번). `MacTerminalView` 의 `setMarkedText`·`unmarkText`·`hasMarkedText`·`markedRange` 가 비어 있어
+   한글 조합 중 글자가 확정되기 전까지 보이지 않았다. 조합 중 글자를 저장하고 커서 자리에 밑줄 친 글(터미널 글꼴·배경)로 겹쳐 그린다.
+   폭은 글자 칸 수(한글 2칸)로. 커서가 움직이면(`updateCursorPosition`) 따라가고, 커서 뷰가 다시 붙으면 그 위로 올린다
+   (확정 글자가 프로그램 메아리로 늦게 찍혀 겹쳐 보이던 문제). `insertText` 는 조합 표시를 지운다.
+   `commitMarkedText()` 를 공개로 더했다(Option·Cmd 이동 키 전에 조합 중 글자를 먼저 확정해 보낸다).
