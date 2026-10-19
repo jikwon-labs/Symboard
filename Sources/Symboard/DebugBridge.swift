@@ -93,6 +93,8 @@ final class DebugBridge {
             }
         case "screen":
             if let n = node(cmd), let s = model.sessions.session(for: n.id) {
+                let t = s.view.getTerminal()
+                log.append("modes mouse=\(t.mouseMode) alt=\(t.isCurrentBufferAlternate) bracketed=\(t.bracketedPasteMode) appCursor=\(t.applicationCursor) scrolledBack=\(s.view.isScrolledBack)")
                 log.append("--- screen \(n.title) status=\(model.sessions.status(of: n.id)?.rawValue ?? "-")\n\(s.screenText())\n---")
             }
         case "state":

@@ -21,6 +21,9 @@ final class TerminalNodeContent: NSObject, NodeContent {
         exitBanner.isHidden = true
         if let s = model.sessions.ensureSession(for: node) {
             container.terminal = s.view
+            s.view.onScrolled = { [weak self, weak v = s.view] in
+                self?.container.bottomButton.isHidden = !(v?.isScrolledBack ?? false)
+            }
             s.onExit = { [weak self] _ in self?.exitBanner.isHidden = false }
         }
         container.addSubview(exitBanner)
@@ -107,11 +110,37 @@ final class TerminalContainerView: NSView {
         didSet {
             oldValue?.removeFromSuperview()
             if let t = terminal { addSubview(t, positioned: .below, relativeTo: nil) }
+            bottomButton.isHidden = true
             needsLayout = true
         }
     }
     weak var banner: NSView?
     weak var bubble: NSView?
+    /// 지난 줄을 보려고 위로 올렸을 때만 보이는 "맨 아래로" 단추.
+    let bottomButton: NSButton = {
+        let b = NSButton(title: "↓ Bottom", target: nil, action: nil)
+        b.bezelStyle = .push
+        b.controlSize = .small
+        b.font = .systemFont(ofSize: 11, weight: .semibold)
+        b.setAccessibilityLabel("Scroll to bottom")
+        b.isHidden = true
+        return b
+    }()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        bottomButton.target = self
+        bottomButton.action = #selector(scrollToBottom)
+        addSubview(bottomButton)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    @objc private func scrollToBottom() {
+        guard let t = terminal as? SymTerminalView else { return }
+        t.scrollToBottom()
+        window?.makeFirstResponder(t)
+    }
 
     override var isFlipped: Bool { true }
 
@@ -121,6 +150,8 @@ final class TerminalContainerView: NSView {
         if let b = banner {
             b.frame = NSRect(x: (bounds.width - 260) / 2, y: bounds.height - 40, width: 260, height: 28)
         }
+        let bs = bottomButton.fittingSize
+        bottomButton.frame = NSRect(x: bounds.width - bs.width - 26, y: bounds.height - bs.height - 10, width: bs.width, height: bs.height)
         if let b = bubble {
             let s = b.fittingSize
             b.frame = NSRect(x: bounds.width - s.width - 10, y: 8, width: s.width, height: s.height)

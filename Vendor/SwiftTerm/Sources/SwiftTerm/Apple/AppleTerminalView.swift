@@ -1523,6 +1523,9 @@ extension TerminalView {
     func scrollTo (row: Int, notifyAccessibility: Bool = true)
     {
         let displayBuffer = terminal.displayBuffer
+        // Symboard: 맨 아래가 아니면 "사용자가 올려 봄" 으로 표시해, 새 출력이 와도 화면을 맨 아래로 끌어내리지 않는다.
+        // 원래 Terminal.userScrolling 을 켜는 곳이 없어 출력이 올 때마다 맨 아래로 튀었다.
+        terminal.userScrolling = !terminal.isDisplayBufferAlternate && row < displayBuffer.yBase
         if row != displayBuffer.yDisp {
             terminal.setViewYDisp (row)
             
@@ -1538,6 +1541,17 @@ extension TerminalView {
         }
     }
     
+    /// Symboard: 지난 줄을 보려고 위로 올려 둔 상태인지.
+    public var isScrolledBack: Bool {
+        let b = terminal.displayBuffer
+        return !terminal.isDisplayBufferAlternate && b.yDisp < b.yBase
+    }
+
+    /// Symboard: 맨 아래(지금 출력)로 돌아간다.
+    public func scrollToBottom () {
+        scrollTo (row: terminal.displayBuffer.yBase)
+    }
+
     /// Scrolls the content of the terminal one page up
     public func pageUp()
     {

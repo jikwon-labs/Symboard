@@ -1397,15 +1397,45 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         }
     }
     
+    /// 트랙패드의 잘게 쪼개진 스크롤 양을 줄 단위로 모으는 나머지.
+    private var wheelRemainder: CGFloat = 0
+
     public override func scrollWheel(with event: NSEvent) {
-        if event.deltaY == 0 {
+        // Symboard: 트랙패드(정밀 스크롤)는 화소 양을 줄 높이로 나눠 모은다. 원래는 deltaY 의 정수 부분으로만 계산해
+        // 트랙패드에서는 한 번에 한 줄씩만 움직이거나 아예 안 움직였다.
+        var lines: Int
+        if event.hasPreciseScrollingDeltas {
+            wheelRemainder += event.scrollingDeltaY / max(1, cellDimension.height)
+            lines = Int(wheelRemainder)
+            wheelRemainder -= CGFloat(lines)
+        } else {
+            if event.deltaY == 0 { return }
+            let v = calcScrollingVelocity(delta: Int(abs(event.deltaY)))
+            lines = event.deltaY > 0 ? v : -v
+        }
+        if lines == 0 { return }
+        // Symboard: 프로그램이 마우스 보고 모드를 켰으면 휠을 그 프로그램에 넘긴다(버튼 4·5).
+        if allowMouseReporting && terminal.mouseMode != .off {
+            let hit = calculateMouseHit(with: event)
+            let flags = event.modifierFlags
+            let b = terminal.encodeButton(button: lines > 0 ? 4 : 5, release: false, shift: flags.contains(.shift),
+                                          meta: flags.contains(.option), control: flags.contains(.control))
+            for _ in 0..<min(abs(lines), 5) {
+                terminal.sendEvent(buttonFlags: b, x: hit.grid.col, y: hit.grid.row, pixelX: hit.pixels.col, pixelY: hit.pixels.row)
+            }
             return
         }
-        let velocity = calcScrollingVelocity(delta: Int (abs (event.deltaY)))
-        if event.deltaY > 0 {
-            scrollUp (lines: velocity)
+        // Symboard: 대체 화면(지난 줄이 없음)이면 xterm 의 alternate scroll 처럼 위·아래 화살표로 보낸다.
+        if terminal.isDisplayBufferAlternate {
+            for _ in 0..<min(abs(lines), 5) {
+                if lines > 0 { sendKeyUp() } else { sendKeyDown() }
+            }
+            return
+        }
+        if lines > 0 {
+            scrollUp (lines: lines)
         } else {
-            scrollDown(lines: velocity)
+            scrollDown(lines: -lines)
         }
     }
     
@@ -1543,7 +1573,8 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         let realCaret = displayBuffer.y + displayBuffer.yBase
         let viewportEnd = displayBuffer.yDisp + displayBuffer.rows
         
-        if realCaret >= viewportEnd || realCaret < displayBuffer.yDisp {
+        // Symboard: 입력을 보내면 위로 올려 둔 화면을 늘 맨 아래로 돌린다(커서가 화면 안에 보여도).
+        if realCaret >= viewportEnd || realCaret < displayBuffer.yDisp || displayBuffer.yDisp != displayBuffer.yBase {
             scrollTo (row: displayBuffer.yBase)
         }
     }

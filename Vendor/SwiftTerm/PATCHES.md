@@ -17,3 +17,10 @@
    원래는 스크롤 막대 폭을 빼지 않은 전체 폭으로 열 수를 구해(오른쪽 두 칸이 막대 밑으로 들어감) `resize(cols:rows:)` 를 불렀고,
    그 안의 `softReset()` 이 돌고 있는 TUI(claude·codex)의 모드(커서 키 모드, 스크롤 영역 등)를 지웠다.
    Symboard 7차에서 설정의 글꼴을 바꾸면 떠 있는 콘솔에 바로 적용하므로 이 길을 탄다.
+4. 콘솔 안 스크롤(Symboard 8차 1번).
+   - `MacTerminalView.scrollWheel`: 프로그램이 마우스 보고 모드를 켰으면(claude 2.1.303 은 대체 화면 + anyEvent) 휠을 버튼 4·5 마우스 보고로 넘긴다.
+     원래는 모드와 상관없이 지난 줄을 움직이려 해서, 지난 줄이 없는 대체 화면의 claude 에서는 휠이 아무 일도 하지 않았다.
+     마우스 보고가 없는 대체 화면이면 위·아래 화살표로 보낸다(xterm alternate scroll). 트랙패드(정밀 스크롤)는 화소 양을 줄 높이로 나눠 모은다.
+   - `AppleTerminalView.scrollTo`: 맨 아래가 아니면 `Terminal.userScrolling` 을 켠다. 원래 이 값을 켜는 곳이 없어 출력이 올 때마다 화면이 맨 아래로 튀었다.
+   - `MacTerminalView.ensureCaretIsVisible`: 입력을 보내면 커서가 화면 안에 있어도 맨 아래로 돌린다.
+   - `isScrolledBack`·`scrollToBottom()` 을 공개로 더했다("맨 아래로" 단추용).

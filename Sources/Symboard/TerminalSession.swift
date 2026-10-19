@@ -22,6 +22,14 @@ final class SymTerminalView: LocalProcessTerminalView {
                                     characters: event.characters, ignoringModifiers: event.charactersIgnoringModifiers)
     }
 
+    /// 지난 줄 보기 위치가 바뀔 때(휠·스크롤 막대·입력으로 맨 아래 복귀).
+    var onScrolled: (() -> Void)?
+
+    override func scrolled(source: TerminalView, position: Double) {
+        super.scrolled(source: source, position: position)
+        onScrolled?()
+    }
+
     override func send(source: TerminalView, data: ArraySlice<UInt8>) {
         onUserInput?()
         super.send(source: source, data: data)
