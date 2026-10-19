@@ -160,3 +160,22 @@ import Testing
         #expect(Mention.activeInBody(in: "hi @P", cursor: 5, names: names) == nil)
     }
 }
+
+@Suite struct ShortcutCatalogTests {
+    var all: [String] { ShortcutCatalog.sections.flatMap { $0.entries.map(\.keys) } }
+
+    @Test func hasTheFourGroups() {
+        #expect(ShortcutCatalog.sections.map(\.title) == ["Canvas", "Consoles", "Command bar", "Nodes and tools"])
+    }
+
+    @Test func includesThisRoundsKeys() {
+        for k in ["⇧ Enter", "⇧⌘ E", "⌥ ←  /  ⌥ →", "⌘ ←  /  ⌘ →", "⌥ ⌫", "⌘ ⌫", "⌃ Tab  /  ⌃⇧ Tab", "⌘ 1 … ⌘ 9", "⇧⌘ 1", "?"] {
+            #expect(all.contains(k), "missing \(k)")
+        }
+    }
+
+    @Test func noDuplicateRows() {
+        let ids = ShortcutCatalog.sections.flatMap { $0.entries.map(\.id) }
+        #expect(Set(ids).count == ids.count)
+    }
+}

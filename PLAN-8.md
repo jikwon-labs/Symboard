@@ -41,7 +41,10 @@ STATUS: IN_PROGRESS
   - 원인: `CommandTargets.parse` 는 맨 앞에 이어 붙은 @ 만 대상으로 보고 나머지 전부를 한 글로 모든 대상에 보냈다.
   - 고침: `CommandTargets.split`(+ `Mention.targets`·`activeInBody`, 단위 테스트 8개) — 알려진 @이름으로 시작하면 각 @이름 뒤부터 다음 알려진 @이름 앞까지가 그 대상 글, 이어 붙은 이름은 같은 글, 맨 끝 글 없는 이름은 보내지 않고 THREAD 에 알림, 모르는 @ 는 글. 줄바꿈 든 글도 다음 @이름 앞까지 한 덩어리. 명령 바와 오케스트레이터 입력칸 모두 같은 함수(`deliver`), 보내기 직전 THREAD 에 대상별 한 줄. 입력칸은 글 중간 알려진 @이름도 색칠하고 @ 목록을 띄운다.
   - 확인한 실제 입력(symv8-5, 셸 Ada·Pip·Maya, orca type + Return): `@Ada echo one @Pip echo two` → Ada 에 one, Pip 에 two 만, Maya 그대로, THREAD "→ Ada: echo one" "→ Pip: echo two"(`5-sent.png`), 입력칸에서 @Ada·@Pip 둘 다 주황(`5-typed.png`). `@Ada @Maya echo adjacent` → 둘 다 adjacent. `@Ada echo last @Pip` → Ada 만 last, THREAD "Nothing to send to Pip · not sent"(`5-adjacent-missing.png`).
-- [ ] 6. 왼쪽 아래 ? 단추와 단축키 표, `?` 키
+- [x] 6. 왼쪽 아래 ? 단추와 단축키 표, `?` 키
+  - 원래 단축키를 볼 곳이 없었다. 코드에서 찾은 키: 메뉴(`MainMenu.swift` ⌘T·⌘N·⌘W·⌘Z·⇧⌘Z·⌘X/C/V/A·⌘=·⌘−·⌘0·⇧⌘]/[·⌘M·⌘H·⌘Q), 창 키 감시(Esc·Delete·⇧⌘E·⌃Tab·⌘1~9·⇧⌘1·콘솔 ⌃글자·⌥/⌘ 이동·지우기), 캔버스(⌘ 스크롤 확대, 노드 위 ⌥/⌘ 스크롤은 보드로, 빈 곳 두 번 누르기 새 콘솔), 입력칸(Enter·⇧Enter·@ 목록 ↑↓·Tab·Enter·Esc), SwiftUI(스튜디오 ⌘S, 루프·메모리 ⌘Enter), SwiftTerm(⌥⌘O Option as Meta, Tab 은 프로그램으로).
+  - 만든 것: `ShortcutCatalog`(SymboardCore, 단위 테스트 3개 — 네 묶음, 이번 차수 키 포함, 중복 없음), `ShortcutsSheet`(묶음: Canvas, Consoles, Command bar, Nodes and tools). 브랜치 칩 오른쪽 `?` 단추, 입력칸·콘솔 밖에서 `?` 키, Esc·바깥 누르기·× 로 닫기.
+  - 확인한 실제 입력(symv8-7): `?` 단추 실제 클릭 → 표(`6-shortcuts-button.png`) → Esc 닫힘 → 빈 캔버스 클릭 뒤 Shift+/ 실제 키 → 표(`6-shortcuts-key.png`). 콘솔을 누른 뒤 Shift+/ → 표는 안 뜨고 셸에 `?` 가 들어감.
 - [x] 7. 콘솔 안 Cmd·Option 이동과 지우기(단위 테스트)
   - 재현/원인: SwiftTerm 은 Option 을 Meta 로 써서(optionAsMetaKey 기본 켬) Option+←/→ 는 원래 ESC b/f 를 보냈지만, Cmd+←/→·Cmd+Backspace 는 처리하지 않았다. 한글 조합 중이면 조합 글자가 남은 채로 커서만 움직일 수 있었다.
   - 고침: `KeyInput.editBytes`(SymboardCore, 단위 테스트 4개) — Option+←/→ ESC b/f, Cmd+←/→ Ctrl+A/E, Option+Backspace ESC DEL, Cmd+Backspace Ctrl+U. 창 키 감시에서 콘솔이 초점일 때 키 코드로 보고(입력 소스 무관), 보내기 전에 조합 중 글자를 먼저 확정한다(`commitMarkedText`). Shift·Ctrl 이 같이 눌리면 건드리지 않고, Cmd+C·V·A 등 다른 키도 그대로.

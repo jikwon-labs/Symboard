@@ -202,6 +202,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             promptHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             promptHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
+        let keysHost = HiddenAwareHostingView(rootView: ShortcutsSheet(chrome: chrome))
+        keysHost.translatesAutoresizingMaskIntoConstraints = false
+        keysHost.sizingOptions = []
+        keysHost.isHidden = true
+        content.addSubview(keysHost)
+        NSLayoutConstraint.activate([
+            keysHost.topAnchor.constraint(equalTo: content.topAnchor),
+            keysHost.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            keysHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            keysHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+        ])
+        shortcutsObserver = chrome.$shortcutsOpen.sink { open in keysHost.isHidden = !open }
         promptObserver = promptEditor.$open.sink { [weak self] open in
             promptHost.isHidden = !open
             if !open { DispatchQueue.main.async { self?.promptEditorClosed() } }
@@ -268,6 +280,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     private var keyMonitor: Any?
     let promptEditor = PromptEditorModel()
     private var promptObserver: AnyCancellable?
+    private var shortcutsObserver: AnyCancellable?
     /// 전체 화면 편집을 연 입력칸(닫으면 거기로 초점을 돌린다).
     private weak var promptOrigin: MentionTextField?
     private var flagsMonitor: Any?
@@ -333,6 +346,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                 // 입력칸의 @ 목록이 열려 있으면 Esc 는 그 목록만 닫는다(입력칸이 받는다).
                 if event.keyCode == 53, MentionTextField.listOpen(for: self.window?.firstResponder) { return event }
                 if event.keyCode == 53, self.promptEditor.open { self.promptEditor.close(); return nil }
+                if event.keyCode == 53, self.chrome.shortcutsOpen { self.chrome.shortcutsOpen = false; return nil }
+                // ? (입력칸·콘솔 밖에서) 는 단축키 표. 한글 입력 상태에서도 Shift+/ 는 ? 로 온다.
+                if event.characters == "?", !(self.window?.firstResponder is NSTextView), !(self.window?.firstResponder is SymTerminalView) {
+                    self.chrome.shortcutsOpen.toggle()
+                    return nil
+                }
                 // Esc 는 열린 모달부터 닫는다. 닫지 않으면 다음 클릭이 어두운 배경을 눌러 모달을 닫는 데 쓰여 "첫 클릭 무시" 처럼 보였다.
                 if event.keyCode == 53, self.closeTopOverlay() { return nil }
                 if event.keyCode == 53, self.chrome.tool != .select {

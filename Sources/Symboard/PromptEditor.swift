@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import SymboardCore
 
 /// Cmd+Shift+E 전체 화면 프롬프트 편집(8차 4번). 명령 바나 오케스트레이터 입력칸의 글을 큰 칸에서 고친다.
 /// 닫으면(같은 키·Esc) 쓴 글이 원래 입력칸에 그대로 남는다. Enter 보내기, Shift+Enter 줄바꿈, @ 자동완성·색칠은 입력칸과 같다.
@@ -84,6 +85,48 @@ struct PromptEditorView: View {
             .background(RoundedRectangle(cornerRadius: 18).fill(Color.symSurface))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.symBorder))
             .padding(.horizontal, 90).padding(.vertical, 70)
+        }
+    }
+}
+
+/// 단축키 표(8차 6번). 왼쪽 아래 ? 단추나 입력칸 밖 ? 키로 연다.
+struct ShortcutsSheet: View {
+    @ObservedObject var chrome: ChromeModel
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { chrome.shortcutsOpen = false }
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text("Keyboard shortcuts").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.symText)
+                    Spacer()
+                    Button { chrome.shortcutsOpen = false } label: { Image(systemName: "xmark").font(.system(size: 11, weight: .bold)) }
+                        .buttonStyle(.plainHit).tip("Close (Esc)").axName("Close shortcuts")
+                }
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], alignment: .leading, spacing: 18) {
+                        ForEach(ShortcutCatalog.sections) { sec in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(sec.title.uppercased()).font(.system(size: 10, weight: .bold)).kerning(1).foregroundStyle(Color.symAccent)
+                                ForEach(sec.entries) { e in
+                                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                        Text(e.keys).font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundStyle(Color.symText)
+                                            .frame(width: 170, alignment: .leading)
+                                        Text(e.action).font(.system(size: 12)).foregroundStyle(Color.symDim)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    .accessibilityElement(children: .combine)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(22)
+            .frame(maxWidth: 900, maxHeight: 640)
+            .background(RoundedRectangle(cornerRadius: 18).fill(Color.symSurface))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.symBorder))
+            .padding(40)
         }
     }
 }

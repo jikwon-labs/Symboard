@@ -669,6 +669,20 @@ struct PillLook: ViewModifier {
 struct BranchChip: View {
     @ObservedObject var chrome: ChromeModel
     var body: some View {
+        HStack(spacing: 8) {
+            branchButton
+            // 단축키 표(8차 6번).
+            Button { chrome.shortcutsOpen.toggle() } label: {
+                Text("?").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.symText)
+                    .frame(width: 28, height: 28)
+                    .floatingCapsule(radius: 14)
+            }
+            .buttonStyle(.plainHit).tip("Keyboard shortcuts (?)").axName("Keyboard shortcuts")
+            .hiddenOnHome(chrome)
+        }
+    }
+
+    @ViewBuilder var branchButton: some View {
         if let b = chrome.branch {
             Button { chrome.gitOpen.toggle() } label: { chip(b) }
                 .buttonStyle(.plainHit)
