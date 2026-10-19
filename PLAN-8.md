@@ -40,7 +40,10 @@ STATUS: IN_PROGRESS
   - 고침: `KeyInput.editBytes`(SymboardCore, 단위 테스트 4개) — Option+←/→ ESC b/f, Cmd+←/→ Ctrl+A/E, Option+Backspace ESC DEL, Cmd+Backspace Ctrl+U. 창 키 감시에서 콘솔이 초점일 때 키 코드로 보고(입력 소스 무관), 보내기 전에 조합 중 글자를 먼저 확정한다(`commitMarkedText`). Shift·Ctrl 이 같이 눌리면 건드리지 않고, Cmd+C·V·A 등 다른 키도 그대로.
   - ESC DEL 이 zsh·claude 둘 다에서 앞 단어를 지워 Ctrl+W 대신 쓰지 않았다.
   - 확인한 실제 입력(symv8-4, `cgclick key CODE mods` — 수정 키를 실제로 눌렀다 떼게 고친 도구): zsh ABC `echo alpha beta gamma` → Option+← x → `xgamma`, Cmd+← y → `yecho…`, Cmd+→ z → `…gammaz`, Option+Backspace → 앞 단어 지워짐, Cmd+Backspace → 줄 비움. zsh 한글: `안녕 하세`+조합 중 `요` 에서 Cmd+← → 요 확정 뒤 줄 처음(ㄱ 이 맨 앞에), Cmd+→ → 끝, Option+← → 단어 앞, 조합 중 `한` 에서 Option+Backspace → 한 이 확정된 뒤 지워짐(겹쳐 들어가지 않음), Cmd+Backspace → 빈 줄. claude 입력 줄 ABC·한글 같은 순서 모두 동작(claude 는 한글을 단어 글자로 보지 않아 Option+Backspace 가 `하세요 한` 을 한 번에 지웠다 — claude 쪽 단어 규칙). Cmd+V 는 그대로 붙여넣기.
-- [ ] 8. 콘솔 안 한글 글자 사이 틈
+- [x] 8. 콘솔 안 한글 글자 사이 틈
+  - 원인(측정): SF Mono 12pt 한 칸 7.42pt, 두 칸 14.84pt. Apple SD Gothic Neo·Pretendard 12pt `니` 의 글리프 폭 10.4pt. SwiftTerm 이 글리프를 칸 왼쪽에 붙여 그려 글자마다 오른쪽에 4.4pt(두 칸의 30%) 틈. 14pt 도 같은 비율(17.3 / 12.1). 추측이 맞았다.
+  - 고침(`Vendor/SwiftTerm/PATCHES.md` 6): 두 칸 글자는 두 칸의 84% 까지 키우되 영문 ascent 를 넘지 않게(12pt 기준 약 1.2배) 하고 두 칸 가운데에 놓는다. 칸 위치는 안 바꿔 커서·선택·줄바꿈 영향 없음.
+  - 확인한 실제 화면: 같은 글(`/tmp/symko.txt`, "줍니다. 기획서에는 …")을 셸 콘솔에 `cat` 해서 고치기 전·후를 같은 조건으로 찍었다. 기본(Apple SD Gothic Neo)·Pretendard × 12·14 (`8-before-*`, `8-after-*`, 위아래로 붙인 `8-compare-*`). 고친 뒤 한글 입력(`cgclick keys`) 후 커서가 `하세요 ` 바로 뒤(`8-after-cursor-Pretendard-14.png`).
 - [x] 9. 콘솔 안 조합 중 한글 보이기
   - 원인: SwiftTerm `setMarkedText` 등이 비어 있었다(`PATCHES.md` 5).
   - 고침: 조합 중 글자를 커서 자리에 밑줄과 함께 겹쳐 그림, 커서를 따라감, 커서 뷰 위로.

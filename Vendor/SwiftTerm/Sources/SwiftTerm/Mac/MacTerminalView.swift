@@ -866,6 +866,8 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     // Symboard: 입력기(한글 등)가 조합 중인 글자. 원래 setMarkedText 가 아무 일도 하지 않아
     // 조합 중 글자가 확정되기 전까지 보이지 않았다. 커서 자리에 밑줄과 함께 겹쳐 그린다.
     private var markedTextString = ""
+    /// Symboard: 두 칸 글자용으로 키운 글꼴(글꼴 이름@크기).
+    var wideFontCache: [String: CTFont] = [:]
     private lazy var markedTextLabel: NSTextField = {
         let l = NSTextField(labelWithString: "")
         l.drawsBackground = true
@@ -912,6 +914,40 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         label.frame = NSRect(x: caret.frame.minX, y: caret.frame.minY, width: w + 1, height: caret.frame.height)
         label.isHidden = false
         addSubview(label, positioned: .above, relativeTo: caret.superview === self ? caret : nil)
+    }
+
+    /// Symboard: 두 칸 글자의 글꼴을 두 칸의 84% 까지(줄 위로 넘지 않게) 키우고 가운데로 옮긴다.
+    func fitWideGlyphs(font: CTFont, glyphs: [CGGlyph], positions: [CGPoint]) -> (CTFont, [CGPoint]) {
+        let n = glyphs.count
+        guard n > 0 else { return (font, positions) }
+        let slot = cellDimension.width * 2
+        var advances = [CGSize](repeating: .zero, count: n)
+        CTFontGetAdvancesForGlyphs(font, .horizontal, glyphs, &advances, n)
+        var rects = [CGRect](repeating: .zero, count: n)
+        CTFontGetBoundingRectsForGlyphs(font, .horizontal, glyphs, &rects, n)
+        let widest = advances.map(\.width).max() ?? 0
+        let tallest = rects.map(\.maxY).max() ?? 0
+        guard widest > 0 else { return (font, positions) }
+        var scale = slot * 0.84 / widest
+        if tallest > 0 { scale = min(scale, CTFontGetAscent(fontSet.normal) / tallest) }
+        scale = min(1.25, max(1, scale))
+        var drawFont = font
+        if scale > 1.01 {
+            let size = (CTFontGetSize(font) * scale * 4).rounded() / 4
+            let key = "\(CTFontCopyPostScriptName(font) as String)@\(size)"
+            if let cached = wideFontCache[key] {
+                drawFont = cached
+            } else {
+                drawFont = CTFontCreateCopyWithAttributes(font, size, nil, nil)
+                wideFontCache[key] = drawFont
+            }
+            scale = CTFontGetSize(drawFont) / CTFontGetSize(font)
+        }
+        var out = positions
+        for i in 0..<n {
+            out[i].x += max(0, (slot - advances[i].width * scale) / 2)
+        }
+        return (drawFont, out)
     }
 
     func repositionMarkedText() {

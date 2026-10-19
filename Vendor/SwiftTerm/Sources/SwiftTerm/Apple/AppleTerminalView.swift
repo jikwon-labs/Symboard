@@ -1138,6 +1138,16 @@ extension TerminalView {
                             x: lineOrigin.x + CGFloat(glyphColumn) * cellDimension.width,
                             y: lineOrigin.y + yOffset + ctPosition.y)
                     }
+                    #if os(macOS)
+                    // Symboard: 두 칸 글자(한글 등)는 글리프가 두 칸보다 좁아 왼쪽에 붙고 오른쪽에 틈이 생겼다.
+                    // 줄 높이를 넘지 않는 만큼 키우고 두 칸 가운데에 놓는다. 칸 위치(커서·선택)는 그대로다.
+                    var drawFont = runFont
+                    if prepared.segment.columnWidth == 2 {
+                        (drawFont, positions) = fitWideGlyphs(font: runFont, glyphs: runGlyphs, positions: positions)
+                    }
+                    #else
+                    let drawFont = runFont
+                    #endif
 
                     nativeForegroundColor.set()
 
@@ -1150,7 +1160,7 @@ extension TerminalView {
                         context.setFillColor(cgColor)
                     }
 
-                    CTFontDrawGlyphs(runFont, runGlyphs, &positions, positions.count, context)
+                    CTFontDrawGlyphs(drawFont, runGlyphs, &positions, positions.count, context)
 
                     // Draw other attributes
                     drawRunAttributes(runAttributes, glyphPositions: positions, in: context)
