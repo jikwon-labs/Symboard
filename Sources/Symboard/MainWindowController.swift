@@ -955,12 +955,37 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let targets = orchestratorTargets(orch)
         let ws = model.selectedWorkspace
         let cands = targets.map { n in CommandTargets.Candidate(id: n.id, name: n.title, team: n.teamID.flatMap { id in ws.teams.first { $0.id == id }?.name }) }
+        if let split = CommandTargets.split(text, candidates: cands) {
+            let n = deliver(split, said: text)
+            if n > 0 { chrome.flash("Sent to \(n) agent\(n == 1 ? "" : "s")") }
+            return n
+        }
         let parsed = CommandTargets.parse(text, candidates: cands)
         let ids = parsed.implicit ? targets.map(\.id) : parsed.nodeIDs
         guard !parsed.body.isEmpty, !ids.isEmpty else { return 0 }
         for id in ids { model.sessions.session(for: id)?.sendText(parsed.body, submit: true) }
         chrome.flash("Sent to \(ids.count) agent\(ids.count == 1 ? "" : "s")")
         return ids.count
+    }
+
+    /// @대상별로 나눈 글을 보낸다. 보내기 직전 THREAD 에 대상마다 무엇이 갔는지, 글 없는 대상은 보내지 않았다고 남긴다.
+    /// 여러 대상이거나 빠진 대상이 있으면 THREAD 를 연다. 보낸 콘솔 수(겹치면 한 번)를 돌려준다.
+    func deliver(_ split: CommandTargets.Split, said: String) -> Int {
+        let multi = split.deliveries.count > 1 || !split.missingBody.isEmpty
+        chrome.thread.add(.user, said)
+        for name in split.missingBody { chrome.thread.add(.result, "Nothing to send to \(name) · not sent") }
+        var sent = Set<UUID>()
+        for d in split.deliveries {
+            let titles = d.nodeIDs.compactMap { model.node($0)?.title }
+            let preview = d.body.count > 80 ? String(d.body.prefix(80)) + "…" : d.body
+            chrome.thread.add(.result, "→ \(titles.isEmpty ? d.names.joined(separator: ", ") : titles.joined(separator: ", ")): \(preview.replacingOccurrences(of: "\n", with: " ⏎ "))")
+            for id in d.nodeIDs {
+                model.sessions.session(for: id)?.sendText(d.body, submit: true)
+                sent.insert(id)
+            }
+        }
+        if multi { chrome.threadOpen = true }
+        return sent.count
     }
 
     /// 오케스트레이터 Connect/Done.
@@ -1062,6 +1087,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let ws = model.selectedWorkspace
         let cands = ws.nodes.filter { $0.kind == .terminal }.map { n in
             CommandTargets.Candidate(id: n.id, name: n.title, team: n.teamID.flatMap { t in ws.teams.first { $0.id == t }?.name })
+        }
+        // @대상마다 다른 글(8차 5번).
+        if !closing, let split = CommandTargets.split(text, candidates: cands) {
+            let n = deliver(split, said: text)
+            if n > 0 || !split.missingBody.isEmpty { chrome.command = "" }
+            if n > 0 { chrome.flash("Sent to \(n) console\(n == 1 ? "" : "s")") }
+            else if split.missingBody.isEmpty { chrome.flash("Type something to send") }
+            return
         }
         let parsed = CommandTargets.parse(text, candidates: cands)
         var targets = parsed.nodeIDs

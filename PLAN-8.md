@@ -33,7 +33,10 @@ STATUS: IN_PROGRESS
   - 확인한 실제 입력(symv8-3): Ada(0,0)·Pip(700,0)·스티커(0,480) 보드, 화면을 (-3000,-2000) 빈 곳으로 옮김(`2-before-empty-view.png`) → `New console` 실제 클릭 → Maya 가 Pip 오른쪽(1380,0)에 생기고 화면이 그쪽으로, 배율 60% 그대로(`2-after-new-console.png`). 다시 빈 곳으로 옮긴 뒤 명령 바에 `spawn 2 shell` 타이핑 + Enter → 줄이 차서 아래 줄, 스티커 오른쪽에 Group 1, 화면 이동(`2-after-spawn2.png`).
 - [ ] 3. claude 가 보드에 콘솔을 띄우는 MCP 도구(list/spawn/send/read/close), 설정 스위치, 부른 콘솔과 옅은 선
 - [ ] 4. 명령 바 여러 줄(Shift+Enter, 3줄까지 자람, Cmd+Shift+E 전체 화면 편집, claude·codex 에는 bracketed paste)
-- [ ] 5. @ 대상마다 다른 글 보내기(단위 테스트)
+- [x] 5. @ 대상마다 다른 글 보내기(단위 테스트)
+  - 원인: `CommandTargets.parse` 는 맨 앞에 이어 붙은 @ 만 대상으로 보고 나머지 전부를 한 글로 모든 대상에 보냈다.
+  - 고침: `CommandTargets.split`(+ `Mention.targets`·`activeInBody`, 단위 테스트 8개) — 알려진 @이름으로 시작하면 각 @이름 뒤부터 다음 알려진 @이름 앞까지가 그 대상 글, 이어 붙은 이름은 같은 글, 맨 끝 글 없는 이름은 보내지 않고 THREAD 에 알림, 모르는 @ 는 글. 줄바꿈 든 글도 다음 @이름 앞까지 한 덩어리. 명령 바와 오케스트레이터 입력칸 모두 같은 함수(`deliver`), 보내기 직전 THREAD 에 대상별 한 줄. 입력칸은 글 중간 알려진 @이름도 색칠하고 @ 목록을 띄운다.
+  - 확인한 실제 입력(symv8-5, 셸 Ada·Pip·Maya, orca type + Return): `@Ada echo one @Pip echo two` → Ada 에 one, Pip 에 two 만, Maya 그대로, THREAD "→ Ada: echo one" "→ Pip: echo two"(`5-sent.png`), 입력칸에서 @Ada·@Pip 둘 다 주황(`5-typed.png`). `@Ada @Maya echo adjacent` → 둘 다 adjacent. `@Ada echo last @Pip` → Ada 만 last, THREAD "Nothing to send to Pip · not sent"(`5-adjacent-missing.png`).
 - [ ] 6. 왼쪽 아래 ? 단추와 단축키 표, `?` 키
 - [x] 7. 콘솔 안 Cmd·Option 이동과 지우기(단위 테스트)
   - 재현/원인: SwiftTerm 은 Option 을 Meta 로 써서(optionAsMetaKey 기본 켬) Option+←/→ 는 원래 ESC b/f 를 보냈지만, Cmd+←/→·Cmd+Backspace 는 처리하지 않았다. 한글 조합 중이면 조합 글자가 남은 채로 커서만 움직일 수 있었다.

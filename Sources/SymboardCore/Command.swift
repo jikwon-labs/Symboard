@@ -56,6 +56,52 @@ public struct CommandTargets: Equatable, Sendable {
         return CommandTargets(nodeIDs: ids, body: body, unknown: unknown, implicit: !sawTarget)
     }
 
+    /// @ 대상마다 다른 글(8차). `@Ada 로그인 버그 고쳐 @Pip 테스트 돌려` → Ada 에 "로그인 버그 고쳐", Pip 에 "테스트 돌려".
+    /// 각 @이름 뒤부터 다음 알려진 @이름 앞까지가 그 대상의 글(앞뒤 빈칸·줄바꿈은 자름, 가운데 줄바꿈은 그대로).
+    /// 글 없이 이어 붙은 이름은 다음 글을 함께 받고(`@Ada @Maya echo two`), 맨 끝에 글 없이 남은 이름은 `missingBody`.
+    public struct Delivery: Equatable, Sendable {
+        public var names: [String]
+        public var nodeIDs: [UUID]
+        public var body: String
+        public init(names: [String], nodeIDs: [UUID], body: String) { self.names = names; self.nodeIDs = nodeIDs; self.body = body }
+    }
+
+    public struct Split: Equatable, Sendable {
+        public var deliveries: [Delivery]
+        public var missingBody: [String]
+        public init(deliveries: [Delivery], missingBody: [String]) { self.deliveries = deliveries; self.missingBody = missingBody }
+    }
+
+    /// 글이 알려진 @이름으로 시작하지 않으면 nil(예전 `parse` 로: 고른 콘솔에 보내기·모르는 이름 알림).
+    public static func split(_ input: String, candidates: [Candidate]) -> Split? {
+        let names = ["all"] + candidates.map(\.name) + candidates.compactMap(\.team)
+        let ns = input as NSString
+        let ranges = Mention.targets(in: input, names: names)
+        guard !ranges.isEmpty else { return nil }
+        func resolve(_ raw: String) -> [UUID] {
+            let name = raw.lowercased()
+            if name == "all" { return candidates.map(\.id) }
+            let byName = candidates.filter { $0.name.lowercased() == name }.map(\.id)
+            return byName.isEmpty ? candidates.filter { $0.team?.lowercased() == name }.map(\.id) : byName
+        }
+        var deliveries: [Delivery] = []
+        var pending: [String] = []
+        for (k, r) in ranges.enumerated() {
+            pending.append(ns.substring(with: NSRange(location: r.location + 1, length: r.length - 1)))
+            var start = NSMaxRange(r)
+            // "@Ada, 고쳐" 처럼 이름에 붙은 구두점은 글에 넣지 않는다.
+            while start < ns.length, ",:".utf16.contains(ns.character(at: start)) { start += 1 }
+            let end = k + 1 < ranges.count ? ranges[k + 1].location : ns.length
+            let body = start < end ? ns.substring(with: NSRange(location: start, length: end - start)).trimmingCharacters(in: .whitespacesAndNewlines) : ""
+            guard !body.isEmpty else { continue }
+            var ids: [UUID] = []
+            for n in pending { for id in resolve(n) where !ids.contains(id) { ids.append(id) } }
+            deliveries.append(Delivery(names: pending, nodeIDs: ids, body: body))
+            pending = []
+        }
+        return Split(deliveries: deliveries, missingBody: pending)
+    }
+
     /// 입력 끝에서 쓰고 있는 @ 토큰(자동 완성용). 없으면 nil.
     public static func pendingMention(in input: String) -> String? {
         guard let last = input.split(separator: " ", omittingEmptySubsequences: false).last, last.hasPrefix("@") else { return nil }

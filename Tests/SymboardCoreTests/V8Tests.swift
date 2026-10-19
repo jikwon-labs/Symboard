@@ -97,3 +97,66 @@ import Testing
         #expect(ConsoleOrder.digit(keyCode: 29) == nil)   // 0 은 Actual Size
     }
 }
+
+@Suite struct TargetSplitTests {
+    let ada = UUID(), pip = UUID(), maya = UUID()
+    var cands: [CommandTargets.Candidate] {
+        [.init(id: ada, name: "Ada", team: "Group 1"), .init(id: pip, name: "Pip", team: "Group 1"), .init(id: maya, name: "Maya", team: nil)]
+    }
+
+    @Test func eachTargetGetsItsOwnText() {
+        let s = CommandTargets.split("@Ada 로그인 버그 고쳐 @Pip 테스트 돌려", candidates: cands)!
+        #expect(s.deliveries == [.init(names: ["Ada"], nodeIDs: [ada], body: "로그인 버그 고쳐"),
+                                 .init(names: ["Pip"], nodeIDs: [pip], body: "테스트 돌려")])
+        #expect(s.missingBody.isEmpty)
+    }
+
+    @Test func adjacentNamesShareText() {
+        let s = CommandTargets.split("@Ada @Maya echo two", candidates: cands)!
+        #expect(s.deliveries == [.init(names: ["Ada", "Maya"], nodeIDs: [ada, maya], body: "echo two")])
+        let t = CommandTargets.split("@Ada @Pip 테스트", candidates: cands)!
+        #expect(t.deliveries.map(\.nodeIDs) == [[ada, pip]])
+    }
+
+    @Test func trailingNameWithoutTextIsReported() {
+        let s = CommandTargets.split("@Ada 고쳐 @Pip", candidates: cands)!
+        #expect(s.deliveries == [.init(names: ["Ada"], nodeIDs: [ada], body: "고쳐")])
+        #expect(s.missingBody == ["Pip"])
+        #expect(CommandTargets.split("@Ada", candidates: cands)!.missingBody == ["Ada"])
+    }
+
+    @Test func unknownAtStaysInText() {
+        let s = CommandTargets.split("@Ada mail a@b.com and install @types/node", candidates: cands)!
+        #expect(s.deliveries.map(\.body) == ["mail a@b.com and install @types/node"])
+        // 알려진 이름이라도 낱말 중간(앞이 빈칸이 아님)이면 글이다.
+        #expect(CommandTargets.split("@Ada ping x@Pip", candidates: cands)!.deliveries.map(\.body) == ["ping x@Pip"])
+        // @Adam 은 Ada 가 아니다.
+        #expect(CommandTargets.split("@Ada hi @Adam", candidates: cands)!.deliveries.map(\.body) == ["hi @Adam"])
+    }
+
+    @Test func notStartingWithKnownNameFallsBack() {
+        #expect(CommandTargets.split("echo hi @Ada", candidates: cands) == nil)
+        #expect(CommandTargets.split("@nobody hi", candidates: cands) == nil)
+    }
+
+    @Test func multilineTextStaysTogetherUntilNextName() {
+        let s = CommandTargets.split("@Ada first line\nsecond line\n@Pip\nrun tests\n", candidates: cands)!
+        #expect(s.deliveries.map(\.body) == ["first line\nsecond line", "run tests"])
+    }
+
+    @Test func groupsAllAndPunctuation() {
+        let s = CommandTargets.split("@group 1, build @maya: lint", candidates: cands)!
+        #expect(s.deliveries == [.init(names: ["group 1"], nodeIDs: [ada, pip], body: "build"),
+                                 .init(names: ["maya"], nodeIDs: [maya], body: "lint")])
+        #expect(CommandTargets.split("@all status", candidates: cands)!.deliveries.first?.nodeIDs == [ada, pip, maya])
+    }
+
+    @Test func bodyMentionsAreHighlightedAndCompleted() {
+        let names = ["Ada", "Pip", "all"]
+        #expect(Mention.targets(in: "@Ada fix @Pip test", names: names).map(\.location) == [0, 9])
+        #expect(Mention.targets(in: "fix @Pip", names: names).isEmpty)
+        #expect(Mention.activeInBody(in: "@Ada fix @P", cursor: 11, names: names)?.query == "P")
+        #expect(Mention.activeInBody(in: "@Ada mail a@b", cursor: 13, names: names) == nil)
+        #expect(Mention.activeInBody(in: "hi @P", cursor: 5, names: names) == nil)
+    }
+}

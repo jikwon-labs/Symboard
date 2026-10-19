@@ -189,12 +189,12 @@ final class MentionTextField: NSTextField, NSTextFieldDelegate {
             let full = NSRange(location: 0, length: (ed.string as NSString).length)
             lm.removeTemporaryAttribute(.foregroundColor, forCharacterRange: full)
             lm.removeTemporaryAttribute(.backgroundColor, forCharacterRange: full)
-            for r in Mention.highlights(in: ed.string, names: names) {
+            for r in Mention.highlights(in: ed.string, names: names) + Mention.targets(in: ed.string, names: names) {
                 lm.addTemporaryAttributes([.foregroundColor: Self.mentionColor, .backgroundColor: Self.pillColor], forCharacterRange: r)
             }
         } else {
             let s = NSMutableAttributedString(string: stringValue, attributes: [.font: baseFont, .foregroundColor: Theme.text])
-            for r in Mention.highlights(in: stringValue, names: names) {
+            for r in Mention.highlights(in: stringValue, names: names) + Mention.targets(in: stringValue, names: names) {
                 s.addAttributes([.foregroundColor: Self.mentionColor], range: r)
             }
             attributedStringValue = s
@@ -208,7 +208,8 @@ final class MentionTextField: NSTextField, NSTextFieldDelegate {
         guard let ed = activeEditor, !ed.hasMarkedText() else { return }
         let sel = ed.selectedRange()
         let opts = optionsSource()
-        guard sel.length == 0, let a = Mention.active(in: ed.string, cursor: sel.location, names: opts.map(\.name)) else {
+        guard sel.length == 0, let a = Mention.active(in: ed.string, cursor: sel.location, names: opts.map(\.name))
+                ?? Mention.activeInBody(in: ed.string, cursor: sel.location, names: opts.map(\.name)) else {
             state.close(); return
         }
         let hits = Mention.filter(opts.map(\.name), query: a.query)

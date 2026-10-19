@@ -2,8 +2,8 @@ import Foundation
 
 /// 입력칸 @ 자동완성과 색칠 계산. 위치는 모두 UTF-16 단위(NSString·NSTextView 와 같은 단위)다.
 ///
-/// 대상으로 보는 @ 는 `CommandTargets.parse` 와 같이 "맨 앞에 이어 붙은 @ 토큰" 뿐이다.
-/// 본문 중간의 @(예: claude 에 보내는 `@file`)는 목록도 띄우지 않고 색칠도 하지 않는다.
+/// 대상으로 보는 @ 는 맨 앞에 이어 붙은 @ 토큰과, 글이 알려진 @이름으로 시작할 때 글 중간의 알려진 @이름(8차, `targets`)이다.
+/// 알려지지 않은 @(예: claude 에 보내는 `@file`)는 목록도 띄우지 않고 색칠도 하지 않는다.
 public enum Mention {
     /// 지금 커서 바로 앞에서 쓰고 있는 @ 토큰. `range` 는 @ 부터 커서까지, `query` 는 @ 뒤 글자.
     public struct Active: Equatable, Sendable {
@@ -75,6 +75,47 @@ public enum Mention {
             while j < ns.length, [comma, colon].contains(ns.character(at: j)) { j += 1 }
             i = j
         }
+    }
+
+    /// 대상으로 보는 `@이름` 범위들(8차). 글이 알려진 @이름으로 시작할 때만, 그 뒤 글 중간의 알려진 @이름도 대상이다
+    /// (`@Ada 고쳐 @Pip 테스트`). @ 앞은 글 처음이거나 빈칸·줄바꿈이어야 하고, 알려지지 않은 @(이메일·`@types/node`)는 넣지 않는다.
+    public static func targets(in text: String, names: [String]) -> [NSRange] {
+        let ns = text as NSString
+        let first = skipSpaces(ns, from: 0)
+        guard first < ns.length, ns.character(at: first) == at, matchedName(ns, nameStart: first + 1, names: names) != nil else { return [] }
+        var out: [NSRange] = []
+        var i = first
+        while i < ns.length {
+            if ns.character(at: i) == at, i == 0 || isSpace(ns.character(at: i - 1)), let len = matchedName(ns, nameStart: i + 1, names: names) {
+                out.append(NSRange(location: i, length: len + 1))
+                i += len + 1
+            } else {
+                i += 1
+            }
+        }
+        return out
+    }
+
+    /// 글 중간에서 쓰고 있는 @ 토큰(8차). 글이 알려진 @이름으로 시작할 때만 본다. 맨 앞 줄은 `active` 가 맡는다.
+    public static func activeInBody(in text: String, cursor: Int, names: [String]) -> Active? {
+        let ns = text as NSString
+        guard cursor > 0, cursor <= ns.length, !targets(in: text, names: names).isEmpty else { return nil }
+        var i = cursor - 1
+        while i >= 0 {
+            let c = ns.character(at: i)
+            if c == at {
+                guard i == 0 || isSpace(ns.character(at: i - 1)) else { return nil }
+                let q = ns.substring(with: NSRange(location: i + 1, length: cursor - i - 1))
+                if q.contains(where: { $0.isWhitespace }) {
+                    let lq = q.lowercased()
+                    guard !q.contains("\n"), names.contains(where: { $0.lowercased().hasPrefix(lq) }) else { return nil }
+                }
+                return Active(range: NSRange(location: i, length: cursor - i), query: q)
+            }
+            if c == 0x0A { return nil }
+            i -= 1
+        }
+        return nil
     }
 
     /// `nameStart` 부터 가장 길게 맞는 알려진 이름의 길이. 이름 뒤가 경계가 아니면 맞지 않는 것으로 본다.
