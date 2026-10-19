@@ -18,8 +18,9 @@ STATUS: IN_PROGRESS
 | # | 때 | 무엇 |
 |---|----|------|
 | 1 | 10-20 01:38 | 1번 스크롤 시험. "print the numbers 1 to 150, one per line, nothing else" |
+| 2 | 10-20 02:10 | 4번 여러 줄 한 메시지 시험. "Reply with only the word OK." + 세 줄 |
 
-합계: 1
+합계: 2
 
 ## 할 일
 
@@ -32,7 +33,10 @@ STATUS: IN_PROGRESS
   - 고침: `CanvasLayout.besideSlot`(단위 테스트 5개) — 기준 노드(고른 노드 → 마지막 노드, 그룹에 들었으면 그룹 프레임) 같은 줄 오른쪽 첫 빈 칸, 줄 폭 2100 을 넘으면 그 줄 아래 왼쪽부터. 묶음은 그룹 여백·머리까지 넣은 크기로 자리를 찾는다. 놓은 뒤 `glideReveal` 로 0.35초 미끄러지듯 옮기고 배율은 그대로(화면보다 크면 맞춤). 별 메뉴 놓기·컴포저(stagger)는 그대로.
   - 확인한 실제 입력(symv8-3): Ada(0,0)·Pip(700,0)·스티커(0,480) 보드, 화면을 (-3000,-2000) 빈 곳으로 옮김(`2-before-empty-view.png`) → `New console` 실제 클릭 → Maya 가 Pip 오른쪽(1380,0)에 생기고 화면이 그쪽으로, 배율 60% 그대로(`2-after-new-console.png`). 다시 빈 곳으로 옮긴 뒤 명령 바에 `spawn 2 shell` 타이핑 + Enter → 줄이 차서 아래 줄, 스티커 오른쪽에 Group 1, 화면 이동(`2-after-spawn2.png`).
 - [ ] 3. claude 가 보드에 콘솔을 띄우는 MCP 도구(list/spawn/send/read/close), 설정 스위치, 부른 콘솔과 옅은 선
-- [ ] 4. 명령 바 여러 줄(Shift+Enter, 3줄까지 자람, Cmd+Shift+E 전체 화면 편집, claude·codex 에는 bracketed paste)
+- [x] 4. 명령 바 여러 줄(Shift+Enter, 3줄까지 자람, Cmd+Shift+E 전체 화면 편집, claude·codex 에는 bracketed paste)
+  - 원래: 입력칸이 한 줄(`usesSingleLineMode`), Enter 만 있었다. 여러 줄 글은 프로그램이 bracketed paste 모드를 켰을 때만 감쌌다.
+  - 고침: `MentionTextField` 를 자동 줄바꿈 여러 줄로, Shift+Enter(Option+Enter 도)는 줄바꿈, Enter 는 보내기. 높이는 줄 수만큼 3줄까지 자라고 그 뒤는 칸 안에서 스크롤. `PromptEditor.swift` — Cmd+Shift+E 로 초점 있는 입력칸(없으면 명령 바)의 글을 창 대부분을 덮는 편집 칸에서(위에 대상, 아래 Send), 같은 키·Esc·바깥 누르기로 닫으면 글이 원래 칸에 남고 초점도 돌아감. 편집 칸도 같은 `MentionField` 라 Enter·Shift+Enter·@ 목록·색칠이 같다. 오케스트레이터 입력칸도 같은 입력칸이고 Cmd+Shift+E 대상이 된다. claude·codex 콘솔은 줄바꿈 든 글을 늘 `ESC[200~ … ESC[201~` 로 감싸고 Enter 한 번(`alwaysBracketedPaste`), 셸은 예전처럼(모드를 켰을 때만).
+  - 확인한 실제 입력(symv8-6, claude Ada 고름, ABC): 명령 바에 `Reply with only the word OK.` Shift+Enter `second line` Shift+Enter `third line` Shift+Enter `fourth line` → 칸이 3줄 높이로 자라고 안에서 스크롤돼 끝 줄이 보임(`4-four-lines-bar.png`) → Cmd+Shift+E → 큰 편집 칸에 네 줄, 위에 "Message Ada"(`4-fullscreen-editor.png`) → Cmd+Shift+E 로 닫음 → 명령 바에 네 줄 그대로(`4-closed-text-kept.png`) → Enter → claude 에 네 줄이 한 메시지로 들어가고 답 OK 한 번(질문 2, `4-claude-one-message.png`). 편집 칸에서 `@A` → 목록 @Ada·@all(`4-fullscreen-mention-list.png`) → Tab → `@Ada` 주황(`4-fullscreen-mention-colored.png`) → Esc → 명령 바에 `@Ada echo hi`. 오케스트레이터 입력칸 `echo first` Shift+Enter `echo second` Enter → 이어진 셸 Pip 에 두 줄이 한 번에 붙고 first·second 출력(`4-orchestrator-two-lines.png`).
 - [x] 5. @ 대상마다 다른 글 보내기(단위 테스트)
   - 원인: `CommandTargets.parse` 는 맨 앞에 이어 붙은 @ 만 대상으로 보고 나머지 전부를 한 글로 모든 대상에 보냈다.
   - 고침: `CommandTargets.split`(+ `Mention.targets`·`activeInBody`, 단위 테스트 8개) — 알려진 @이름으로 시작하면 각 @이름 뒤부터 다음 알려진 @이름 앞까지가 그 대상 글, 이어 붙은 이름은 같은 글, 맨 끝 글 없는 이름은 보내지 않고 THREAD 에 알림, 모르는 @ 는 글. 줄바꿈 든 글도 다음 @이름 앞까지 한 덩어리. 명령 바와 오케스트레이터 입력칸 모두 같은 함수(`deliver`), 보내기 직전 THREAD 에 대상별 한 줄. 입력칸은 글 중간 알려진 @이름도 색칠하고 @ 목록을 띄운다.

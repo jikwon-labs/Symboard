@@ -198,7 +198,16 @@ struct OrchestratorView: View {
         HStack(spacing: 8) {
             MentionField(text: $command, placeholder: "Command \(targets.count) agent\(targets.count == 1 ? "" : "s") · @ to direct",
                          fontSize: 12, state: mention, options: { [c, nodeID] in c?.mentionOptions(orchestrator: nodeID) ?? [] },
-                         onSubmit: send, axLabel: "Orchestrator command")
+                         onSubmit: send, axLabel: "Orchestrator command",
+                         onExpand: { [c, nodeID] in
+                             guard let c else { return }
+                             let binding = $command
+                             c.promptEditor.show(PromptEditorModel.Target(
+                                 title: { "Orchestrator · \(targets.count) agent\(targets.count == 1 ? "" : "s") · @ to direct" },
+                                 read: { binding.wrappedValue }, write: { binding.wrappedValue = $0 },
+                                 send: { if c.orchestratorSend(nodeID, text: binding.wrappedValue) > 0 { binding.wrappedValue = "" } },
+                                 options: { c.mentionOptions(orchestrator: nodeID) }))
+                         })
             Button(action: send) {
                 Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
                     .frame(width: 22, height: 22)

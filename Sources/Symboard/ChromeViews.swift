@@ -545,7 +545,8 @@ struct BottomBar: View {
                     .background(Circle().fill(Color.symAccent.opacity(0.15)))
                 MentionField(text: $chrome.command, placeholder: placeholder, fontSize: 13, state: mention,
                              options: { [c] in c.mentionOptions() }, onSubmit: { [c] in c.runCommand() },
-                             focusRequest: focusRequest, axLabel: "Command")
+                             focusRequest: focusRequest + chrome.focusCommand, axLabel: "Command",
+                             onExpand: { [c] in c.promptEditor.show(c.commandBarPromptTarget) })
                 if !chrome.thread.entries.isEmpty {
                     Button { chrome.threadOpen.toggle() } label: {
                         Image(systemName: chrome.threadOpen ? "chevron.down" : "chevron.up").font(.system(size: 11, weight: .bold))

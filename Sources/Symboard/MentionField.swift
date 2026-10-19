@@ -65,6 +65,10 @@ struct MentionField: NSViewRepresentable {
     /// 값이 바뀌면 이 입력칸에 초점을 주고 커서를 끝에 둔다.
     var focusRequest: Int = 0
     var axLabel: String = "Command"
+    /// 보이는 줄 수 상한(8차). 그보다 길면 입력칸 안에서 스크롤한다. 0 이면 받은 높이를 다 쓴다(전체 화면 편집).
+    var maxLines: Int = 3
+    /// Cmd+Shift+E 로 이 입력칸의 글을 전체 화면 편집으로 연다.
+    var onExpand: (() -> Void)? = nil
 
     func makeNSView(context: Context) -> MentionTextField {
         let f = MentionTextField()
@@ -78,6 +82,7 @@ struct MentionField: NSViewRepresentable {
         f.stringValue = text
         f.setPlaceholder(placeholder)
         f.lastFocusRequest = focusRequest
+        f.onExpand = onExpand
         return f
     }
 
@@ -87,6 +92,7 @@ struct MentionField: NSViewRepresentable {
         f.optionsSource = options
         f.onSubmit = onSubmit
         f.onText = { text = $0 }
+        f.onExpand = onExpand
         f.setPlaceholder(placeholder)
         f.setExternal(text)
         if f.lastFocusRequest != focusRequest {
@@ -96,7 +102,12 @@ struct MentionField: NSViewRepresentable {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: MentionTextField, context: Context) -> CGSize? {
-        CGSize(width: proposal.width ?? 200, height: ceil(nsView.baseFont.ascender - nsView.baseFont.descender + nsView.baseFont.leading) + 4)
+        let w = proposal.width ?? 200
+        if maxLines == 0 { return CGSize(width: w, height: proposal.height ?? 200) }
+        // 글 줄 수(줄바꿈·자동 줄바꿈)만큼 자라되 maxLines 까지.
+        let line = nsView.lineHeight
+        let lines = min(maxLines, max(1, nsView.lineCount(width: w)))
+        return CGSize(width: w, height: ceil(line * CGFloat(lines)) + 4)
     }
 }
 
@@ -107,6 +118,7 @@ final class MentionTextField: NSTextField, NSTextFieldDelegate {
     var onText: (String) -> Void = { _ in }
     var baseFont: NSFont = .systemFont(ofSize: 13) { didSet { font = baseFont } }
     var lastFocusRequest = 0
+    var onExpand: (() -> Void)?
     private var placeholderText = ""
     private let editor = MentionEditor.make()
 
@@ -127,10 +139,11 @@ final class MentionTextField: NSTextField, NSTextFieldDelegate {
         focusRingType = .none
         isEditable = true
         isSelectable = true
-        usesSingleLineMode = true
-        lineBreakMode = .byClipping
-        cell?.isScrollable = true
-        cell?.wraps = false
+        // 8차: 여러 줄(Shift+Enter). 자동 줄바꿈하고, 칸보다 길면 편집기가 칸 안에서 스크롤한다.
+        usesSingleLineMode = false
+        lineBreakMode = .byWordWrapping
+        cell?.isScrollable = false
+        cell?.wraps = true
         textColor = Theme.text
         font = baseFont
         delegate = self
@@ -144,6 +157,19 @@ final class MentionTextField: NSTextField, NSTextFieldDelegate {
         guard s != placeholderText else { return }
         placeholderText = s
         placeholderAttributedString = NSAttributedString(string: s, attributes: [.foregroundColor: Theme.textDim, .font: baseFont])
+    }
+
+    var lineHeight: CGFloat { ceil(baseFont.ascender - baseFont.descender + baseFont.leading) }
+
+    /// 폭 w 에서 지금 글이 차지하는 줄 수.
+    func lineCount(width w: CGFloat) -> Int {
+        let text = activeEditor?.string ?? stringValue
+        guard !text.isEmpty else { return 1 }
+        // 끝 줄바꿈 뒤 빈 줄도 한 줄로 센다(커서가 거기 있다).
+        let measured = text.hasSuffix("\n") ? text + " " : text
+        let r = (measured as NSString).boundingRect(with: NSSize(width: max(20, w - 4), height: .greatestFiniteMagnitude),
+                                                    options: [.usesLineFragmentOrigin], attributes: [.font: baseFont])
+        return max(1, Int((r.height / lineHeight).rounded()))
     }
 
     /// 지금 편집 중인 글 편집기(초점이 없으면 nil).
@@ -244,6 +270,13 @@ final class MentionTextField: NSTextField, NSTextFieldDelegate {
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy sel: Selector) -> Bool {
         let open = state?.isOpen ?? false
+        // Shift+Enter(Option+Enter 도)는 보내지 않고 줄을 바꾼다.
+        if sel == #selector(NSResponder.insertNewline(_:)) || sel == #selector(NSResponder.insertLineBreak(_:)),
+           let f = NSApp.currentEvent?.modifierFlags, f.contains(.shift) || f.contains(.option) {
+            state?.close()
+            textView.insertNewlineIgnoringFieldEditor(nil)
+            return true
+        }
         switch sel {
         case #selector(NSResponder.moveUp(_:)) where open:
             state?.move(-1); return true
@@ -266,6 +299,12 @@ final class MentionTextField: NSTextField, NSTextFieldDelegate {
         default:
             return false
         }
+    }
+
+    /// 초점이 있는 입력칸(글 편집기 → 입력칸).
+    static func focused(_ responder: NSResponder?) -> MentionTextField? {
+        guard let tv = responder as? NSTextView else { return nil }
+        return (tv.delegate as AnyObject?) as? MentionTextField
     }
 
     /// 이 입력칸의 목록이 열려 있는지(창의 Esc 처리가 목록을 먼저 닫게 한다).
@@ -291,6 +330,7 @@ final class MentionEditor: NSTextView {
         container.widthTracksTextView = false
         lm.addTextContainer(container)
         let ed = MentionEditor(frame: .zero, textContainer: container)
+        container.widthTracksTextView = true
         ed.isFieldEditor = true
         ed.isRichText = false
         ed.allowsUndo = true

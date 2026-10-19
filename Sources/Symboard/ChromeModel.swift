@@ -54,6 +54,8 @@ final class ChromeModel: ObservableObject {
     @Published var branch: String?
     @Published var changeCount = 0
     @Published var command = ""
+    /// 값이 바뀌면 명령 바 입력칸에 초점을 준다.
+    @Published var focusCommand = 0
     @Published var selectedNodeID: UUID?
     @Published var showingHome = false
     @Published var spawnMenuOpen = false

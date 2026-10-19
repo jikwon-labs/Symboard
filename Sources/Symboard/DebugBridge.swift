@@ -323,6 +323,7 @@ final class DebugBridge {
             log.append("command toast=\(controller.chrome.toast ?? "-")")
         case "chrome":
             let ch = controller.chrome
+            log.append("command=\(ch.command.debugDescription) promptEditor=\(controller.promptEditor.open)")
             log.append("chrome tool=\(ch.tool) zoom=\(ch.zoomPercent) live=\(ch.liveCount) branch=\(ch.branch ?? "-") changes=\(ch.changeCount) home=\(ch.showingHome)")
         case "link":
             // from: 노드 번호, to: 노드 번호 또는 team: 팀 번호

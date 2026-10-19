@@ -191,6 +191,21 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             loopsHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         loopsObserver = chrome.$loopsPage.sink { page in loopsHost.isHidden = page == nil }
+        let promptHost = HiddenAwareHostingView(rootView: PromptEditorView(editor: promptEditor))
+        promptHost.translatesAutoresizingMaskIntoConstraints = false
+        promptHost.sizingOptions = []
+        promptHost.isHidden = true
+        content.addSubview(promptHost)
+        NSLayoutConstraint.activate([
+            promptHost.topAnchor.constraint(equalTo: content.topAnchor),
+            promptHost.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            promptHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            promptHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+        ])
+        promptObserver = promptEditor.$open.sink { [weak self] open in
+            promptHost.isHidden = !open
+            if !open { DispatchQueue.main.async { self?.promptEditorClosed() } }
+        }
         // 안내 알약("Try @all …")은 모달·팝오버가 열려 있으면 숨긴다(팝오버 뒤로 비치지 않게).
         overlayObserver = Publishers.MergeMany(chrome.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
                                                composer.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
@@ -251,6 +266,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     private var eventMonitor: Any?
     private var keyMonitor: Any?
+    let promptEditor = PromptEditorModel()
+    private var promptObserver: AnyCancellable?
+    /// 전체 화면 편집을 연 입력칸(닫으면 거기로 초점을 돌린다).
+    private weak var promptOrigin: MentionTextField?
     private var flagsMonitor: Any?
 
     private func observe() {
@@ -306,8 +325,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                         return nil
                     }
                 }
+                // Cmd+Shift+E: 초점이 있는 입력칸(없으면 명령 바)의 글을 전체 화면 편집으로 열고 닫는다.
+                if event.keyCode == 14, event.modifierFlags.intersection([.command, .shift, .option, .control]) == [.command, .shift] {
+                    self.togglePromptEditor()
+                    return nil
+                }
                 // 입력칸의 @ 목록이 열려 있으면 Esc 는 그 목록만 닫는다(입력칸이 받는다).
                 if event.keyCode == 53, MentionTextField.listOpen(for: self.window?.firstResponder) { return event }
+                if event.keyCode == 53, self.promptEditor.open { self.promptEditor.close(); return nil }
                 // Esc 는 열린 모달부터 닫는다. 닫지 않으면 다음 클릭이 어두운 배경을 눌러 모달을 닫는 데 쓰여 "첫 클릭 무시" 처럼 보였다.
                 if event.keyCode == 53, self.closeTopOverlay() { return nil }
                 if event.keyCode == 53, self.chrome.tool != .select {
@@ -750,6 +775,38 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         spec.profileID = p?.id
         addTerminal(spec: spec, at: nil, applyActiveProfile: false)
     }
+    // MARK: 전체 화면 프롬프트 편집(Cmd+Shift+E)
+
+    /// 명령 바를 편집 대상으로 하는 틀.
+    var commandBarPromptTarget: PromptEditorModel.Target {
+        PromptEditorModel.Target(
+            title: { [weak self] in self?.commandBarTitle ?? "" },
+            read: { [weak self] in self?.chrome.command ?? "" },
+            write: { [weak self] in self?.chrome.command = $0 },
+            send: { [weak self] in self?.runCommand() },
+            options: { [weak self] in self?.mentionOptions() ?? [] })
+    }
+
+    /// 편집 창 위에 보이는 대상: 명령 바 자리표시와 같은 말.
+    var commandBarTitle: String {
+        if let id = currentCanvas?.selectedNodeID, let n = model.node(id), n.kind == .terminal { return "Message \(n.title) · @ to direct" }
+        return "Command the board · @ to direct"
+    }
+
+    func togglePromptEditor() {
+        if promptEditor.open { promptEditor.close(); return }
+        let field = MentionTextField.focused(window?.firstResponder)
+        promptOrigin = field
+        if let f = field, let expand = f.onExpand { expand() }
+        else { promptOrigin = nil; promptEditor.show(commandBarPromptTarget) }
+    }
+
+    /// 닫히면 원래 입력칸(없으면 명령 바)에 초점을 돌려 이어서 쓸 수 있게 한다.
+    private func promptEditorClosed() {
+        if let f = promptOrigin, f.window != nil { f.focusAtEnd() } else { chrome.focusCommand += 1 }
+        promptOrigin = nil
+    }
+
     /// 맨 위에 열린 모달 하나를 닫는다. 닫은 게 있으면 true.
     @discardableResult
     func closeTopOverlay() -> Bool {

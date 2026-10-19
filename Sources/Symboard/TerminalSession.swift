@@ -123,8 +123,9 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         busyUntil = Date().addingTimeInterval(wait + (submit ? 0.35 : 0.05))
         let deliver = { [weak self] in
             guard let self, self.running else { return }
-            // 여러 줄은 bracketed paste 로 감싸서 CLI 가 한 번에 받게 한다. 프로그램이 그 모드를 켰을 때만.
-            if text.contains("\n") && self.view.getTerminal().bracketedPasteMode {
+            // 여러 줄은 bracketed paste 로 감싸서 CLI 가 한 번에 받게 한다(줄마다 따로 실행되지 않게).
+            // claude·codex 는 늘, 셸 등은 프로그램이 그 모드를 켰을 때만.
+            if text.contains("\n") && (self.alwaysBracketedPaste || self.view.getTerminal().bracketedPasteMode) {
                 self.view.send(txt: "\u{1b}[200~" + text + "\u{1b}[201~")
             } else {
                 self.view.send(txt: text)
@@ -149,6 +150,9 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
     }
 
     private(set) var paused = false
+
+    /// claude·codex 처럼 여러 줄을 늘 한 덩어리 붙여넣기로 받아야 하는 CLI.
+    var alwaysBracketedPaste = false
 
     /// 일반 셸이면 true. 출력 대신 "앞에 도는 프로세스" 로 쉬는 중인지 본다.
     var isPlainShell = false
