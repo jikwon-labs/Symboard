@@ -367,6 +367,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                 return event
             }
         }
+        startBoardTools()
         (window as? BoardWindow)?.keyIntercept = { [weak self] event in
             MainActor.assumeIsolated { self?.handleConsoleNavigation(event) ?? false }
         }
@@ -1126,7 +1127,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if inThread { chrome.thread.add(.result, "Closed \(nodes[0].title)") }
     }
 
-    private func removeNodes(_ ids: [UUID]) {
+    func removeNodes(_ ids: [UUID]) {
         for n in ids.compactMap({ model.node($0) }) {
             currentCanvas?.nodeViews[n.id]?.content.teardown()
             model.removeNode(n.id)

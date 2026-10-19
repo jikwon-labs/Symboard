@@ -71,7 +71,7 @@ public enum LaunchPlanner {
     ///   - claudeSessionExists: claude 세션 기록이 디스크에 있는지. 없으면 --resume 대신 같은 id 로 새로 시작한다.
     public static func plan(for spec: TerminalSpec, nodeID: UUID, statusFile: String,
                             profile: AccountProfile?, claudeSessionExists: Bool,
-                            defaultShell: String) -> LaunchPlan {
+                            defaultShell: String, claudeExtraArgs: [String] = []) -> LaunchPlan {
         var env: [String: String] = [
             "SYMBOARD_NODE_ID": nodeID.uuidString,
             "SYMBOARD_STATUS_FILE": statusFile,
@@ -95,11 +95,11 @@ public enum LaunchPlanner {
         case .claude:
             let settings = claudeHookSettingsJSON()
             if spec.hasLaunched, let sid = spec.sessionID, claudeSessionExists {
-                return LaunchPlan(command: ["claude", "--resume", sid, "--settings", settings] + spec.extraArgs,
+                return LaunchPlan(command: ["claude", "--resume", sid, "--settings", settings] + claudeExtraArgs + spec.extraArgs,
                                   environment: env, cwd: spec.cwd, isResume: true, sessionID: sid)
             }
             let sid = spec.sessionID ?? UUID().uuidString.lowercased()
-            return LaunchPlan(command: ["claude", "--session-id", sid, "--settings", settings] + spec.extraArgs,
+            return LaunchPlan(command: ["claude", "--session-id", sid, "--settings", settings] + claudeExtraArgs + spec.extraArgs,
                               environment: env, cwd: spec.cwd, isResume: false, sessionID: sid)
 
         case .codex:

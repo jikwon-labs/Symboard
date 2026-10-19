@@ -179,3 +179,57 @@ import Testing
         #expect(Set(ids).count == ids.count)
     }
 }
+
+@Suite struct BoardToolsTests {
+    @Test func mcpConfigNamesServerSocketAndCaller() throws {
+        let id = UUID()
+        let json = BoardTools.mcpConfigJSON(serverPath: "/A/symboard-mcp", socketPath: "/tmp/s.sock", nodeID: id)
+        let obj = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
+        let server = (obj["mcpServers"] as! [String: Any])["symboard"] as! [String: Any]
+        #expect(server["command"] as? String == "/A/symboard-mcp")
+        let env = server["env"] as! [String: String]
+        #expect(env["SYMBOARD_SOCKET"] == "/tmp/s.sock")
+        #expect(env["SYMBOARD_CALLER"] == id.uuidString)
+    }
+
+    @Test func claudeLaunchGetsArgsButNotStrictConfig() {
+        let spec = TerminalSpec(agent: .claude, cwd: "/tmp")
+        let extra = BoardTools.claudeArgs(configPath: "/tmp/x.mcp.json")
+        let plan = LaunchPlanner.plan(for: spec, nodeID: UUID(), statusFile: "/tmp/s", profile: nil, claudeSessionExists: false,
+                                      defaultShell: "/bin/zsh", claudeExtraArgs: extra)
+        #expect(plan.command.contains("--mcp-config"))
+        #expect(plan.command.contains("--append-system-prompt"))
+        #expect(!plan.command.contains("--strict-mcp-config"))
+        // 셸에는 붙지 않는다.
+        let shell = LaunchPlanner.plan(for: TerminalSpec(agent: .shell, cwd: "/tmp"), nodeID: UUID(), statusFile: "/tmp/s", profile: nil,
+                                       claudeSessionExists: false, defaultShell: "/bin/zsh", claudeExtraArgs: extra)
+        #expect(!shell.command.contains("--mcp-config"))
+    }
+
+    @Test func settingDefaultsOnAndTurnsOff() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let prefs = Prefs(directory: dir)
+        #expect(BoardTools.enabled(prefs))
+        BoardTools.setEnabled(false, prefs)
+        #expect(!BoardTools.enabled(prefs))
+        BoardTools.setEnabled(true, prefs)
+        #expect(BoardTools.enabled(prefs))
+    }
+
+    @Test func stdioServerAnswersHandshakeListAndCall() throws {
+        let server = MCPStdioServer { tool, args in ("called \(tool) \(args["name"] as? String ?? "")", false) }
+        func obj(_ s: String?) throws -> [String: Any] { try JSONSerialization.jsonObject(with: Data(s!.utf8)) as! [String: Any] }
+        let ini = try obj(server.handle(line: #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}"#))
+        #expect((ini["result"] as! [String: Any])["protocolVersion"] as? String == "2025-06-18")
+        #expect(server.handle(line: #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#) == nil)
+        let list = try obj(server.handle(line: #"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#))
+        let names = ((list["result"] as! [String: Any])["tools"] as! [[String: Any]]).map { $0["name"] as! String }
+        #expect(names == ["list_consoles", "spawn_console", "send_to_console", "read_console", "close_console"])
+        let call = try obj(server.handle(line: #"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"read_console","arguments":{"name":"Ada"}}}"#))
+        let content = (call["result"] as! [String: Any])["content"] as! [[String: Any]]
+        #expect(content.first?["text"] as? String == "called read_console Ada")
+        let bad = try obj(server.handle(line: #"{"jsonrpc":"2.0","id":4,"method":"nope"}"#))
+        #expect((bad["error"] as! [String: Any])["code"] as? Int == -32601)
+    }
+}

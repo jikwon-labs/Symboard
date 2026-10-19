@@ -265,7 +265,8 @@ final class LinksView: NSView {
         CATransaction.commit()
     }
 
-    func update(_ segments: [(UUID, NSRect, NSRect)]) {
+    /// faint: 에이전트가 띄운 콘솔과 부른 콘솔 사이 선(8차 3번). 모양은 같고 색만 옅다.
+    func update(_ segments: [(UUID, NSRect, NSRect)], faint: Set<UUID> = []) {
         guard let root = layer else { return }
         let ids = Set(segments.map(\.0))
         for (id, l) in layers where !ids.contains(id) {
@@ -279,11 +280,12 @@ final class LinksView: NSView {
             let dot = layers[id]?.1 ?? CALayer()
             shape.path = path
             shape.fillColor = nil
-            shape.strokeColor = Theme.accent.withAlphaComponent(0.55).cgColor
+            let light = faint.contains(id)
+            shape.strokeColor = Theme.accent.withAlphaComponent(light ? 0.22 : 0.55).cgColor
             shape.lineWidth = 1.5
             dot.bounds = CGRect(x: 0, y: 0, width: 7, height: 7)
             dot.cornerRadius = 3.5
-            dot.backgroundColor = Theme.accent.cgColor
+            dot.backgroundColor = Theme.accent.withAlphaComponent(light ? 0.45 : 1).cgColor
             dot.shadowColor = Theme.accent.cgColor
             dot.shadowOpacity = 0.9
             dot.shadowRadius = 4

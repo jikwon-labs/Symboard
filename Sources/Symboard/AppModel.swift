@@ -30,6 +30,9 @@ final class AppModel: ObservableObject {
 
     var statusDirectory: URL { store.directory.appendingPathComponent("status", isDirectory: true) }
 
+    /// claude 가 보드에 콘솔을 띄우는 도구의 소켓(8차 3번).
+    lazy var boardTools = BoardToolServer(directory: store.directory)
+
     // MARK: 저장
 
     func scheduleSave() {

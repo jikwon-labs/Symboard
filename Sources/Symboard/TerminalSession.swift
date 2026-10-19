@@ -189,6 +189,18 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
 
     func idleSeconds(now: Date = Date()) -> TimeInterval { tracker.idleSeconds(now: now) }
 
+    /// 지난 줄까지 포함한 끝 n 줄(보드 도구 read_console). 대체 화면(claude 등)이면 지금 화면.
+    func transcript(lastLines n: Int) -> String {
+        let data = view.getTerminal().getBufferAsData(kind: .active)
+        var lines = String(decoding: data, as: UTF8.self).components(separatedBy: "\n").map { line -> String in
+            var l = line.replacingOccurrences(of: "\u{0}", with: " ")
+            while l.last == " " { l.removeLast() }
+            return l
+        }
+        while lines.last?.isEmpty == true { lines.removeLast() }
+        return lines.suffix(max(1, n)).joined(separator: "\n")
+    }
+
     /// 화면에 보이는 터미널 내용을 텍스트로.
     func screenText() -> String {
         let term = view.getTerminal()

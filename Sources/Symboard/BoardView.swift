@@ -283,7 +283,7 @@ final class CanvasView: NSView {
             return (l.id, a, b, l.label, l.colorHex ?? Theme.text.hexString)
         }
         if segs.isEmpty && arrows.isEmpty && linksView.layer?.sublayers?.isEmpty ?? true { return }
-        linksView.update(segs)
+        linksView.update(segs, faint: Set((ws.links ?? []).filter { $0.style == NodeLink.spawnedStyle }.map(\.id)))
         arrowsView.updateArrows(arrows)
     }
 

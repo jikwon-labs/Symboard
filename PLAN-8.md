@@ -19,8 +19,9 @@ STATUS: IN_PROGRESS
 |---|----|------|
 | 1 | 10-20 01:38 | 1번 스크롤 시험. "print the numbers 1 to 150, one per line, nothing else" |
 | 2 | 10-20 02:10 | 4번 여러 줄 한 메시지 시험. "Reply with only the word OK." + 세 줄 |
+| 3 | 10-20 02:20 | 3번 보드 도구 시험. 프롬프트의 시험 질문 그대로 |
 
-합계: 2
+합계: 3
 
 ## 할 일
 
@@ -32,7 +33,10 @@ STATUS: IN_PROGRESS
   - 재현/원인: `addTerminal(at: nil)` 은 `suggestedFrame(near: visibleCenter)` 로 화면 가운데에, Spawn·spawn 명령의 `launchTeam` 은 화면 가운데가 비면 거기(`freeSpotCenter`)에 놓고 `zoomToFit` 으로 배율까지 바꿨다.
   - 고침: `CanvasLayout.besideSlot`(단위 테스트 5개) — 기준 노드(고른 노드 → 마지막 노드, 그룹에 들었으면 그룹 프레임) 같은 줄 오른쪽 첫 빈 칸, 줄 폭 2100 을 넘으면 그 줄 아래 왼쪽부터. 묶음은 그룹 여백·머리까지 넣은 크기로 자리를 찾는다. 놓은 뒤 `glideReveal` 로 0.35초 미끄러지듯 옮기고 배율은 그대로(화면보다 크면 맞춤). 별 메뉴 놓기·컴포저(stagger)는 그대로.
   - 확인한 실제 입력(symv8-3): Ada(0,0)·Pip(700,0)·스티커(0,480) 보드, 화면을 (-3000,-2000) 빈 곳으로 옮김(`2-before-empty-view.png`) → `New console` 실제 클릭 → Maya 가 Pip 오른쪽(1380,0)에 생기고 화면이 그쪽으로, 배율 60% 그대로(`2-after-new-console.png`). 다시 빈 곳으로 옮긴 뒤 명령 바에 `spawn 2 shell` 타이핑 + Enter → 줄이 차서 아래 줄, 스티커 오른쪽에 Group 1, 화면 이동(`2-after-spawn2.png`).
-- [ ] 3. claude 가 보드에 콘솔을 띄우는 MCP 도구(list/spawn/send/read/close), 설정 스위치, 부른 콘솔과 옅은 선
+- [x] 3. claude 가 보드에 콘솔을 띄우는 MCP 도구(list/spawn/send/read/close), 설정 스위치, 부른 콘솔과 옅은 선
+  - 만든 것: `SymboardCore/BoardTools.swift`(도구 정의, `--mcp-config` json, 안내 글, JSON-RPC 처리 `MCPStdioServer`, 소켓 요청 `BoardBridge`, 단위 테스트 4개), 실행 파일 `symboard-mcp`(Package `SymboardMCP`, `scripts/bundle.sh` 가 `Contents/MacOS` 에 넣음), 앱 쪽 `BoardToolServer`(소켓)·`BoardToolHandler`(list_consoles, spawn_console(agent,name?,prompt?,group?), send_to_console, read_console(name,lines), close_console). claude 를 띄울 때 설정이 켜져 있으면 `--mcp-config <status/노드.mcp.json> --append-system-prompt <안내>` 만 붙인다(`LaunchPlanner.plan(claudeExtraArgs:)`). 띄운 콘솔은 부른 콘솔 옆에, `NodeLink(style: "spawned")` 로 이어 오케스트레이터 선과 같은 곡선·흐르는 점을 옅은 색으로. 설정 창 AGENTS 칸 "Let agents open consoles on the board"(기본 켬).
+  - 먼저 claude 없이 확인: 앱 소켓에 `symboard-mcp` 를 직접 돌려 JSON-RPC 로 spawn_console(shell, prompt "echo a") → Pip 생김·a 출력, list_consoles, read_console 정상. 처음에는 상태 폴더가 없을 때 소켓을 못 만들어 "not running" 이었다(폴더를 먼저 만들게 고침).
+  - 확인한 실제 입력(symv8-3, claude Ada): claude 가 `--mcp-config` 로 `symboard-mcp` 를 띄운 것을 ps 로 확인. 명령 바에 `symboard 도구로 셸 콘솔 2개를 띄워 각각 echo a, echo b 를 보내고 결과를 읽어 한 줄로 알려줘` 타이핑 + Enter(질문 3) → 15초 안에 "Called symboard 6 times", 보드에 셸 Pip(echo a → a)·Maya(echo b → b), 답 "Pip 콘솔은 echo a의 결과로 a를, Maya 콘솔은 echo b의 결과로 b를 출력했습니다." Ada→Pip·Ada→Maya 옅은 선(`3-claude-spawned-two.png`). 톱니 → Settings 의 스위치(`3-settings-switch.png`)를 실제 클릭으로 끔 → prefs.json `agents.boardTools: off`(`3-settings-switch-off.png`) → 그 뒤 띄운 claude(Dax)의 실행 인자에 `--mcp-config` 없음, 켜져 있을 때 띄운 Iris 에는 있음.
 - [x] 4. 명령 바 여러 줄(Shift+Enter, 3줄까지 자람, Cmd+Shift+E 전체 화면 편집, claude·codex 에는 bracketed paste)
   - 원래: 입력칸이 한 줄(`usesSingleLineMode`), Enter 만 있었다. 여러 줄 글은 프로그램이 bracketed paste 모드를 켰을 때만 감쌌다.
   - 고침: `MentionTextField` 를 자동 줄바꿈 여러 줄로, Shift+Enter(Option+Enter 도)는 줄바꿈, Enter 는 보내기. 높이는 줄 수만큼 3줄까지 자라고 그 뒤는 칸 안에서 스크롤. `PromptEditor.swift` — Cmd+Shift+E 로 초점 있는 입력칸(없으면 명령 바)의 글을 창 대부분을 덮는 편집 칸에서(위에 대상, 아래 Send), 같은 키·Esc·바깥 누르기로 닫으면 글이 원래 칸에 남고 초점도 돌아감. 편집 칸도 같은 `MentionField` 라 Enter·Shift+Enter·@ 목록·색칠이 같다. 오케스트레이터 입력칸도 같은 입력칸이고 Cmd+Shift+E 대상이 된다. claude·codex 콘솔은 줄바꿈 든 글을 늘 `ESC[200~ … ESC[201~` 로 감싸고 Enter 한 번(`alwaysBracketedPaste`), 셸은 예전처럼(모드를 켰을 때만).

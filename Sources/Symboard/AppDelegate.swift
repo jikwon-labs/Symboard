@@ -64,5 +64,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowController?.captureViewports()
         model?.saveNow()
         model?.sessions.terminateAll()
+        model?.boardTools.stop()
     }
 }

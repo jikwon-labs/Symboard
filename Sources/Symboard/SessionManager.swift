@@ -88,8 +88,16 @@ final class SessionManager {
         let exists = spec.sessionID.map {
             LaunchPlanner.claudeSessionExists(sessionID: $0, cwd: spec.cwd, configDir: configDir)
         } ?? false
+        // 설정이 켜져 있으면 claude 에 보드 도구(MCP)와 짧은 안내를 인자로만 붙인다(8차 3번). 사용자 ~/.claude 는 그대로.
+        var claudeArgs: [String] = []
+        if spec.agent == .claude, BoardTools.enabled(Prefs.shared), let exe = BoardToolServer.serverExecutable {
+            let cfg = model.statusDirectory.appendingPathComponent("\(s.nodeID.uuidString).mcp.json")
+            try? FileManager.default.createDirectory(at: model.statusDirectory, withIntermediateDirectories: true)
+            let json = BoardTools.mcpConfigJSON(serverPath: exe, socketPath: model.boardTools.socketPath, nodeID: s.nodeID)
+            if (try? json.write(to: cfg, atomically: true, encoding: .utf8)) != nil { claudeArgs = BoardTools.claudeArgs(configPath: cfg.path) }
+        }
         let plan = LaunchPlanner.plan(for: spec, nodeID: s.nodeID, statusFile: s.statusFile.path,
-                                      profile: profile, claudeSessionExists: exists, defaultShell: shell)
+                                      profile: profile, claudeSessionExists: exists, defaultShell: shell, claudeExtraArgs: claudeArgs)
         if spec.agent == .claude {
             s.onSessionID = { [weak self] sid in
                 guard let self, self.model.node(s.nodeID)?.terminal?.sessionID != sid else { return }
