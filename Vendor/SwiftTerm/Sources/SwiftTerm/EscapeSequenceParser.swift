@@ -415,7 +415,9 @@ public class EscapeSequenceParser {
                 terminal.cmdSaveCursor(pars, collect)
             }
         case 0x74: terminal.csit(pars, collect)                 // t
-        case 0x75: terminal.cmdRestoreCursor(pars, collect)     // u
+        case 0x75:                                              // u
+            // 접두 글자(? > < =)가 붙은 CSI u 는 kitty 키보드 프로토콜(질의·push·pop·set)이라 커서를 되돌리지 않는다.
+            if collect.isEmpty { terminal.cmdRestoreCursor(pars, collect) }
         case 0x76: terminal.csiCopyRectangularArea(pars, collect) // v
         case 0x78: terminal.csiX(pars, collect)                 // x (DECFRA)
         case 0x79: terminal.cmdDECRQCRA(pars, collect)          // y
