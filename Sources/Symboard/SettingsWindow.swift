@@ -13,11 +13,14 @@ final class SettingsWindowController: NSWindowController {
     private let preview = NSTextField(labelWithString: TerminalFontSetting.previewText)
     /// 8차 3번: claude 가 보드에 콘솔을 띄우는 도구를 붙일지.
     private let boardTools = NSButton(checkboxWithTitle: "Let agents open consoles on the board", target: nil, action: nil)
+    /// 9차 5번: 에이전트가 이어 띄울 수 있는 단계와 연 콘솔 수. 넘으면 아래 확인 띠로 묻는다.
+    private let maxDepth = NSPopUpButton()
+    private let maxOpened = NSPopUpButton()
     private static let systemLatin = "System Mono (SF Mono)"
     private static let systemHangul = "System default (Apple SD Gothic Neo)"
 
     init() {
-        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 318), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 400), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = "Settings"
         w.appearance = NSAppearance(named: .darkAqua)
         w.backgroundColor = Theme.surface
@@ -105,11 +108,28 @@ final class SettingsWindowController: NSWindowController {
         boardTools.action = #selector(boardToolsChanged)
         boardTools.setAccessibilityLabel("Let agents open consoles on the board")
         (boardTools.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: boardTools.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
-        let agentsNote = NSTextField(wrappingLabelWithString: "Claude consoles get Symboard tools to open, message, read and close consoles here. Applies to consoles started after the change.")
+        let agentsNote = NSTextField(wrappingLabelWithString: "Claude and Codex consoles get Symboard tools to open, hand off to, message, read and close consoles, and to add notes and diagrams. Applies to consoles started after the change.")
         agentsNote.font = .systemFont(ofSize: 11)
         agentsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [header, grid, previewBox, note, agentsHeader, boardTools, agentsNote])
+        for (p, name) in [(maxDepth, "Max chain steps"), (maxOpened, "Max consoles opened by agents")] {
+            for n in AgentLimits.choices { p.addItem(withTitle: "\(n)"); p.lastItem?.tag = n }
+            p.target = self
+            p.action = #selector(limitsChanged)
+            p.setAccessibilityLabel(name)
+        }
+        let limits = NSGridView(views: [
+            [label("Max chain steps"), maxDepth],
+            [label("Max consoles opened by agents"), maxOpened],
+        ])
+        limits.rowSpacing = 8
+        limits.columnSpacing = 12
+        limits.rowAlignment = .firstBaseline
+        let limitsNote = NSTextField(wrappingLabelWithString: "Past a limit, Symboard asks you before an agent opens another console.")
+        limitsNote.font = .systemFont(ofSize: 11)
+        limitsNote.textColor = Theme.textDim
+
+        let stack = NSStackView(views: [header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
         stack.setCustomSpacing(22, after: note)
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -122,6 +142,7 @@ final class SettingsWindowController: NSWindowController {
             stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
             previewBox.widthAnchor.constraint(equalTo: stack.widthAnchor),
             agentsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            limitsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             previewBox.heightAnchor.constraint(equalToConstant: 44),
             preview.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 12),
             preview.trailingAnchor.constraint(lessThanOrEqualTo: previewBox.trailingAnchor, constant: -12),
@@ -142,6 +163,13 @@ final class SettingsWindowController: NSWindowController {
         size.selectItem(withTag: Int(s.size))
         preview.font = TerminalFont.make(s)
         boardTools.state = BoardTools.enabled(Prefs.shared) ? .on : .off
+        maxDepth.selectItem(withTag: AgentLimits.maxDepth(Prefs.shared))
+        maxOpened.selectItem(withTag: AgentLimits.maxOpened(Prefs.shared))
+    }
+
+    @objc private func limitsChanged() {
+        AgentLimits.setMaxDepth(maxDepth.selectedTag(), Prefs.shared)
+        AgentLimits.setMaxOpened(maxOpened.selectedTag(), Prefs.shared)
     }
 
     @objc private func boardToolsChanged() {

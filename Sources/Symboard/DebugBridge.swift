@@ -357,7 +357,7 @@ final class DebugBridge {
         case "confirm":
             if let cf = controller.chrome.confirm {
                 controller.chrome.confirm = nil
-                if cmd["yes"] as? Bool ?? false { cf.action() }
+                if cmd["yes"] as? Bool ?? false { cf.action() } else { cf.onCancel?() }
                 log.append("confirm \(cf.message)")
             } else { log.append("confirm: none") }
         case "resumeAll":

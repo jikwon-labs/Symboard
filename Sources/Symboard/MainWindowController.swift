@@ -368,6 +368,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             }
         }
         startBoardTools()
+        model.sessions.onMissingFolder = { [weak self] path in
+            self?.chrome.flash("Folder not found: \((path as NSString).lastPathComponent) · open a folder from Home")
+        }
         (window as? BoardWindow)?.keyIntercept = { [weak self] event in
             MainActor.assumeIsolated { self?.handleConsoleNavigation(event) ?? false }
         }

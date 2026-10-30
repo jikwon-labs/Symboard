@@ -238,6 +238,8 @@ public struct NodeLink: Codable, Equatable, Sendable, Identifiable {
     /// "arrow" 이면 다이어그램용 손그림 화살표(흐르는 점 없음). "spawned" 면 에이전트가 띄운 콘솔(옅은 선, 8차).
     public var style: String?
     public static let spawnedStyle = "spawned"
+    /// 에이전트가 넘겨주기(hand_off)로 이은 선: 부른 콘솔 → 프롬프트 카드 → 새 콘솔(9차).
+    public static let handoffStyle = "handoff"
     public var label: String?
     public var colorHex: String?
     public init(id: UUID = UUID(), from: UUID, to: UUID, style: String? = nil, label: String? = nil, colorHex: String? = nil) {

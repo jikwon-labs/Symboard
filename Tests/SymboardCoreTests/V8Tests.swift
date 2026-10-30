@@ -225,7 +225,7 @@ import Testing
         #expect(server.handle(line: #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#) == nil)
         let list = try obj(server.handle(line: #"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#))
         let names = ((list["result"] as! [String: Any])["tools"] as! [[String: Any]]).map { $0["name"] as! String }
-        #expect(names == ["list_consoles", "spawn_console", "send_to_console", "read_console", "close_console"])
+        #expect(names == ["list_consoles", "spawn_console", "send_to_console", "read_console", "close_console", "hand_off", "add_note", "draw_diagram"])
         let call = try obj(server.handle(line: #"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"read_console","arguments":{"name":"Ada"}}}"#))
         let content = (call["result"] as! [String: Any])["content"] as! [[String: Any]]
         #expect(content.first?["text"] as? String == "called read_console Ada")

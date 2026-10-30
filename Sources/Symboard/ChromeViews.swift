@@ -504,7 +504,7 @@ struct BottomBar: View {
                     Text(cf.message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
                     Button(cf.button) { chrome.confirm = nil; cf.action() }
                         .buttonStyle(PillButtonStyle(prominent: true)).axName(cf.button)
-                    Button("Cancel") { chrome.confirm = nil }.axName("Cancel")
+                    Button("Cancel") { chrome.confirm = nil; cf.onCancel?() }.axName("Cancel")
                         .buttonStyle(PillButtonStyle())
                 }
                 .padding(.horizontal, 14).padding(.vertical, 8)

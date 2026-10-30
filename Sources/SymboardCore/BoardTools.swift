@@ -1,6 +1,6 @@
 import Foundation
 
-/// claude 가 보드에 콘솔을 띄우는 도구(8차 3번).
+/// claude·codex 가 보드에 콘솔을 띄우고 넘겨주고 그리는 도구(8차 3번, 9차).
 /// 앱이 유닉스 소켓을 열고, 앱 번들 안 `symboard-mcp`(stdio MCP 서버)가 도구 호출마다 그 소켓에 한 줄 JSON 을 보낸다.
 /// claude 콘솔은 `--mcp-config <앱이 만든 임시 json>` 과 `--append-system-prompt` 로, codex 콘솔은 `-c` 인자로 붙인다. 사용자 ~/.claude·~/.codex 는 건드리지 않는다.
 public enum BoardTools {
@@ -24,11 +24,17 @@ public enum BoardTools {
     /// claude 에 덧붙이는 짧은 안내.
     public static let systemPrompt = """
         You are running in a console on Symboard, a board where the user watches many terminal consoles side by side. \
-        When a task splits into parts that can run in parallel, prefer the symboard tools over your built-in subagents: \
+        The symboard tools let you work on that board. \
+        When a task splits into parts that can run in parallel, prefer them over your built-in subagents: \
         open a console per part with spawn_console (agent "claude", "codex" or "shell", with the instructions as prompt), \
-        or send work to an existing console with send_to_console. The user can see and steer every console. \
-        Collect results with read_console and combine them in your answer. Leave the consoles open so the user can look at them; \
-        use close_console only when the user asks.
+        or send work to an existing console with send_to_console, and collect results with read_console. \
+        When the user asks you to pass work on, or the next stage should run in a fresh session, write a complete, self-contained prompt \
+        (goal, context, relevant files, what is done, what remains, how to verify) and call hand_off. \
+        The prompt is pinned on the board as a card linked to the new console, and that console can hand off again. \
+        After handing off, do not do that stage yourself. \
+        Use add_note for short notes and draw_diagram for boxes and arrows (plans, flows, architecture). \
+        The user can see and steer every console. Leave consoles open; use close_console only when the user asks. \
+        If a tool says a limit was reached or the user declined, stop and tell the user instead of retrying.
         """
 
     public static func claudeArgs(configPath: String) -> [String] {
@@ -102,6 +108,36 @@ public enum BoardTools {
             ["name": "close_console",
              "description": "Close a console and stop its process.",
              "inputSchema": schema(["name": name], required: ["name"])],
+            ["name": "hand_off",
+             "description": "Pass the next stage of work to a new console: pins the prompt on the board as a card next to yours, opens the console beside it, links you → card → console, and sends the prompt once the console is ready. The new console has these tools too and can hand off again.",
+             "inputSchema": schema([
+                "prompt": ["type": "string", "description": "Complete, self-contained instructions for the next session"],
+                "agent": ["type": "string", "enum": ["claude", "codex", "shell"], "description": "What runs in the new console (default claude)"],
+                "title": ["type": "string", "description": "Optional short card title, e.g. \"Step 2: tests\""],
+                "name": ["type": "string", "description": "Optional console name"],
+             ], required: ["prompt"])],
+            ["name": "add_note",
+             "description": "Put a sticky note next to your console on the board.",
+             "inputSchema": schema([
+                "text": ["type": "string"],
+                "title": ["type": "string", "description": "Optional short title"],
+                "color": ["type": "string", "enum": ["yellow", "blue", "green", "pink", "purple", "gray"]],
+             ], required: ["text"])],
+            ["name": "draw_diagram",
+             "description": "Draw a hand-drawn style diagram of boxes and arrows on the board (laid out top to bottom). Groups draw dashed frames around their boxes.",
+             "inputSchema": schema([
+                "title": ["type": "string"],
+                "nodes": ["type": "array", "items": ["type": "object", "properties": [
+                    "id": ["type": "string"], "label": ["type": "string"], "sub": ["type": "string", "description": "Optional second line"],
+                    "shape": ["type": "string", "enum": ["box", "ellipse"]], "group": ["type": "string", "description": "Optional group id"],
+                ], "required": ["id", "label"]]],
+                "edges": ["type": "array", "items": ["type": "object", "properties": [
+                    "from": ["type": "string"], "to": ["type": "string"], "label": ["type": "string"],
+                ], "required": ["from", "to"]]],
+                "groups": ["type": "array", "items": ["type": "object", "properties": [
+                    "id": ["type": "string"], "label": ["type": "string"],
+                ], "required": ["id", "label"]]],
+             ], required: ["title", "nodes", "edges"])],
         ]
     }
 }
@@ -127,7 +163,7 @@ public struct MCPStdioServer: Sendable {
         case "initialize":
             result = ["protocolVersion": params["protocolVersion"] as? String ?? "2025-06-18",
                       "capabilities": ["tools": [String: Any]()],
-                      "serverInfo": ["name": BoardTools.serverName, "version": "0.8.0"]]
+                      "serverInfo": ["name": BoardTools.serverName, "version": "0.9.0"]]
         case "ping":
             result = [:]
         case "tools/list":

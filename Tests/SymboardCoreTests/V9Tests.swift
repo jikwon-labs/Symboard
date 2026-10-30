@@ -61,3 +61,65 @@ import Testing
         #expect(a != BoardTools.socketPath(directory: long + "y", temporary: "/var/folders/T/"))
     }
 }
+
+@Suite struct AgentLimitsTests {
+    let a = UUID(), b = UUID(), card = UUID(), c = UUID(), d = UUID()
+
+    @Test func depthCountsConsolesNotCards() {
+        // a(사람이 연) → b(spawned) → 카드 → c(handoff) → d(spawned)
+        let links = [NodeLink(from: a, to: b, style: NodeLink.spawnedStyle),
+                     NodeLink(from: b, to: card, style: NodeLink.handoffStyle),
+                     NodeLink(from: card, to: c, style: NodeLink.handoffStyle),
+                     NodeLink(from: c, to: d, style: NodeLink.spawnedStyle),
+                     NodeLink(from: d, to: a, style: "arrow")]          // 다이어그램 화살표는 세지 않는다
+        let consoles: Set<UUID> = [a, b, c, d]
+        let depth = { (id: UUID) in AgentLimits.depth(of: id, links: links, isConsole: { consoles.contains($0) }) }
+        #expect(depth(a) == 0)
+        #expect(depth(b) == 1)
+        #expect(depth(c) == 2)
+        #expect(depth(d) == 3)
+        #expect(AgentLimits.openedCount(consoles: Array(consoles), links: links) == 3)
+    }
+
+    @Test func cycleStops() {
+        let links = [NodeLink(from: a, to: b, style: NodeLink.spawnedStyle), NodeLink(from: b, to: a, style: NodeLink.spawnedStyle)]
+        #expect(AgentLimits.depth(of: a, links: links, isConsole: { _ in true }) == 1)
+    }
+
+    @Test func exceeded() {
+        #expect(AgentLimits.exceeded(callerDepth: 3, opened: 0, maxDepth: 4, maxOpened: 12) == nil)
+        #expect(AgentLimits.exceeded(callerDepth: 4, opened: 0, maxDepth: 4, maxOpened: 12)?.contains("chain step 5") == true)
+        #expect(AgentLimits.exceeded(callerDepth: 0, opened: 12, maxDepth: 4, maxOpened: 12)?.contains("12 consoles") == true)
+    }
+
+    @Test func prefsDefaultAndChange() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let prefs = Prefs(directory: dir)
+        #expect(AgentLimits.maxDepth(prefs) == 4 && AgentLimits.maxOpened(prefs) == 12)
+        AgentLimits.setMaxDepth(7, prefs); AgentLimits.setMaxOpened(3, prefs)
+        #expect(AgentLimits.maxDepth(prefs) == 7 && AgentLimits.maxOpened(prefs) == 3)
+        AgentLimits.setMaxDepth(4, prefs)
+        #expect(prefs.string(AgentLimits.depthKey) == nil)
+    }
+}
+
+@Suite struct BoardToolsV9Tests {
+    @Test func newToolsListed() {
+        let names = BoardTools.toolDefinitions.compactMap { $0["name"] as? String }
+        #expect(names == ["list_consoles", "spawn_console", "send_to_console", "read_console", "close_console", "hand_off", "add_note", "draw_diagram"])
+        let handoff = BoardTools.toolDefinitions.first { $0["name"] as? String == "hand_off" }!
+        #expect((handoff["inputSchema"] as! [String: Any])["required"] as? [String] == ["prompt"])
+    }
+
+    @Test func instructionsCoverRelayAndDrawing() {
+        for word in ["hand_off", "add_note", "draw_diagram", "limit"] { #expect(BoardTools.systemPrompt.contains(word)) }
+    }
+
+    @Test func diagramArgumentsParse() throws {
+        let args: [String: Any] = ["title": "Flow", "nodes": [["id": "a", "label": "A"], ["id": "b", "label": "B"]], "edges": [["from": "a", "to": "b"]]]
+        let data = try JSONSerialization.data(withJSONObject: args)
+        let spec = DiagramSpec.parse(String(decoding: data, as: UTF8.self))
+        #expect(spec?.nodes.count == 2 && spec?.edges.count == 1)
+    }
+}
