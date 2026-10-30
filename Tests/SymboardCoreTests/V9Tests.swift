@@ -124,3 +124,65 @@ import Testing
         #expect(spec?.nodes.count == 2 && spec?.edges.count == 1)
     }
 }
+
+@Suite struct BoardHistoryTests {
+    func note(_ x: Double, id: UUID = UUID()) -> BoardNode { BoardNode(id: id, kind: .sticky, frame: Rect(x: x, y: 0, w: 100, h: 100), title: "N") }
+
+    @Test func undoRedoSettledStates() {
+        var ws = Workspace(name: "W")
+        var h = BoardHistory()
+        h.record(BoardSnapshot(ws))                                 // 빈 보드
+        let a = note(0)
+        ws.nodes = [a]; h.record(BoardSnapshot(ws))                 // 노드 추가
+        ws.nodes[0].frame.x = 50                                    // 옮김(아직 기록 전)
+        // 되돌리면 방금 옮긴 것부터.
+        let back1 = h.undo(current: BoardSnapshot(ws))!
+        #expect(back1.nodes.first?.frame.x == 0)
+        back1.apply(to: &ws)
+        let back2 = h.undo(current: BoardSnapshot(ws))!
+        #expect(back2.nodes.isEmpty)
+        back2.apply(to: &ws)
+        let none = h.undo(current: BoardSnapshot(ws))
+        #expect(none == nil)
+        let fwd = h.redo(current: BoardSnapshot(ws))!
+        #expect(fwd.nodes.count == 1)
+        fwd.apply(to: &ws)
+        let fwd2 = h.redo(current: BoardSnapshot(ws))
+        #expect(fwd2?.nodes.first?.frame.x == 50)
+    }
+
+    @Test func newChangeClearsRedo() {
+        var ws = Workspace(name: "W")
+        var h = BoardHistory()
+        h.record(BoardSnapshot(ws))
+        ws.nodes = [note(0)]; h.record(BoardSnapshot(ws))
+        h.undo(current: BoardSnapshot(ws))!.apply(to: &ws)
+        #expect(h.canRedo)
+        ws.nodes = [note(200)]; h.record(BoardSnapshot(ws))
+        #expect(!h.canRedo)
+    }
+
+    @Test func sessionIDsAreNotChangesAndSurviveUndo() {
+        var ws = Workspace(name: "W")
+        var h = BoardHistory()
+        var t = BoardNode(kind: .terminal, frame: Rect(x: 0, y: 0, w: 640, h: 400), title: "Ada", terminal: TerminalSpec(agent: .claude, cwd: "/tmp"))
+        ws.nodes = [t]; h.record(BoardSnapshot(ws))
+        t.terminal?.sessionID = "s1"; t.terminal?.hasLaunched = true
+        ws.nodes = [t]
+        let recorded = h.record(BoardSnapshot(ws))
+        #expect(!recorded)                                          // 대화 id 만 바뀐 것은 기록하지 않는다
+        ws.nodes[0].frame.x = 300; h.record(BoardSnapshot(ws))
+        h.undo(current: BoardSnapshot(ws))!.apply(to: &ws)
+        #expect(ws.nodes[0].frame.x == 0)
+        #expect(ws.nodes[0].terminal?.sessionID == "s1")            // 이어 가기 id 는 지금 값
+        #expect(ws.nodes[0].terminal?.hasLaunched == true)
+    }
+
+    @Test func limitKeepsNewest() {
+        var ws = Workspace(name: "W")
+        var h = BoardHistory()
+        h.record(BoardSnapshot(ws))
+        for i in 0..<(BoardHistory.limit + 20) { ws.nodes = [note(Double(i))]; h.record(BoardSnapshot(ws)) }
+        #expect(h.undoStack.count == BoardHistory.limit)
+    }
+}

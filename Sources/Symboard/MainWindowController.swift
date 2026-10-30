@@ -7,6 +7,29 @@ import SymboardCore
 /// 본 창. Ctrl+Tab 은 키 감시(local monitor)·메뉴까지 오지 않고 창의 키 보기 순환에 먼저 쓰여서, 창이 받기 전에 가로챈다.
 final class BoardWindow: NSWindow {
     var keyIntercept: ((NSEvent) -> Bool)?
+    /// 보드 되돌리기(9차). 글을 고치는 칸(명령 바·스티커 편집)에 되돌릴 입력이 있으면 그 글부터 되돌리고, 없으면 보드를 되돌린다.
+    /// 명령 바 입력칸이 거의 늘 초점을 갖고 있어서, 글 쪽에 되돌릴 것이 없을 때도 글로 보내면 ⌘Z 가 아무 일도 하지 않았다.
+    var boardUndo: ((_ redo: Bool) -> Void)?
+    var boardCanUndo: ((_ redo: Bool) -> Bool)?
+
+    private func textCan(redo: Bool) -> Bool {
+        guard firstResponder is NSText, let um = undoManager else { return false }
+        return redo ? um.canRedo : um.canUndo
+    }
+
+    @objc func undo(_ sender: Any?) {
+        if textCan(redo: false) { undoManager?.undo() } else { boardUndo?(false) }
+    }
+
+    @objc func redo(_ sender: Any?) {
+        if textCan(redo: true) { undoManager?.redo() } else { boardUndo?(true) }
+    }
+
+    override func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
+        if item.action == #selector(undo(_:)) { return textCan(redo: false) || (boardCanUndo?(false) ?? false) }
+        if item.action == #selector(redo(_:)) { return textCan(redo: true) || (boardCanUndo?(true) ?? false) }
+        return super.validateUserInterfaceItem(item)
+    }
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, let f = keyIntercept, f(event) { return }
@@ -370,6 +393,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         startBoardTools()
         model.sessions.onMissingFolder = { [weak self] path in
             self?.chrome.flash("Folder not found: \((path as NSString).lastPathComponent) · open a folder from Home")
+        }
+        (window as? BoardWindow)?.boardUndo = { [weak self] redo in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.model.stepBoard(redo: redo) {
+                    self.currentCanvas?.select(nil)
+                    self.currentCanvas?.layoutLinks()
+                    self.chrome.flash(redo ? "Redo" : "Undo")
+                }
+            }
+        }
+        (window as? BoardWindow)?.boardCanUndo = { [weak self] redo in
+            MainActor.assumeIsolated { redo ? (self?.model.canRedoBoard ?? false) : (self?.model.canUndoBoard ?? false) }
         }
         (window as? BoardWindow)?.keyIntercept = { [weak self] event in
             MainActor.assumeIsolated { self?.handleConsoleNavigation(event) ?? false }

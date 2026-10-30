@@ -21,11 +21,15 @@ final class AppModel: ObservableObject {
     lazy var profiles = ProfilesModel(model: self)
     lazy var memory = MemoryModel(model: self)
     private var saveWork: DispatchWorkItem?
+    /// 작업공간마다 보드 되돌리기 기록(9차). 바뀐 뒤 0.6초 조용하면 한 칸.
+    private var histories: [UUID: BoardHistory] = [:]
+    private var historyWork: DispatchWorkItem?
 
     init(store: StateStore) {
         self.store = store
         self.state = store.load()
         if state.selectedIndex == nil { state = .initial() }
+        recordHistory()
     }
 
     var statusDirectory: URL { store.directory.appendingPathComponent("status", isDirectory: true) }
@@ -36,6 +40,7 @@ final class AppModel: ObservableObject {
     // MARK: 저장
 
     func scheduleSave() {
+        scheduleHistory()
         saveWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.saveNow() }
         saveWork = work
@@ -46,6 +51,48 @@ final class AppModel: ObservableObject {
         saveWork?.cancel()
         saveWork = nil
         do { try store.save(state) } catch { NSLog("Symboard: save failed: \(error)") }
+    }
+
+    // MARK: 되돌리기
+
+    private func scheduleHistory() {
+        historyWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.recordHistory() }
+        historyWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
+    }
+
+    private func recordHistory() {
+        historyWork?.cancel()
+        historyWork = nil
+        for ws in state.workspaces { histories[ws.id, default: BoardHistory()].record(BoardSnapshot(ws)) }
+    }
+
+    var canUndoBoard: Bool {
+        let ws = selectedWorkspace
+        var h = histories[ws.id] ?? BoardHistory()
+        return h.canUndo || h.record(BoardSnapshot(ws))
+    }
+    var canRedoBoard: Bool { histories[selectedWorkspace.id]?.canRedo ?? false }
+
+    /// 보고 있는 작업공간을 한 칸 되돌린다(redo 면 다시 한다). 사라지는 콘솔은 프로세스를 끄고, 돌아오는 콘솔은 다시 띄운다.
+    @discardableResult
+    func stepBoard(redo: Bool) -> Bool {
+        let wsID = selectedWorkspace.id
+        var h = histories[wsID] ?? BoardHistory()
+        let current = BoardSnapshot(selectedWorkspace)
+        guard let target = redo ? h.redo(current: current) : h.undo(current: current) else { histories[wsID] = h; return false }
+        histories[wsID] = h
+        historyWork?.cancel()
+        historyWork = nil
+        let gone = Set(current.nodes.map(\.id)).subtracting(target.nodes.map(\.id))
+        for id in gone { sessions.terminate(id) }
+        mutateWorkspace(wsID) { target.apply(to: &$0) }
+        // 되돌린 결과는 기록하지 않는다(mutateWorkspace 가 건 기록 예약을 지운다).
+        historyWork?.cancel()
+        historyWork = nil
+        NotificationCenter.default.post(name: .nodesChanged, object: wsID)
+        return true
     }
 
     // MARK: 작업공간

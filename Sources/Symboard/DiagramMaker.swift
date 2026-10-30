@@ -105,8 +105,9 @@ final class DiagramMaker: ObservableObject {
             }
         }
         later {
-            let titleW = max(560, Double(spec.title.count) * 22 + 60)
-            self.c.addNode(kind: .text, size: CGSize(width: titleW, height: 70), title: spec.title, at: Point(x: lay.title.x, y: lay.title.y - 60)) {
+            // 제목 칸은 실제 글꼴로 잰 크기. 글자 수로 어림하면 한글처럼 넓은 글자가 줄을 넘겨 둘째 줄이 잘렸다.
+            let ts = Self.titleSize(spec.title)
+            self.c.addNode(kind: .text, size: ts, title: spec.title, at: Point(x: lay.title.x, y: lay.title.y - 60 - (ts.height - 70))) {
                 $0.text = spec.title
                 $0.style = NodeStyle(fontSize: 40, font: "hand")
                 $0.role = Self.role
@@ -162,8 +163,16 @@ final class DiagramMaker: ObservableObject {
         let est = spec.layout(origin: Point(x: 0, y: 0), nodeW: 250, nodeH: 120)
         let maxX = est.nodes.values.map { $0.x + $0.w }.max() ?? 0
         let maxY = est.nodes.values.map { $0.y + $0.h }.max() ?? 0
-        let titleW = max(560, Double(spec.title.count) * 22 + 60)
-        return CGSize(width: max(maxX, titleW) + 80, height: maxY + 160)
+        let ts = titleSize(spec.title)
+        return CGSize(width: max(maxX, ts.width) + 80, height: maxY + 160 + (ts.height - 70))
+    }
+
+    /// 제목 글(손글씨 40pt)이 들어갈 칸. 한 줄로 1100pt 까지 넓히고, 넘으면 줄을 바꾸고 높이를 늘린다.
+    static func titleSize(_ title: String) -> CGSize {
+        let font = TextStyleFonts.font(NodeStyle(fontSize: 40, font: "hand"))
+        let r = (title as NSString).boundingRect(with: NSSize(width: 1100, height: 10_000), options: [.usesLineFragmentOrigin, .usesFontLeading],
+                                                 attributes: [.font: font])
+        return CGSize(width: max(560, ceil(r.width) + 60), height: max(70, ceil(r.height) + 24))
     }
 
     /// 다이어그램이 만든 노드 표시(BoardNode.role). 고르면 노드 편집 패널이 뜬다.

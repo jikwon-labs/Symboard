@@ -271,6 +271,22 @@ final class DebugBridge {
             model.addWorkspace(name: cmd["name"] as? String ?? "Workspace")
         case "panelTab":
             controller.showPanel(tab: cmd["tab"] as? String ?? "Mission")
+        case "move":
+            // 끌기가 끝났을 때와 같은 모델 변경.
+            if let n = node(cmd) {
+                controller.model.mutateNode(n.id) { $0.frame.x += cmd["dx"] as? Double ?? 0; $0.frame.y += cmd["dy"] as? Double ?? 0 }
+                controller.currentCanvas?.reloadNodes()
+                log.append("move \(n.title)")
+            }
+        case "remove":
+            // Delete 키·닫기 단추와 같은 길(확인 없이).
+            if let n = node(cmd) { controller.removeNodes([n.id]); log.append("remove \(n.title)") }
+        case "undo":
+            // 메뉴 ⌘Z·⇧⌘Z 와 같은 길(BoardWindow.undo/redo).
+            let w = controller.window as? BoardWindow
+            if cmd["redo"] as? Bool ?? false { w?.redo(nil) } else { w?.undo(nil) }
+            let fr = controller.window?.firstResponder
+            log.append("undo canUndo=\(controller.model.canUndoBoard) canRedo=\(controller.model.canRedoBoard) responder=\(fr.map { String(describing: type(of: $0)) } ?? "nil") isText=\(fr is NSText)")
         case "perform":
             // 도구 막대 동작을 이름으로 부른다.
             if let sel = cmd["selector"] as? String { NSApp.sendAction(Selector(sel), to: controller, from: nil) }
