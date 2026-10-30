@@ -129,9 +129,14 @@ public enum CanvasLayout {
 public enum KeyInput {
     /// 콘솔 안 macOS 터미널 관례 키(단어·줄 이동과 지우기)를 터미널에 보낼 바이트로.
     /// Option+←/→ 단어 이동(ESC b / ESC f), Cmd+←/→ 줄 처음·끝(Ctrl+A / Ctrl+E),
-    /// Option+Backspace 앞 단어 지우기(ESC DEL), Cmd+Backspace 줄 처음까지 지우기(Ctrl+U). 해당 없으면 nil.
+    /// Option+Backspace 앞 단어 지우기(ESC DEL), Cmd+Backspace 줄 처음까지 지우기(Ctrl+U), Shift+Enter 줄바꿈(ESC CR). 해당 없으면 nil.
     /// 키 코드로 보므로 입력 소스(한글·영문)와 상관없다.
     public static func editBytes(keyCode: UInt16, command: Bool, option: Bool, control: Bool, shift: Bool) -> [UInt8]? {
+        // Shift+Enter(키패드 Enter 도) 는 보내지 않고 줄바꿈: ESC CR(Meta+Enter).
+        // SwiftTerm 은 Shift 와 상관없이 CR 만 보내 claude·codex 가 바로 보냈다. claude·codex 는 ESC CR 을 줄바꿈으로, zsh 는 버퍼 안 줄바꿈으로 받는다.
+        if keyCode == 36 || keyCode == 76 {
+            return shift && !command && !option && !control ? [0x1b, 0x0d] : nil
+        }
         guard !control, !shift, command != option else { return nil }
         switch (keyCode, command) {
         case (123, false): return [0x1b, 0x62]   // ESC b

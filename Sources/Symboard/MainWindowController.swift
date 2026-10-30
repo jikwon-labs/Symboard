@@ -328,7 +328,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                     term.send([byte])
                     return nil
                 }
-                // 콘솔 안 Option·Cmd + ←/→/Backspace 는 macOS 터미널 관례대로 단어·줄 이동과 지우기로 보낸다.
+                // 콘솔 안 Option·Cmd + ←/→/Backspace 는 macOS 터미널 관례대로 단어·줄 이동과 지우기로, Shift+Enter 는 줄바꿈으로 보낸다.
                 if let term = self.window?.firstResponder as? SymTerminalView {
                     let f = event.modifierFlags
                     if let bytes = KeyInput.editBytes(keyCode: event.keyCode, command: f.contains(.command), option: f.contains(.option),
