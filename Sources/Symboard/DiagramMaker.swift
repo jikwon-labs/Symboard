@@ -36,7 +36,7 @@ final class DiagramMaker: ObservableObject {
             self.removePlaceholders()
             guard ok, let spec = DiagramSpec.parse(text) else {
                 self.error = "The CLI did not return a diagram."
-                self.c.chrome.flash("No diagram came back")
+                self.c.chrome.flash(L("No diagram came back"))
                 return
             }
             self.draw(spec, center: center)
@@ -258,11 +258,11 @@ struct DiagramPopover: View {
                 }
             }
             HStack(spacing: 6) {
-                TextField("", text: $maker.describe, prompt: Text("Describe a diagram...").foregroundColor(Color.symDim))
+                TextField("", text: $maker.describe, prompt: Text(L("Describe a diagram...")).foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
                     .autoFocus()
                     .onSubmit { if !maker.describe.isEmpty { maker.generate(kind: nil) } }
-                Button("Generate") { maker.generate(kind: nil) }.buttonStyle(PillButtonStyle(prominent: !maker.describe.isEmpty)).axName("Generate")
+                Button(L("Generate")) { maker.generate(kind: nil) }.buttonStyle(PillButtonStyle(prominent: !maker.describe.isEmpty)).axName("Generate")
                     .disabled(maker.describe.isEmpty)
             }
             .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised.opacity(0.6)))
@@ -295,8 +295,8 @@ struct DrawingChip: View {
         if let who = maker.drawing {
             HStack(spacing: 8) {
                 Circle().fill(Color.symAccent).frame(width: 6, height: 6)
-                Text("\(who) is drawing").font(.system(size: 12)).foregroundStyle(Color.symText)
-                Button { maker.cancel() } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Cancel diagram")
+                Text(L("%@ is drawing", who)).font(.system(size: 12)).foregroundStyle(Color.symText)
+                Button { maker.cancel() } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Cancel diagram"))
             }
             .padding(.horizontal, 12).padding(.vertical, 6)
             .floatingCapsule(radius: 12)

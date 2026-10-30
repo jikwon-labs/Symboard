@@ -31,7 +31,7 @@ final class TerminalNodeContent: NSObject, NodeContent {
         let bubble = CanvasHostingView(rootView: ResumeBubble { [weak self] yes in
             guard let self else { return }
             self.model.sessions.answerResume([self.nodeID], resume: yes)
-        })
+        }.localized())
         bubble.isHidden = !model.sessions.pendingResume.contains(node.id)
         container.addSubview(bubble)
         container.bubble = bubble
@@ -48,12 +48,12 @@ final class TerminalNodeContent: NSObject, NodeContent {
     func sync(node: BoardNode) {}
 
     func menuItems() -> [NSMenuItem] {
-        [ClosureMenuItem(title: "Restart Process") { [weak self] in self?.restart() },
-         ClosureMenuItem(title: "Hand Off To...") { [weak self] in
+        [ClosureMenuItem(title: L("Restart Process")) { [weak self] in self?.restart() },
+         ClosureMenuItem(title: L("Hand Off To...")) { [weak self] in
              guard let self else { return }
              self.model.handoff.begin(from: self.nodeID)
          },
-         ClosureMenuItem(title: "Add Loop...") { [weak self] in
+         ClosureMenuItem(title: L("Add Loop...")) { [weak self] in
              guard let self else { return }
              (NSApp.delegate as? AppDelegate)?.windowController.newLoop(for: self.nodeID)
          }] + permissionItems()
@@ -62,7 +62,7 @@ final class TerminalNodeContent: NSObject, NodeContent {
     /// claude·codex 노드의 권한 모드 고르기. 바꾸면 같은 대화로 다시 띄운다.
     private func permissionItems() -> [NSMenuItem] {
         guard let spec = model.node(nodeID)?.terminal, spec.agent == .claude || spec.agent == .codex else { return [] }
-        let item = NSMenuItem(title: "Permissions", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: L("Permissions"), action: nil, keyEquivalent: "")
         let sub = NSMenu()
         let now = PermissionMode.current(for: spec)
         for mode in PermissionMode.allCases {
@@ -95,9 +95,9 @@ struct ResumeBubble: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "clock.arrow.circlepath").foregroundStyle(Color.symAccent)
-            Text("Resume last conversation?").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
-            Button("Yes") { answer(true) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Yes")
-            Button("No") { answer(false) }.buttonStyle(PillButtonStyle()).axName("No")
+            Text(L("Resume last conversation?")).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
+            Button(L("Yes")) { answer(true) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Yes")
+            Button(L("No")) { answer(false) }.buttonStyle(PillButtonStyle()).axName("No")
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
         .floatingCapsule(radius: 12)
@@ -122,7 +122,7 @@ final class TerminalContainerView: NSView {
         b.bezelStyle = .push
         b.controlSize = .small
         b.font = .systemFont(ofSize: 11, weight: .semibold)
-        b.setAccessibilityLabel("Scroll to bottom")
+        b.setAccessibilityLabel(L("Scroll to bottom"))
         b.isHidden = true
         return b
     }()

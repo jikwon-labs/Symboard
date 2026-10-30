@@ -65,20 +65,20 @@ struct MemoryPanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Picker("", selection: $memory.scope) {
-                    Text("Global").tag(String?.none)
+                    Text(L("Global")).tag(String?.none)
                     ForEach(memory.repos, id: \.self) { r in Text((r as NSString).lastPathComponent).tag(String?.some(r)) }
                 }
                 .labelsHidden()
-                Button("New") { memory.add() }.controlSize(.small).axName("New")
+                Button(L("New")) { memory.add() }.controlSize(.small).axName("New")
             }
-            Toggle("Press Enter after sending", isOn: $memory.pressEnter).font(.system(size: 10)).controlSize(.mini)
+            Toggle(L("Press Enter after sending"), isOn: $memory.pressEnter).font(.system(size: 10)).controlSize(.mini)
             Text(selectedText).font(.system(size: 10)).foregroundStyle(.secondary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(memory.notes) { n in
                         VStack(alignment: .leading, spacing: 4) {
                             if memory.editingID == n.id {
-                                TextField("Title", text: Binding(get: { n.title }, set: { memory.update(n.id, title: $0) }))
+                                TextField(L("Title"), text: Binding(get: { n.title }, set: { memory.update(n.id, title: $0) }))
                                     .textFieldStyle(.roundedBorder)
                                 TextEditor(text: Binding(get: { n.body }, set: { memory.update(n.id, body: $0) }))
                                     .font(.system(size: 11)).frame(height: 90)
@@ -88,20 +88,20 @@ struct MemoryPanelView: View {
                                 Text(n.body).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(4)
                             }
                             HStack {
-                                Button("Send to Node") { memory.send(n, to: panel.selectedNodeID) }.axName("Send to Node")
-                                Button(memory.editingID == n.id ? "Done" : "Edit") {
+                                Button(L("Send to Node")) { memory.send(n, to: panel.selectedNodeID) }.axName("Send to Node")
+                                Button(L(memory.editingID == n.id ? "Done" : "Edit")) {
                                     memory.editingID = memory.editingID == n.id ? nil : n.id
                                 }
                                 Spacer()
-                                Button { memory.remove(n.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit).tip("Delete note")
+                                Button { memory.remove(n.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit).tip(L("Delete note"))
                             }
                             .controlSize(.small)
                         }
                         .padding(6)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.16)))
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.symRaised))
                     }
                     if memory.notes.isEmpty {
-                        Text("No memories here yet. Memories are only sent when you press Send to Node.")
+                        Text(L("No memories here yet. Memories are only sent when you press Send to Node."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                 }

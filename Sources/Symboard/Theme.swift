@@ -2,21 +2,89 @@ import AppKit
 import SwiftUI
 import SymboardCore
 
-/// 화면 전체에서 쓰는 색과 글꼴. 짙은 따뜻한 바탕에 주황빨강 강조색.
+/// 화면 전체에서 쓰는 색과 글꼴. 짙은 따뜻한 바탕(다크) 또는 밝은 종이 바탕(라이트, 10차)에 주황빨강 강조색.
+/// 색은 모두 화면 모드에 따라 바뀌는 색(NSColor dynamicProvider)이라 NSApp.appearance 를 바꾸면 AppKit·SwiftUI 가 다시 칠한다.
+/// 층(CALayer)에 넣은 cgColor 는 저절로 바뀌지 않으므로 `Theme.didChange` 알림에서 다시 넣는다.
 enum Theme {
     static let canvasHex = "#0F0E0D"
     static let accentHex = "#F05A38"
 
-    static let canvas = NSColor(hex: canvasHex)
-    static let dot = NSColor(hex: "#2A2724")
-    static let surface = NSColor(hex: "#171615")
-    static let surfaceRaised = NSColor(hex: "#1F1D1B")
-    static let border = NSColor(hex: "#2E2B28")
-    static let nodeBorder = NSColor(hex: "#3A2E2A")
+    static let canvas = dynamic(dark: canvasHex, light: "#F5F2EE")
+    static let dot = dynamic(dark: "#2A2724", light: "#D9D2CA")
+    static let surface = dynamic(dark: "#171615", light: "#FFFFFF")
+    static let surfaceRaised = dynamic(dark: "#1F1D1B", light: "#F1EDE8")
+    static let border = dynamic(dark: "#2E2B28", light: "#DED7CF")
+    static let nodeBorder = dynamic(dark: "#3A2E2A", light: "#D8C9C2")
     static let accent = NSColor(hex: accentHex)
-    static let text = NSColor(hex: "#ECE7E2")
-    static let textDim = NSColor(hex: "#8F8882")
+    static let text = dynamic(dark: "#ECE7E2", light: "#211D1A")
+    static let textDim = dynamic(dark: "#8F8882", light: "#77706A")
+    /// 콘솔 안은 두 모드 모두 어두운 바탕(claude·codex·셸 색이 어두운 바탕에 맞춰져 있다, DECISIONS 10차-1).
     static let terminalBackground = NSColor(hex: "#121110")
+    static let terminalText = NSColor(hex: "#ECE7E2")
+    /// 떠 있는 막대 그림자.
+    static let shadow = dynamic(dark: "#000000", light: "#5A4A40")
+
+    /// 화면 모드가 바뀌었을 때(층 색을 다시 넣는 곳이 받는다).
+    static let didChange = Notification.Name("symboard.themeDidChange")
+
+    /// 화면 모드가 바뀔 때마다(처음 한 번 포함) body 를 다시 부른다. 층 색처럼 저절로 바뀌지 않는 곳에서 쓴다.
+    @MainActor
+    static func paint(_ body: @escaping @MainActor () -> Void) {
+        NSApp.effectiveAppearance.performAsCurrentDrawingAppearance { body() }
+        _ = NotificationCenter.default.addObserver(forName: didChange, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { NSApp.effectiveAppearance.performAsCurrentDrawingAppearance { body() } }
+        }
+    }
+
+    /// 기기 화면 모드가 바뀌어도(기기 따라가기일 때) didChange 를 보낸다.
+    @MainActor
+    static func watchSystemAppearance() {
+        appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.new]) { _, _ in
+            DispatchQueue.main.async { NotificationCenter.default.post(name: didChange, object: nil) }
+        }
+    }
+    @MainActor private static var appearanceObservation: NSKeyValueObservation?
+
+    static func dynamic(dark: String, light: String) -> NSColor {
+        let d = NSColor(hex: dark), l = NSColor(hex: light)
+        return NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .aqua ? l : d
+        }
+    }
+
+    static var isLight: Bool { NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .aqua }
+
+    /// 동적 색을 지금 모드의 고정 색으로(층 색·층 글자용). cgColor 를 그때그때 풀면 옛 모드 색이 남는 경우가 있었다.
+    static func resolved(_ c: NSColor) -> NSColor {
+        var out = c
+        NSAppearance(named: isLight ? .aqua : .darkAqua)!.performAsCurrentDrawingAppearance {
+            out = c.usingColorSpace(.sRGB) ?? c
+        }
+        return out
+    }
+
+    /// 저장된 노드 색 중 "어두운 바탕용 글·선 색"(다이어그램 잉크 등)을 지금 모드에 맞는 색으로. 나머지 색은 그대로.
+    static func ink(_ hex: String?) -> NSColor? {
+        guard let hex else { return nil }
+        switch hex.uppercased() {
+        case "#ECE7E2": return text
+        case "#8F8882": return textDim
+        case "#5A5550": return dynamic(dark: "#5A5550", light: "#B7AEA6")
+        default: return NSColor(hex: hex)
+        }
+    }
+
+    /// 설정한 화면 모드를 앱에 적용한다. nil 은 기기 설정을 따른다.
+    @MainActor
+    static func apply(_ mode: AppearanceMode) {
+        switch mode {
+        case .system: NSApp.appearance = nil
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        }
+        // NSApp.effectiveAppearance 는 다음 순간에 바뀐다. 바로 보내면 층 색을 옛 모드로 다시 칠했다(다크로 바꿨는데 화살표가 어두운 색).
+        DispatchQueue.main.async { NotificationCenter.default.post(name: didChange, object: nil) }
+    }
 
     /// 손글씨풍 글꼴. 시스템에 있는 것 중 고른다.
     static func handwriting(size: CGFloat) -> NSFont {
@@ -50,12 +118,19 @@ struct FloatingCapsule: ViewModifier {
         content
             .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.symSurface.opacity(0.96)))
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Color.symBorder, lineWidth: 1))
-            .shadow(color: .black.opacity(0.45), radius: 10, y: 4)
+            .shadow(color: Color(nsColor: Theme.shadow).opacity(Theme.isLight ? 0.16 : 0.45), radius: 10, y: 4)
     }
 }
 
 extension View {
     func floatingCapsule(radius: CGFloat = 14) -> some View { modifier(FloatingCapsule(radius: radius)) }
+    /// 언어를 바꾸면 다시 그린다(10차). SwiftUI 뿌리 뷰마다 붙인다.
+    func localized() -> some View { modifier(LocalizedRoot()) }
+}
+
+struct LocalizedRoot: ViewModifier {
+    @ObservedObject private var l10n = L10n.shared
+    func body(content: Content) -> some View { content.id(l10n.revision) }
 }
 
 /// 위쪽·아래쪽 막대의 알약 버튼.

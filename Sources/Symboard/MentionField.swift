@@ -408,13 +408,13 @@ struct MentionList: View {
                 Text(choice.name).font(.system(size: 11)).foregroundStyle(Color.symDim)
                 HStack(spacing: 4) {
                     Circle().fill(Color(nsColor: st.color)).frame(width: 6, height: 6)
-                    Text(st.pillText).font(.system(size: 9, weight: .semibold, design: .monospaced)).foregroundStyle(Color(nsColor: st.color))
+                    Text(L(st.pillText)).font(.system(size: 9, weight: .semibold, design: .monospaced)).foregroundStyle(Color(nsColor: st.color))
                 }
                 .frame(width: 78, alignment: .leading)
             case .all(let n):
-                Text("\(n) console\(n == 1 ? "" : "s")").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                Text(Ln(n, "%d console", "%d consoles")).font(.system(size: 11)).foregroundStyle(Color.symDim)
             case .group(let n, _):
-                Text("group · \(n) console\(n == 1 ? "" : "s")").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                Text(L("group") + " · " + Ln(n, "%d console", "%d consoles")).font(.system(size: 11)).foregroundStyle(Color.symDim)
             }
         }
         .padding(.horizontal, 8).frame(height: 30)

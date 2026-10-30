@@ -70,7 +70,9 @@ extension MainWindowController {
                                                  maxDepth: AgentLimits.maxDepth(Prefs.shared), maxOpened: AgentLimits.maxOpened(Prefs.shared)) else {
                 open(); return
             }
-            askToExceed("\(callerNode?.title ?? "An agent") wants to open another console: \(why).", allow: open) {
+            let shown = AgentLimits.exceeded(callerDepth: depth, opened: opened, maxDepth: AgentLimits.maxDepth(Prefs.shared),
+                                             maxOpened: AgentLimits.maxOpened(Prefs.shared), localized: true) ?? why
+            askToExceed(L("%@ wants to open another console: %@.", callerNode?.title ?? L("An agent"), shown), allow: open) {
                 reply("The user did not allow another console (\(why)). Do not retry; tell the user.", true)
             }
 
@@ -206,7 +208,7 @@ extension MainWindowController {
     private func askToExceed(_ message: String, allow: @escaping () -> Void, deny: @escaping () -> Void) {
         guard chrome.confirm == nil else { deny(); return }
         var answered = false
-        let cf = PendingConfirm(message: message, button: "Allow once", action: {
+        let cf = PendingConfirm(message: message, button: L("Allow once"), action: {
             guard !answered else { return }
             answered = true; allow()
         }, onCancel: {

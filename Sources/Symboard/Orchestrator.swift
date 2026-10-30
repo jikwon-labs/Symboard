@@ -18,7 +18,7 @@ final class OrchestratorContent: NodeContent {
     init(node: BoardNode, model: AppModel) {
         let c = MainWindowController.current
         host = CanvasHostingView(rootView: OrchestratorView(nodeID: node.id, model: model, beat: .shared, chrome: c?.chrome ?? ChromeModel(), c: c)
-            .environment(\.colorScheme, .dark))
+            .localized())
     }
 
     func sync(node: BoardNode) {}
@@ -52,16 +52,16 @@ struct OrchestratorView: View {
         let _ = beat.tick
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Text("\(targets.count) agent\(targets.count == 1 ? "" : "s") · \(wiredTeams.count) group\(wiredTeams.count == 1 ? "" : "s")")
+                Text(Ln(targets.count, "%d agent", "%d agents") + " · " + Ln(wiredTeams.count, "%d group", "%d groups"))
                     .font(.system(size: 12)).foregroundStyle(Color.symDim)
                 Spacer()
                 Text("\(targets.filter { status($0) == .idle }.count)/\(targets.count)")
                     .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(Color.symDim)
-                    .hint("Ready / wired")
+                    .hint(L("Ready / wired"))
                 Button { spawnWired() } label: { Image(systemName: "plus") }
-                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Spawn an agent and wire it")
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Spawn an agent and wire it"))
                 Button { c?.toggleConnect(nodeID) } label: {
-                    Label(connecting ? "Done" : "Connect", systemImage: connecting ? "checkmark" : "link")
+                    Label(L(connecting ? "Done" : "Connect"), systemImage: connecting ? "checkmark" : "link")
                 }
                 .buttonStyle(PillButtonStyle(prominent: true)).axName(connecting ? "Done" : "Connect")
             }
@@ -91,10 +91,10 @@ struct OrchestratorView: View {
         VStack(spacing: 10) {
             Spacer()
             Image(systemName: "point.3.connected.trianglepath.dotted").font(.system(size: 26)).foregroundStyle(Color.symAccent)
-            Text("No agents wired").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
-            Text("Spawn a new one here, or tap Connect and pick\nconsoles or groups on the board.")
+            Text(L("No agents wired")).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
+            Text(L("Spawn a new one here, or tap Connect and pick\nconsoles or groups on the board."))
                 .multilineTextAlignment(.center).font(.system(size: 12)).foregroundStyle(Color.symDim)
-            Button { spawnWired() } label: { Label("Spawn agent", systemImage: "plus") }
+            Button { spawnWired() } label: { Label(L("Spawn agent"), systemImage: "plus") }
                 .buttonStyle(PillButtonStyle(active: true)).axName("Spawn agent")
             Spacer()
         }
@@ -104,10 +104,10 @@ struct OrchestratorView: View {
     var connectPicker: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Click consoles on the board, or wire groups here. Tap Done when finished.")
+                Text(L("Click consoles on the board, or wire groups here. Tap Done when finished."))
                     .font(.system(size: 11)).foregroundStyle(Color.symDim).padding(.bottom, 4)
                 if !(ws?.teams.isEmpty ?? true) {
-                    Text("GROUPS").font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundStyle(Color.symDim)
+                    Text(L("GROUPS")).font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundStyle(Color.symDim)
                 }
                 ForEach(ws?.teams ?? []) { t in
                     let on = links.contains { $0.to == t.id }
@@ -115,7 +115,7 @@ struct OrchestratorView: View {
                 }
                 let loose = (ws?.nodes ?? []).filter { $0.kind == .terminal && $0.teamID == nil }
                 if !loose.isEmpty {
-                    Text("CONSOLES").font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundStyle(Color.symDim).padding(.top, 4)
+                    Text(L("CONSOLES")).font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundStyle(Color.symDim).padding(.top, 4)
                 }
                 ForEach(loose) { n in
                     let on = links.contains { $0.to == n.id }
@@ -178,32 +178,32 @@ struct OrchestratorView: View {
             Spacer()
             if hoverRow == n.id {
                 Button { c?.focus(nodeID: n.id) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                    .buttonStyle(.plainHit).tip("Show on board")
+                    .buttonStyle(.plainHit).tip(L("Show on board"))
                 Button { _ = model.sessions.session(for: n.id)?.signal(paused ? SIGCONT : SIGSTOP) } label: {
                     Image(systemName: paused ? "play.fill" : "pause.fill")
                 }
                 .buttonStyle(.plainHit).tip(paused ? "Resume" : "Pause")
             }
             let hold = model.sessions.pendingResume.contains(n.id)
-            StatusPill(text: paused ? "paused" : (hold ? "on hold" : st.pillText.lowercased()), color: paused || hold ? Theme.textDim : st.color)
+            StatusPill(text: L(paused ? "paused" : (hold ? "on hold" : st.pillText.lowercased())), color: paused || hold ? Theme.textDim : st.color)
         }
         .foregroundStyle(Color.symDim)
         .padding(.horizontal, 12).padding(.vertical, 5)
-        .background(hoverRow == n.id ? Color.white.opacity(0.04) : .clear)
+        .background(hoverRow == n.id ? Color.symText.opacity(0.04) : .clear)
         .contentShape(Rectangle())
         .onHover { hoverRow = $0 ? n.id : (hoverRow == n.id ? nil : hoverRow) }
     }
 
     var commandField: some View {
         HStack(spacing: 8) {
-            MentionField(text: $command, placeholder: "Command \(targets.count) agent\(targets.count == 1 ? "" : "s") · @ to direct",
+            MentionField(text: $command, placeholder: Ln(targets.count, "Command %d agent · @ to direct", "Command %d agents · @ to direct"),
                          fontSize: 12, state: mention, options: { [c, nodeID] in c?.mentionOptions(orchestrator: nodeID) ?? [] },
                          onSubmit: send, axLabel: "Orchestrator command",
                          onExpand: { [c, nodeID] in
                              guard let c else { return }
                              let binding = $command
                              c.promptEditor.show(PromptEditorModel.Target(
-                                 title: { "Orchestrator · \(targets.count) agent\(targets.count == 1 ? "" : "s") · @ to direct" },
+                                 title: { L("Orchestrator") + " · " + Ln(targets.count, "Command %d agent · @ to direct", "Command %d agents · @ to direct") },
                                  read: { binding.wrappedValue }, write: { binding.wrappedValue = $0 },
                                  send: { if c.orchestratorSend(nodeID, text: binding.wrappedValue) > 0 { binding.wrappedValue = "" } },
                                  options: { c.mentionOptions(orchestrator: nodeID) }))
@@ -213,7 +213,7 @@ struct OrchestratorView: View {
                     .frame(width: 22, height: 22)
                     .background(Circle().fill(command.isEmpty ? Color.symRaised : Color.symAccent))
             }
-            .buttonStyle(.plainHit).tip("Send to wired agents")
+            .buttonStyle(.plainHit).tip(L("Send to wired agents"))
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised))

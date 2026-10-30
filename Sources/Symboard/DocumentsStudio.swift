@@ -118,13 +118,13 @@ struct DocumentsStudio: View {
                 Image(systemName: "doc.richtext").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symAccent)
                     .frame(width: 38, height: 38).background(RoundedRectangle(cornerRadius: 10).fill(Color.symAccent.opacity(0.14)))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Documents").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.symText)
-                    Text("Turn this repo into a PDF, written by your own CLI.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                    Text(L("Documents")).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.symText)
+                    Text(L("Turn this repo into a PDF, written by your own CLI.")).font(.system(size: 11)).foregroundStyle(Color.symDim)
                 }
             }
             HStack(spacing: 6) {
                 ForEach(["claude", "codex"], id: \.self) { a in
-                    Button { docs.agent = a } label: { AgentBadge(choice: AgentCatalog.choice(id: a)!, size: 28) }.tip("Write with \(a)")
+                    Button { docs.agent = a } label: { AgentBadge(choice: AgentCatalog.choice(id: a)!, size: 28) }.tip(L("Write with %@", a))
                         .buttonStyle(.plainHit)
                         .overlay(Circle().stroke(docs.agent == a ? Color.symAccent : .clear, lineWidth: 1.5).padding(-4))
                         .opacity(AgentCatalog.shared.installed.contains(a) ? 1 : 0.35)
@@ -147,7 +147,7 @@ struct DocumentsStudio: View {
                 }
             }
             Divider().overlay(Color.symBorder)
-            Text("DOCUMENTS").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+            Text(L("DOCUMENTS")).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
             ScrollView {
                 VStack(spacing: 2) {
                     ForEach(DocKind.all) { k in row(id: k.id, title: k.title, sub: k.blurb, icon: k.icon) }
@@ -157,7 +157,7 @@ struct DocumentsStudio: View {
                 }
             }
             HStack(spacing: 6) {
-                TextField("", text: $docs.request, prompt: Text("Ask for any document...").foregroundColor(Color.symDim))
+                TextField("", text: $docs.request, prompt: Text(L("Ask for any document...")).foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
                     .autoFocus()
                     .onSubmit { if !docs.request.isEmpty { docs.generate(kind: nil) } }
@@ -201,14 +201,14 @@ struct DocumentsStudio: View {
                 Text(docs.title).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText).lineLimit(1)
                 if docs.generating == nil, !docs.currentText.isEmpty {
                     let w = Markdown.wordCount(docs.currentText)
-                    Text("\(w.words) words · ~\(w.minutes) min read").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                    Text(L("%d words · ~%d min read", w.words, w.minutes)).font(.system(size: 11)).foregroundStyle(Color.symDim)
                 }
             }
             if docs.generating == docs.selected {
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
                     HStack(spacing: 6) {
                         Circle().fill(Color.symAccent).frame(width: 6, height: 6)
-                        Text("Writing with \(agentName) · \(Int(ctx.date.timeIntervalSince(docs.startedAt)))s")
+                        Text(L("Writing with %@ · %ds", agentName, Int(ctx.date.timeIntervalSince(docs.startedAt))))
                     }
                     .font(.system(size: 11)).foregroundStyle(Color.symText.opacity(0.85))
                     .padding(.horizontal, 8).padding(.vertical, 4).background(Capsule().fill(Color.symRaised))
@@ -216,20 +216,20 @@ struct DocumentsStudio: View {
             }
             Spacer()
             if docs.generating == docs.selected {
-                Button { docs.stop() } label: { Label("Stop", systemImage: "stop.fill") }.buttonStyle(PillButtonStyle())
+                Button { docs.stop() } label: { Label(L("Stop"), systemImage: "stop.fill") }.buttonStyle(PillButtonStyle())
                     .foregroundStyle(Color(hex: "#E8564A"))
             } else if !docs.currentText.isEmpty {
                 HStack(spacing: 2) {
-                    Button { docs.view = "paper" } label: { Image(systemName: "text.alignleft") }.buttonStyle(ChipStyle(on: docs.view == "paper")).tip("Paper view")
+                    Button { docs.view = "paper" } label: { Image(systemName: "text.alignleft") }.buttonStyle(ChipStyle(on: docs.view == "paper")).tip(L("Paper view"))
                     Button { docs.view = "source" } label: { Image(systemName: "doc.plaintext") }.buttonStyle(ChipStyle(on: docs.view == "source"))
                 }
                 Button { docs.generate(kind: docs.selected.hasPrefix("custom-") ? nil : docs.selected) } label: { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(ChipStyle(on: false)).tip("Regenerate")
+                    .buttonStyle(ChipStyle(on: false)).tip(L("Regenerate"))
                 Button { c.placeDocumentCard(docs.selected) } label: { Image(systemName: "rectangle.on.rectangle") }
-                    .buttonStyle(ChipStyle(on: false)).tip("Send to board")
-                Button { c.studioExportDocPDF(docs.selected) } label: { Label("Export PDF", systemImage: "arrow.down.doc") }.buttonStyle(PillButtonStyle(prominent: true))
+                    .buttonStyle(ChipStyle(on: false)).tip(L("Send to board"))
+                Button { c.studioExportDocPDF(docs.selected) } label: { Label(L("Export PDF"), systemImage: "arrow.down.doc") }.buttonStyle(PillButtonStyle(prominent: true))
             }
-            Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }.tip("Close studio")
+            Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }.tip(L("Close studio"))
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
@@ -242,9 +242,9 @@ struct DocumentsStudio: View {
                 Image(systemName: k?.icon ?? "doc.text").font(.system(size: 34)).foregroundStyle(Color.symAccent)
                 Text(k?.title ?? "Document").font(.system(size: 20, weight: .semibold)).foregroundStyle(Color.symText)
                 Text(k?.blurb ?? "").font(.system(size: 13)).foregroundStyle(Color.symDim)
-                Button { docs.generate(kind: k?.id) } label: { Label("Generate with \(agentName)", systemImage: "sparkles") }
+                Button { docs.generate(kind: k?.id) } label: { Label(L("Generate with %@", agentName), systemImage: "sparkles") }
                     .buttonStyle(PillButtonStyle(prominent: true)).disabled(docs.generating != nil || k == nil)
-                Text("Saved to this repo's library when it finishes.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                Text(L("Saved to this repo's library when it finishes.")).font(.system(size: 11)).foregroundStyle(Color.symDim)
                 if let e = docs.error { Text(e).font(.system(size: 11)).foregroundStyle(Color.symAccent) }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -337,7 +337,7 @@ final class DocumentCardContent: NodeContent {
     init(node: BoardNode) {
         let url = URL(fileURLWithPath: node.text ?? "")
         let text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        host = CanvasHostingView(rootView: DocumentCardView(text: text, agent: node.role ?? "claude", url: url).environment(\.colorScheme, .dark))
+        host = CanvasHostingView(rootView: DocumentCardView(text: text, agent: node.role ?? "claude", url: url).localized())
     }
 
     func sync(node: BoardNode) {}
@@ -350,11 +350,11 @@ struct DocumentCardView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                Text("DOCUMENT").font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symAccent)
+                Text(L("DOCUMENT")).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symAccent)
                 if let ch = AgentCatalog.choice(id: agent) { AgentBadge(choice: ch, size: 16) }
                 Text(Markdown.firstHeading(text) ?? url.deletingPathExtension().lastPathComponent).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText).lineLimit(1)
                 Spacer()
-                Text("\(Markdown.wordCount(text).words) words").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
+                Text(L("%d words", Markdown.wordCount(text).words)).font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
             PaperView(markdown: text, streaming: false)

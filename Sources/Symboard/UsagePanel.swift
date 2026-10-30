@@ -184,7 +184,7 @@ final class UsageStore: ObservableObject {
             ends.append(Date(timeIntervalSince1970: cached))
         }
         if pillAgent == .codex, let l = codexLimits.first(where: { PlanUsageParser.isSession($0.name) }) ?? codexLimits.first {
-            return UsagePill.Display(text: "resets " + PlanUsageParser.shortReset(l.resets ?? "–"), percent: l.percent, fromCLI: true)
+            return UsagePill.Display(text: L("resets %@", PlanUsageParser.shortReset(l.resets ?? "–")), percent: l.percent, fromCLI: true)
         }
         return UsagePill.display(limits: limits, readAt: limitsAt, blockEnds: ends)
     }
@@ -253,12 +253,12 @@ struct UsagePopover: View {
     var header: some View {
         HStack(spacing: 8) {
             if page == "tokens" {
-                Button { page = "overview" } label: { Image(systemName: "chevron.left") }.buttonStyle(.plainHit).tip("Back to overview")
-                Text("tokens").font(.system(size: 15, weight: .semibold))
+                Button { page = "overview" } label: { Image(systemName: "chevron.left") }.buttonStyle(.plainHit).tip(L("Back to overview"))
+                Text(L("tokens")).font(.system(size: 15, weight: .semibold))
             } else {
-                Text("usage").font(.system(size: 15, weight: .semibold))
+                Text(L("usage")).font(.system(size: 15, weight: .semibold))
                 ForEach([AgentKind.claude, .codex], id: \.self) { a in
-                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }.tip("Show \(a.rawValue) usage")
+                    Button { agent = a } label: { AgentBadge(choice: AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/")), size: 22) }.tip(L("Show %@ usage", a.rawValue))
                         .buttonStyle(.plainHit)
                         .opacity(agent == a ? 1 : 0.45)
                         .overlay(alignment: .bottom) { if agent == a { Circle().fill(Color.symAccent).frame(width: 4, height: 4).offset(y: 6) } }
@@ -266,8 +266,8 @@ struct UsagePopover: View {
             }
             Spacer()
             Button { page = page == "tokens" ? "overview" : "tokens" } label: { Image(systemName: "chart.bar.fill") }
-                .buttonStyle(.plainHit).tip("Token details")
-            Button { store.refresh(); if agent == .codex { store.refreshCodexLimits() } else { store.refreshLimits() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).tip("Rescan logs and /usage")
+                .buttonStyle(.plainHit).tip(L("Token details"))
+            Button { store.refresh(); if agent == .codex { store.refreshCodexLimits() } else { store.refreshLimits() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).tip(L("Rescan logs and /usage"))
             Button(action: close) { Image(systemName: "xmark") }.buttonStyle(.plainHit)
         }
         .foregroundStyle(Color.symText)
@@ -277,8 +277,8 @@ struct UsagePopover: View {
     var loading: some View {
         VStack(spacing: 8) {
             ProgressView().controlSize(.small)
-            Text("Reading local session logs").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
-            Text("Counting tokens straight from each agent's own transcripts on this Mac. Nothing leaves your machine.")
+            Text(L("Reading local session logs")).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
+            Text(L("Counting tokens straight from each agent's own transcripts on this Mac. Nothing leaves your machine."))
                 .font(.system(size: 11)).foregroundStyle(Color.symDim).multilineTextAlignment(.center)
         }
         .padding(30).frame(maxWidth: .infinity, minHeight: 300)
@@ -302,7 +302,7 @@ struct UsagePopover: View {
                             .stroke(tint, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
                         VStack(spacing: 0) {
                             Text(session.map { "\($0.percent)%" } ?? "?").font(.system(size: 16, weight: .bold)).foregroundStyle(Color.symText)
-                            Text(session == nil ? "limit" : "used").font(.system(size: 9)).foregroundStyle(Color.symDim)
+                            Text(L(session == nil ? "limit" : "used")).font(.system(size: 9)).foregroundStyle(Color.symDim)
                         }
                     }
                     .frame(width: 62, height: 62)
@@ -310,15 +310,15 @@ struct UsagePopover: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(agent == .codex ? (session?.name ?? "Current session") : "Current session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                         if let r = session?.resets {
-                            Text("Resets \(r)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                            Text(L("Resets %@", r)).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                         } else if let end = stats.blockEnd {
-                            Text("\(UsageStats.short(stats.blockTokens)) tokens · resets \(end.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Self.en))) (estimated)")
+                            Text(L("%@ tokens · resets %@ (estimated)", UsageStats.short(stats.blockTokens), end.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(Self.en))))
                                 .font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                         } else {
-                            Text("No activity in the last 5 hours").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                            Text(L("No activity in the last 5 hours")).font(.system(size: 11)).foregroundStyle(Color.symDim)
                         }
                         if session == nil || (agent == .codex && store.codexLimitsSource == "session log") {
-                            Text(note.isEmpty ? (agent == .claude ? "Limit % comes from claude /usage" : "Limit % comes from codex /status") : note)
+                            Text(note.isEmpty ? L(agent == .claude ? "Limit % comes from claude /usage" : "Limit % comes from codex /status") : note)
                                 .font(.system(size: 10)).foregroundStyle(Color.symDim.opacity(0.7))
                         }
                     }
@@ -339,13 +339,13 @@ struct UsagePopover: View {
                         }
                         .frame(height: 5)
                         if let r = l.resets {
-                            Text("Resets \(r)").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
+                            Text(L("Resets %@", r)).font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
                         }
                     }
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Last 7 days").font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
+                        Text(L("Last 7 days")).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
                         Spacer()
                         Text(UsageStats.short(stats.weekTokens)).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
                     }
@@ -361,14 +361,14 @@ struct UsagePopover: View {
                 label("ACTIVITY")
                 Heatmap(byDay: stats.byDay, tint: tint)
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 7) {
-                    GridRow { stat("Favorite model", stats.favoriteModel.map(Self.prettyModel) ?? "-"); stat("Total tokens", UsageStats.short(stats.totalTokens)) }
-                    GridRow { stat("Sessions", "\(stats.sessions)"); stat("Active days", "\(stats.activeDays)/365") }
-                    GridRow { stat("Most active day", stats.mostActiveDay.map(Self.prettyDay) ?? "-"); stat("Longest session", Self.duration(stats.longestSession)) }
-                    GridRow { stat("Longest streak", "\(stats.longestStreak) days"); stat("Current streak", "\(stats.currentStreak) days") }
+                    GridRow { stat(L("Favorite model"), stats.favoriteModel.map(Self.prettyModel) ?? "-"); stat(L("Total tokens"), UsageStats.short(stats.totalTokens)) }
+                    GridRow { stat(L("Sessions"), "\(stats.sessions)"); stat(L("Active days"), "\(stats.activeDays)/365") }
+                    GridRow { stat(L("Most active day"), stats.mostActiveDay.map(Self.prettyDay) ?? "-"); stat(L("Longest session"), Self.duration(stats.longestSession)) }
+                    GridRow { stat(L("Longest streak"), "\(stats.longestStreak) days"); stat(L("Current streak"), "\(stats.currentStreak) days") }
                 }
                 label("LAST 30D")
-                shareBar("At >150k context", stats.bigContextShare, "Long sessions cost more per message.")
-                shareBar("While 4+ sessions ran in parallel", stats.parallelShare, "Several busy sessions at once use limits faster.")
+                shareBar(L("At >150k context"), stats.bigContextShare, "Long sessions cost more per message.")
+                shareBar(L("While 4+ sessions ran in parallel"), stats.parallelShare, "Several busy sessions at once use limits faster.")
             }
             .padding(14)
         }
@@ -447,9 +447,9 @@ struct UsagePopover: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 18) {
-                    kpi("Last 30 days", UsageStats.short(total))
-                    kpi("Busiest day", peak.map { $0.key.formatted(Date.FormatStyle().month(.abbreviated).day().locale(Self.en)) } ?? "-")
-                    kpi("Top agent", perAgent.max { $0.1 < $1.1 }.map { "\($0.0.displayName) · \(Int(Double($0.1) / Double(agentSum) * 100))%" } ?? "-")
+                    kpi(L("Last 30 days"), UsageStats.short(total))
+                    kpi(L("Busiest day"), peak.map { $0.key.formatted(Date.FormatStyle().month(.abbreviated).day().locale(Self.en)) } ?? "-")
+                    kpi(L("Top agent"), perAgent.max { $0.1 < $1.1 }.map { "\($0.0.displayName) · \(Int(Double($0.1) / Double(agentSum) * 100))%" } ?? "-")
                 }
                 HStack {
                     label("LAST 30 DAYS")
@@ -459,8 +459,8 @@ struct UsagePopover: View {
                     }
                 }
                 Chart(b) { x in
-                    BarMark(x: .value("Day", x.day, unit: .day), y: .value("Tokens", x.tokens))
-                        .foregroundStyle(by: .value("Agent", x.agent))
+                    BarMark(x: .value(L("Day"), x.day, unit: .day), y: .value(L("Tokens"), x.tokens))
+                        .foregroundStyle(by: .value(L("Agent"), x.agent))
                 }
                 .chartForegroundStyleScale(["Claude Code": Color(hex: "#E8704A"), "Codex": Color(hex: "#6C7BFF")])
                 .chartXAxis { AxisMarks(values: .stride(by: .day, count: 7)) { _ in AxisValueLabel(format: Date.FormatStyle().month(.abbreviated).day().locale(Self.en)) } }
@@ -469,8 +469,8 @@ struct UsagePopover: View {
                 HStack {
                     label("BY AGENT")
                     Spacer()
-                    Button("Last 30 days") { allTime = false }.buttonStyle(ChipStyle(on: !allTime)).axName("Last 30 days")
-                    Button("All time") { allTime = true }.buttonStyle(ChipStyle(on: allTime)).axName("All time")
+                    Button(L("Last 30 days")) { allTime = false }.buttonStyle(ChipStyle(on: !allTime)).axName("Last 30 days")
+                    Button(L("All time")) { allTime = true }.buttonStyle(ChipStyle(on: allTime)).axName("All time")
                 }
                 ForEach(perAgent, id: \.0) { a, v in
                     let c = AgentCatalog.choice(for: TerminalSpec(agent: a, cwd: "/"))
@@ -491,7 +491,7 @@ struct UsagePopover: View {
                         .frame(height: 5)
                     }
                 }
-                Text("Read from each agent's local session logs. Agents that do not keep token counts on disk are not shown.")
+                Text(L("Read from each agent's local session logs. Agents that do not keep token counts on disk are not shown."))
                     .font(.system(size: 10)).foregroundStyle(Color.symDim)
             }
             .padding(14)
@@ -565,11 +565,11 @@ struct Heatmap: View {
             }
             HStack(spacing: 3) {
                 Spacer()
-                Text("Less").font(.system(size: 9)).foregroundStyle(Color.symDim)
+                Text(L("Less")).font(.system(size: 9)).foregroundStyle(Color.symDim)
                 ForEach(0..<5, id: \.self) { l in
                     RoundedRectangle(cornerRadius: 1.5).fill(l == 0 ? Color.symRaised : tint.opacity(0.25 + 0.19 * Double(l))).frame(width: 7, height: 7)
                 }
-                Text("More").font(.system(size: 9)).foregroundStyle(Color.symDim)
+                Text(L("More")).font(.system(size: 9)).foregroundStyle(Color.symDim)
             }
         }
     }

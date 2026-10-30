@@ -87,7 +87,7 @@ struct PenPanel: View {
     var body: some View {
         if chrome.tool == .pen {
             VStack(alignment: .leading, spacing: 8) {
-                Text("COLOR").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+                Text(L("COLOR")).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
                 HStack(spacing: 6) {
                     ForEach(Self.colors, id: \.self) { hex in
                         Button { chrome.penColor = hex } label: {
@@ -100,9 +100,9 @@ struct PenPanel: View {
                         Image(systemName: "eyedropper").font(.system(size: 10, weight: .semibold)).foregroundStyle(Color.black.opacity(0.7))
                             .frame(width: 18, height: 18).background(Circle().fill(Color(hex: chrome.penColor)))
                     }
-                    .buttonStyle(.plainHit).tip("Custom color")
+                    .buttonStyle(.plainHit).tip(L("Custom color"))
                 }
-                Text("WIDTH").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+                Text(L("WIDTH")).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
                 HStack(spacing: 6) {
                     ForEach(Self.widths, id: \.self) { w in
                         Button { chrome.penWidth = w } label: {

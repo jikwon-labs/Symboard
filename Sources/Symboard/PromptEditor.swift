@@ -61,10 +61,10 @@ struct PromptEditorView: View {
                         .accessibilityIdentifier("PromptEditorTitle")
                     Spacer()
                     Button { editor.close() } label: { Image(systemName: "xmark").font(.system(size: 11, weight: .bold)) }
-                        .buttonStyle(.plainHit).tip("Close (Esc · ⇧⌘E)").axName("Close editor")
+                        .buttonStyle(.plainHit).tip(L("Close (Esc · ⇧⌘E)")).axName("Close editor")
                 }
                 ZStack(alignment: .bottomLeading) {
-                    MentionField(text: $editor.text, placeholder: "Write a prompt · Shift+Enter for a new line · @ to direct",
+                    MentionField(text: $editor.text, placeholder: L("Write a prompt · Shift+Enter for a new line · @ to direct"),
                                  fontSize: 15, state: editor.mention, options: { [weak editor] in editor?.target?.options() ?? [] },
                                  onSubmit: { [weak editor] in editor?.send() }, focusRequest: editor.focusRequest,
                                  axLabel: "Prompt editor", maxLines: 0)
@@ -76,9 +76,9 @@ struct PromptEditorView: View {
                     }
                 }
                 HStack {
-                    Text("Enter to send · Shift+Enter new line · Esc or ⇧⌘E to close").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                    Text(L("Enter to send · Shift+Enter new line · Esc or ⇧⌘E to close")).font(.system(size: 11)).foregroundStyle(Color.symDim)
                     Spacer()
-                    Button("Send") { editor.send() }.buttonStyle(PillButtonStyle(prominent: true)).axName("Send prompt")
+                    Button(L("Send")) { editor.send() }.buttonStyle(PillButtonStyle(prominent: true)).axName("Send prompt")
                 }
             }
             .padding(18)
@@ -98,21 +98,21 @@ struct ShortcutsSheet: View {
             Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { chrome.shortcutsOpen = false }
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text("Keyboard shortcuts").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.symText)
+                    Text(L("Keyboard shortcuts")).font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.symText)
                     Spacer()
                     Button { chrome.shortcutsOpen = false } label: { Image(systemName: "xmark").font(.system(size: 11, weight: .bold)) }
-                        .buttonStyle(.plainHit).tip("Close (Esc)").axName("Close shortcuts")
+                        .buttonStyle(.plainHit).tip(L("Close (Esc)")).axName("Close shortcuts")
                 }
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], alignment: .leading, spacing: 18) {
                         ForEach(ShortcutCatalog.sections) { sec in
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(sec.title.uppercased()).font(.system(size: 10, weight: .bold)).kerning(1).foregroundStyle(Color.symAccent)
+                                Text(L(sec.title).uppercased()).font(.system(size: 10, weight: .bold)).kerning(1).foregroundStyle(Color.symAccent)
                                 ForEach(sec.entries) { e in
                                     HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                        Text(e.keys).font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundStyle(Color.symText)
+                                        Text(L(e.keys)).font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundStyle(Color.symText)
                                             .frame(width: 170, alignment: .leading)
-                                        Text(e.action).font(.system(size: 12)).foregroundStyle(Color.symDim)
+                                        Text(L(e.action)).font(.system(size: 12)).foregroundStyle(Color.symDim)
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
                                     .accessibilityElement(children: .combine)

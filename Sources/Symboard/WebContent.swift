@@ -51,8 +51,8 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
         startHost = CanvasHostingView(rootView: AnyView(EmptyView()))
         super.init()
         chromeRef = self
-        (chromeHost as! NSHostingView<AnyView>).rootView = AnyView(WebTileBar(state: state, web: chromeRef!).environment(\.colorScheme, .dark))
-        (startHost as! NSHostingView<AnyView>).rootView = AnyView(WebStartPage { [weak self] url in self?.navigate(url) }.environment(\.colorScheme, .dark))
+        (chromeHost as! NSHostingView<AnyView>).rootView = AnyView(WebTileBar(state: state, web: chromeRef!).localized())
+        (startHost as! NSHostingView<AnyView>).rootView = AnyView(WebStartPage { [weak self] url in self?.navigate(url) }.localized())
         stage.wantsLayer = true
         stage.layer?.backgroundColor = NSColor.black.cgColor
         container.wantsLayer = true
@@ -84,8 +84,8 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
     func sync(node: BoardNode) {}
 
     func menuItems() -> [NSMenuItem] {
-        [ClosureMenuItem(title: "Reload") { [weak self] in self?.webView.reload() },
-         ClosureMenuItem(title: "Open Inspector Tile") { [weak self] in self?.openInspector() }]
+        [ClosureMenuItem(title: L("Reload")) { [weak self] in self?.webView.reload() },
+         ClosureMenuItem(title: L("Open Inspector Tile")) { [weak self] in self?.openInspector() }]
     }
 
     func teardown() {
@@ -261,7 +261,7 @@ struct WebTileBar: View {
                         Image(systemName: "globe").font(.system(size: 9))
                         Text(tabTitle(i)).font(.system(size: 11)).lineLimit(1)
                         if state.tabs.count > 1 {
-                            Button { web.closeTab(i) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.buttonStyle(.plainHit).tip("Close tab")
+                            Button { web.closeTab(i) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.buttonStyle(.plainHit).tip(L("Close tab"))
                         }
                     }
                     .foregroundStyle(i == state.active ? Color.symText : Color.symDim)
@@ -270,7 +270,7 @@ struct WebTileBar: View {
                     .background(RoundedRectangle(cornerRadius: 7).fill(i == state.active ? Color.symRaised : Color.clear))
                     .onTapGesture { web.select(i) }
                 }
-                Button { web.newTab() } label: { Image(systemName: "plus").font(.system(size: 10)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("New tab")
+                Button { web.newTab() } label: { Image(systemName: "plus").font(.system(size: 10)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("New tab"))
                 Spacer()
                 if let d = DevicePreset.find(state.device) {
                     Text("\(d.name)  " + String(Int(d.width)) + " × " + String(Int(d.height))).font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -280,12 +280,12 @@ struct WebTileBar: View {
                 }
             }
             HStack(spacing: 8) {
-                Button(action: web.back) { Image(systemName: "chevron.left") }.disabled(!state.canBack).tip("Back")
-                Button(action: web.forward) { Image(systemName: "chevron.right") }.disabled(!state.canForward).tip("Forward")
+                Button(action: web.back) { Image(systemName: "chevron.left") }.disabled(!state.canBack).tip(L("Back"))
+                Button(action: web.forward) { Image(systemName: "chevron.right") }.disabled(!state.canForward).tip(L("Forward"))
                 Button(action: web.reload) { Image(systemName: state.loading ? "xmark" : "arrow.clockwise") }.tip(state.loading ? "Stop" : "Reload")
                 HStack(spacing: 6) {
                     Image(systemName: "globe").font(.system(size: 10)).foregroundStyle(Color.symDim)
-                    TextField("", text: $state.address, prompt: Text("Address or :port").foregroundColor(Color.symDim))
+                    TextField("", text: $state.address, prompt: Text(L("Address or :port")).foregroundColor(Color.symDim))
                         .textFieldStyle(.plain).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
                         .autoFocus(state.address.isEmpty)
                         .onSubmit { web.navigate(state.address) }
@@ -293,7 +293,7 @@ struct WebTileBar: View {
                 .padding(.horizontal, 8).padding(.vertical, 4)
                 .background(RoundedRectangle(cornerRadius: 7).fill(Color.symRaised))
                 Menu {
-                    Button("Fit to tile") { web.setDevice(nil) }
+                    Button(L("Fit to tile")) { web.setDevice(nil) }
                     ForEach(["Monitor", "Phone", "Tablet"], id: \.self) { g in
                         Section(g) {
                             ForEach(DevicePreset.all.filter { $0.group == g }) { d in
@@ -302,8 +302,8 @@ struct WebTileBar: View {
                         }
                     }
                 } label: { Image(systemName: "display") }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).hint("Display size")
-                Button(action: web.openInspector) { Image(systemName: "ladybug") }.tip("Open inspector tile")
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22).hint(L("Display size"))
+                Button(action: web.openInspector) { Image(systemName: "ladybug") }.tip(L("Open inspector tile"))
             }
             .buttonStyle(.plainHit)
             .foregroundStyle(Color.symText.opacity(0.85))
@@ -337,11 +337,11 @@ struct WebStartPage: View {
     var body: some View {
         ScrollView {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Open a page", systemImage: "globe").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
-            Text("LOCALHOST").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+            Label(L("Open a page"), systemImage: "globe").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
+            Text(L("LOCALHOST")).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
             HStack(spacing: 6) {
                 Image(systemName: "waveform.path.ecg").foregroundStyle(Color(hex: "#6FCF97"))
-                Text("http://localhost:").font(.system(size: 13, design: .monospaced)).foregroundStyle(Color.symDim).fixedSize()
+                Text(L("http://localhost:")).font(.system(size: 13, design: .monospaced)).foregroundStyle(Color.symDim).fixedSize()
                 TextField("", text: $port, prompt: Text("3000").foregroundColor(Color.symDim.opacity(0.6)))
                     .textFieldStyle(.plain).font(.system(size: 13, design: .monospaced)).foregroundStyle(Color.symText)
                     .onSubmit { open(":" + (port.isEmpty ? "3000" : port)) }
@@ -358,7 +358,7 @@ struct WebStartPage: View {
                     .buttonStyle(.plainHit).axName("Open port \(p)")
                 }
             }
-            Text("QUICK OPEN").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim).padding(.top, 4)
+            Text(L("QUICK OPEN")).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim).padding(.top, 4)
             ForEach(Self.quick, id: \.1) { q in
                 Button { open(q.1) } label: {
                     HStack(spacing: 10) {
@@ -374,7 +374,7 @@ struct WebStartPage: View {
                 }
                 .buttonStyle(.plainHit).axName("Open \(q.0)")
             }
-            Text("or type any address above").font(.system(size: 11)).foregroundStyle(Color.symDim)
+            Text(L("or type any address above")).font(.system(size: 11)).foregroundStyle(Color.symDim)
         }
         .padding(16)
         .frame(width: 400)
@@ -384,7 +384,7 @@ struct WebStartPage: View {
         .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(hex: "#0B0B0A"))
+        .background(Color.symSurface)
     }
 }
 

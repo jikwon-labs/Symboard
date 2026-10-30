@@ -12,21 +12,35 @@ final class SettingsWindowController: NSWindowController {
     private let size = NSPopUpButton()
     private let preview = NSTextField(labelWithString: TerminalFontSetting.previewText)
     /// 8차 3번: claude 가 보드에 콘솔을 띄우는 도구를 붙일지.
-    private let boardTools = NSButton(checkboxWithTitle: "Let agents open consoles on the board", target: nil, action: nil)
+    private let boardTools = NSButton(checkboxWithTitle: L("Let agents open consoles on the board"), target: nil, action: nil)
     /// 9차 5번: 에이전트가 이어 띄울 수 있는 단계와 연 콘솔 수. 넘으면 아래 확인 띠로 묻는다.
+    /// 10차: 화면 모드·언어.
+    private let appearance = NSPopUpButton()
+    private let language = NSPopUpButton()
     private let maxDepth = NSPopUpButton()
     private let maxOpened = NSPopUpButton()
     private static let systemLatin = "System Mono (SF Mono)"
     private static let systemHangul = "System default (Apple SD Gothic Neo)"
 
     init() {
-        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 446), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        w.title = "Settings"
-        w.appearance = NSAppearance(named: .darkAqua)
+        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 540), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        w.title = L("Settings")
         w.backgroundColor = Theme.surface
         w.isReleasedWhenClosed = false
         w.hidesOnDeactivate = false
         super.init(window: w)
+        build()
+        load()
+        // 언어를 바꾸면 창 글을 다시 만든다.
+        NotificationCenter.default.addObserver(forName: L10n.didChange, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rebuild() }
+        }
+    }
+
+    private func rebuild() {
+        window?.title = L("Settings")
+        window?.contentView?.subviews.forEach { $0.removeFromSuperview() }
+        for p in [latin, hangul, size, appearance, language, maxDepth, maxOpened] { p.removeAllItems() }
         build()
         load()
     }
@@ -44,51 +58,73 @@ final class SettingsWindowController: NSWindowController {
 
     private func build() {
         guard let content = window?.contentView else { return }
-        let header = NSTextField(labelWithString: "TERMINAL")
+        let generalHeader = NSTextField(labelWithString: L("GENERAL"))
+        generalHeader.font = .systemFont(ofSize: 11, weight: .semibold)
+        generalHeader.textColor = Theme.textDim
+        for m in AppearanceMode.allCases {
+            appearance.addItem(withTitle: L(Self.appearanceTitles[m]!))
+            appearance.lastItem?.representedObject = m.rawValue
+        }
+        for m in LanguageMode.allCases {
+            // 언어 이름은 그 언어로 쓴다(어느 언어로 보고 있어도 찾을 수 있게).
+            language.addItem(withTitle: m == .system ? L("Follow system") : (m == .ko ? "한국어" : "English"))
+            language.lastItem?.representedObject = m.rawValue
+        }
+        appearance.target = self; appearance.action = #selector(appearanceChanged); appearance.setAccessibilityLabel("Appearance")
+        language.target = self; language.action = #selector(languageChanged); language.setAccessibilityLabel("Language")
+        let general = NSGridView(views: [[label(L("Appearance")), appearance], [label(L("Language")), language]])
+        general.rowSpacing = 10
+        general.columnSpacing = 12
+        general.column(at: 0).xPlacement = .trailing
+        general.rowAlignment = .firstBaseline
+        appearance.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        language.widthAnchor.constraint(equalToConstant: 200).isActive = true
+
+        let header = NSTextField(labelWithString: L("TERMINAL"))
         header.font = .systemFont(ofSize: 11, weight: .semibold)
         header.textColor = Theme.textDim
 
         latin.addItem(withTitle: Self.systemLatin)
         latin.menu?.addItem(.separator())
         latin.addItems(withTitles: TerminalFont.monospacedFamilies)
-        latin.setAccessibilityLabel("Terminal font")
+        latin.setAccessibilityLabel(L("Terminal font"))
 
         hangul.addItem(withTitle: Self.systemHangul)
         hangul.menu?.addItem(.separator())
         hangul.addItems(withTitles: TerminalFont.allFamilies.hangul)
         hangul.menu?.addItem(.separator())
         hangul.addItems(withTitles: TerminalFont.allFamilies.other)
-        hangul.setAccessibilityLabel("Korean font")
+        hangul.setAccessibilityLabel(L("Korean font"))
 
         for s in Int(TerminalFontSetting.sizeRange.lowerBound)...Int(TerminalFontSetting.sizeRange.upperBound) {
             size.addItem(withTitle: "\(s) pt")
             size.lastItem?.tag = s
         }
-        size.setAccessibilityLabel("Terminal font size")
+        size.setAccessibilityLabel(L("Terminal font size"))
 
         for p in [latin, hangul, size] {
             p.target = self
             p.action = #selector(changed)
         }
 
-        preview.textColor = Theme.text
+        preview.textColor = Theme.terminalText
         preview.drawsBackground = true
         preview.backgroundColor = Theme.terminalBackground
         preview.lineBreakMode = .byClipping
-        preview.setAccessibilityLabel("Terminal font preview")
+        preview.setAccessibilityLabel(L("Terminal font preview"))
         let previewBox = NSView()
         previewBox.wantsLayer = true
         previewBox.layer?.backgroundColor = Theme.terminalBackground.cgColor
         previewBox.layer?.cornerRadius = 8
-        previewBox.layer?.borderColor = Theme.border.cgColor
+        Theme.paint { [weak previewBox] in previewBox?.layer?.borderColor = Theme.border.cgColor }
         previewBox.layer?.borderWidth = 1
         preview.translatesAutoresizingMaskIntoConstraints = false
         previewBox.addSubview(preview)
 
         let grid = NSGridView(views: [
-            [label("Font"), latin],
-            [label("Korean font"), hangul],
-            [label("Size"), size],
+            [label(L("Font")), latin],
+            [label(L("Korean font")), hangul],
+            [label(L("Size")), size],
         ])
         grid.rowSpacing = 10
         grid.columnSpacing = 12
@@ -97,18 +133,19 @@ final class SettingsWindowController: NSWindowController {
         latin.widthAnchor.constraint(equalToConstant: 300).isActive = true
         hangul.widthAnchor.constraint(equalToConstant: 300).isActive = true
 
-        let note = NSTextField(labelWithString: "Korean font is used for Hangul only. Changes apply to all open consoles.")
+        let note = NSTextField(labelWithString: L("Korean font is used for Hangul only. Changes apply to all open consoles."))
         note.font = .systemFont(ofSize: 11)
         note.textColor = Theme.textDim
 
-        let agentsHeader = NSTextField(labelWithString: "AGENTS")
+        let agentsHeader = NSTextField(labelWithString: L("AGENTS"))
         agentsHeader.font = .systemFont(ofSize: 11, weight: .semibold)
         agentsHeader.textColor = Theme.textDim
+        boardTools.title = L("Let agents open consoles on the board")
         boardTools.target = self
         boardTools.action = #selector(boardToolsChanged)
-        boardTools.setAccessibilityLabel("Let agents open consoles on the board")
+        boardTools.setAccessibilityLabel(L("Let agents open consoles on the board"))
         (boardTools.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: boardTools.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
-        let agentsNote = NSTextField(wrappingLabelWithString: "Claude and Codex consoles get Symboard tools to open, hand off to, message, read and close consoles, and to add notes and diagrams. Applies to consoles started after the change.")
+        let agentsNote = NSTextField(wrappingLabelWithString: L("Claude and Codex consoles get Symboard tools to open, hand off to, message, read and close consoles, and to add notes and diagrams. Applies to consoles started after the change."))
         agentsNote.font = .systemFont(ofSize: 11)
         agentsNote.textColor = Theme.textDim
 
@@ -119,17 +156,18 @@ final class SettingsWindowController: NSWindowController {
             p.setAccessibilityLabel(name)
         }
         let limits = NSGridView(views: [
-            [label("Max chain steps"), maxDepth],
-            [label("Max consoles opened by agents"), maxOpened],
+            [label(L("Max chain steps")), maxDepth],
+            [label(L("Max consoles opened by agents")), maxOpened],
         ])
         limits.rowSpacing = 8
         limits.columnSpacing = 12
         limits.rowAlignment = .firstBaseline
-        let limitsNote = NSTextField(wrappingLabelWithString: "Past a limit, Symboard asks you before an agent opens another console.")
+        let limitsNote = NSTextField(wrappingLabelWithString: L("Past a limit, Symboard asks you before an agent opens another console."))
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
+        let stack = NSStackView(views: [generalHeader, general, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
+        stack.setCustomSpacing(22, after: general)
         stack.setCustomSpacing(22, after: note)
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -163,8 +201,24 @@ final class SettingsWindowController: NSWindowController {
         size.selectItem(withTag: Int(s.size))
         preview.font = TerminalFont.make(s)
         boardTools.state = BoardTools.enabled(Prefs.shared) ? .on : .off
+        appearance.selectItem(at: AppearanceMode.allCases.firstIndex(of: UIPrefs.appearance(Prefs.shared)) ?? 0)
+        language.selectItem(at: LanguageMode.allCases.firstIndex(of: UIPrefs.language(Prefs.shared)) ?? 0)
         maxDepth.selectItem(withTag: AgentLimits.maxDepth(Prefs.shared))
         maxOpened.selectItem(withTag: AgentLimits.maxOpened(Prefs.shared))
+    }
+
+    static let appearanceTitles: [AppearanceMode: String] = [.system: "Follow system", .dark: "Dark", .light: "Light"]
+
+    @objc private func appearanceChanged() {
+        guard let raw = appearance.selectedItem?.representedObject as? String, let m = AppearanceMode(rawValue: raw) else { return }
+        UIPrefs.setAppearance(m, Prefs.shared)
+        Theme.apply(m)
+    }
+
+    @objc private func languageChanged() {
+        guard let raw = language.selectedItem?.representedObject as? String, let m = LanguageMode(rawValue: raw) else { return }
+        UIPrefs.setLanguage(m, Prefs.shared)
+        L10n.apply(m)
     }
 
     @objc private func limitsChanged() {

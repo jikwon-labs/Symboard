@@ -262,7 +262,7 @@ public struct UsageStats: Equatable, Sendable {
 
 /// 위쪽 사용량 알약 문구. 늘 "resets …" 한 가지 꼴로 보인다.
 public enum UsagePill {
-    public static let placeholder = "resets –:––"
+    public static var placeholder: String { L("resets %@", "–:––") }
 
     /// 지금보다 뒤의 가장 가까운 5시간 묶음 끝. 없으면 자리표시.
     public static func text(blockEnds: [Date], now: Date = Date(), timeZone: TimeZone = .current) -> String {
@@ -270,7 +270,7 @@ public enum UsagePill {
         let f = DateFormatter()
         f.dateFormat = "h:mma"; f.amSymbol = "am"; f.pmSymbol = "pm"
         f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = timeZone
-        return "resets " + f.string(from: e)
+        return L("resets %@", f.string(from: e))
     }
 
     /// 알약에 보일 것. percent 가 있으면 CLI 가 보여 준 세션 한도(링으로 그린다).
@@ -287,7 +287,7 @@ public enum UsagePill {
         if let readAt, let s = limits.first(where: { PlanUsageParser.isSession($0.name) }), let r = s.resets {
             let due = PlanUsageParser.resetDate(r, after: readAt, timeZone: timeZone)
             if due.map({ $0 > now }) ?? (now.timeIntervalSince(readAt) < 5 * 3600) {
-                return Display(text: "resets " + PlanUsageParser.shortReset(r), percent: s.percent, fromCLI: true)
+                return Display(text: L("resets %@", PlanUsageParser.shortReset(r)), percent: s.percent, fromCLI: true)
             }
         }
         return Display(text: text(blockEnds: blockEnds, now: now, timeZone: timeZone), percent: nil, fromCLI: false)

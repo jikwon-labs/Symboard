@@ -54,7 +54,7 @@ struct MissionMapView: View {
 
     var subtitle: String {
         let working = consoles.filter { status($0.id) == .working }.count
-        return "\(orchestrators.count) orchestrator\(orchestrators.count == 1 ? "" : "s") · \(teams.count) team\(teams.count == 1 ? "" : "s") · \(consoles.count) console\(consoles.count == 1 ? "" : "s") · \(working) working"
+        return [Ln(orchestrators.count, "%d orchestrator", "%d orchestrators"), Ln(teams.count, "%d team", "%d teams"), Ln(consoles.count, "%d console", "%d consoles"), L("%d working", consoles.filter { status($0.id) == .working }.count)].joined(separator: " · ")
     }
 
     var body: some View {
@@ -88,11 +88,11 @@ struct MissionMapView: View {
             Image(systemName: "point.3.connected.trianglepath.dotted").foregroundStyle(Color.symAccent)
                 .frame(width: 36, height: 36).background(RoundedRectangle(cornerRadius: 10).fill(Color.symAccent.opacity(0.12)))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Mission Map").font(.system(size: 20, weight: .semibold)).foregroundStyle(Color.symText)
+                Text(L("Mission Map")).font(.system(size: 20, weight: .semibold)).foregroundStyle(Color.symText)
                 Text(subtitle).font(.system(size: 12)).foregroundStyle(Color.symDim)
             }
             Spacer()
-            Button { chrome.missionOpen = false } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }.tip("Close mission map")
+            Button { chrome.missionOpen = false } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }.tip(L("Close mission map"))
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
         }
         .padding(18)
@@ -105,7 +105,7 @@ struct MissionMapView: View {
                 Button { filter = f } label: {
                     HStack(spacing: 5) {
                         if f != "All" { Circle().fill(Self.color(f)).frame(width: 6, height: 6) }
-                        Text(f).font(.system(size: 12, weight: .medium))
+                        Text(L(f)).font(.system(size: 12, weight: .medium))
                         Text("\(n)").font(.system(size: 11, design: .monospaced)).opacity(0.7)
                     }
                     .foregroundStyle(filter == f ? Color.white : Color.symText.opacity(0.8))
@@ -117,7 +117,7 @@ struct MissionMapView: View {
             Spacer()
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Color.symDim)
-                TextField("", text: $query, prompt: Text("Find a console or team").foregroundColor(Color.symDim))
+                TextField("", text: $query, prompt: Text(L("Find a console or team")).foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).foregroundStyle(Color.symText)
             }
             .font(.system(size: 12))
@@ -183,16 +183,16 @@ struct MissionMapView: View {
                 }
                 .frame(height: height)
 
-                card(icon: "command", title: "Command center", sub: "\(loose.count) only reachable from the bar", color: Color.symDim, selected: false)
+                card(icon: "command", title: "Command center", sub: L("%d only reachable from the bar", loose.count), color: Color.symDim, selected: false)
                     .offset(x: colX[0], y: ccY)
                 ForEach(orchestrators) { o in
-                    card(icon: "point.3.connected.trianglepath.dotted", title: o.title, sub: "\(c.orchestratorTargets(o.id).count) wired", color: Color.symAccent, selected: selected == o.id)
+                    card(icon: "point.3.connected.trianglepath.dotted", title: o.title, sub: L("%d wired", c.orchestratorTargets(o.id).count), color: Color.symAccent, selected: selected == o.id)
                         .offset(x: colX[0], y: orchY[o.id] ?? 0)
                         .onTapGesture { selected = o.id }
                 }
                 ForEach(shownTeams) { t in
                     let members = consoles.filter { $0.teamID == t.id }
-                    card(icon: "circle.fill", title: t.name, sub: "\(members.count) consoles · \(members.filter { status($0.id) == .working }.count) working",
+                    card(icon: "circle.fill", title: t.name, sub: Ln(members.count, "%d console", "%d consoles") + " · " + L("%d working", members.filter { status($0.id) == .working }.count),
                          color: Color(hex: t.colorHex), selected: selected == t.id, width: 170)
                         .offset(x: colX[1], y: teamY[t.id] ?? 0)
                         .onTapGesture { selected = t.id }
@@ -203,7 +203,7 @@ struct MissionMapView: View {
                         AgentBadge(choice: AgentCatalog.choice(for: n.terminal), size: 20)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(n.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
-                            Text(onHold(n.id) ? "On hold" : (Self.bucket(st) == "Idle" ? "At the prompt" : st.label)).font(.system(size: 10)).foregroundStyle(Color.symDim)
+                            Text(L(onHold(n.id) ? "On hold" : (Self.bucket(st) == "Idle" ? "At the prompt" : st.label))).font(.system(size: 10)).foregroundStyle(Color.symDim)
                         }
                         Spacer()
                         Circle().fill(Color(nsColor: st.color)).frame(width: 6, height: 6)
@@ -226,8 +226,8 @@ struct MissionMapView: View {
         HStack(spacing: 8) {
             Image(systemName: icon).font(.system(size: icon == "circle.fill" ? 7 : 12)).foregroundStyle(color)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText).lineLimit(1)
-                Text(sub).font(.system(size: 10)).foregroundStyle(Color.symDim).lineLimit(1)
+                Text(L(title)).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText).lineLimit(1)
+                Text(L(sub)).font(.system(size: 10)).foregroundStyle(Color.symDim).lineLimit(1)
             }
             Spacer(minLength: 0)
         }
@@ -240,11 +240,11 @@ struct MissionMapView: View {
     var legend: some View {
         HStack(spacing: 14) {
             ForEach(Array(Self.filters.dropFirst()), id: \.self) { f in
-                HStack(spacing: 4) { Circle().fill(Self.color(f)).frame(width: 6, height: 6); Text(f) }
+                HStack(spacing: 4) { Circle().fill(Self.color(f)).frame(width: 6, height: 6); Text(L(f)) }
             }
-            Text("- - - Command bar only")
+            Text(L("- - - Command bar only"))
             Spacer()
-            Text("Click to inspect · Double-click to jump there")
+            Text(L("Click to inspect · Double-click to jump there"))
         }
         .font(.system(size: 11))
         .foregroundStyle(Color.symDim)
@@ -270,16 +270,16 @@ struct MissionMapView: View {
     /// 아무것도 고르지 않았을 때: 원본처럼 Fleet(상태별 수)·Structure(오케스트레이터·팀·콘솔·켜진 루프) 두 카드.
     var overview: some View {
         VStack(alignment: .leading, spacing: 12) {
-            overviewCard("Fleet", Self.filters.dropFirst().map { f in
+            overviewCard(L("Fleet"), Self.filters.dropFirst().map { f in
                 (f, Self.color(f), consoles.filter { Self.bucket(status($0.id)) == f }.count)
             })
-            overviewCard("Structure", [
+            overviewCard(L("Structure"), [
                 ("Orchestrators", nil, orchestrators.count),
                 ("Teams", nil, teams.count),
                 ("Consoles", nil, consoles.count),
                 ("Active loops", nil, ws.loops.filter(\.enabled).count),
             ])
-            Text("Select a console, a team or an orchestrator to see what it is doing and act on it.")
+            Text(L("Select a console, a team or an orchestrator to see what it is doing and act on it."))
                 .font(.system(size: 12)).foregroundStyle(Color.symDim).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -291,7 +291,7 @@ struct MissionMapView: View {
                 ForEach(rows, id: \.0) { r in
                     HStack(spacing: 8) {
                         if let c = r.1 { Circle().fill(c).frame(width: 7, height: 7) }
-                        Text(r.0).foregroundStyle(Color.symText)
+                        Text(L(r.0)).foregroundStyle(Color.symText)
                         Spacer()
                         Text("\(r.2)").font(.system(size: 13, weight: .semibold, design: .monospaced))
                             .foregroundStyle(r.2 == 0 ? Color.symDim : Color.symText)
@@ -313,8 +313,8 @@ struct MissionMapView: View {
                 Circle().fill(Color(hex: t.colorHex)).frame(width: 10, height: 10)
                 Text(t.name).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.symText)
             }
-            Text("\(members.count) consoles · \(members.filter { status($0.id) == .working }.count) working").font(.system(size: 12)).foregroundStyle(Color.symDim)
-            Button { showTeam(t.id) } label: { Label("Show this team on the board", systemImage: "arrow.up.right").frame(maxWidth: .infinity) }
+            Text(Ln(members.count, "%d console", "%d consoles") + " · " + L("%d working", members.filter { status($0.id) == .working }.count)).font(.system(size: 12)).foregroundStyle(Color.symDim)
+            Button { showTeam(t.id) } label: { Label(L("Show this team on the board"), systemImage: "arrow.up.right").frame(maxWidth: .infinity) }
                 .buttonStyle(PillButtonStyle(prominent: true))
         }
     }
@@ -333,28 +333,28 @@ struct MissionMapView: View {
                     Text(choice.name).font(.system(size: 12)).foregroundStyle(Color.symDim)
                 }
             }
-            Button { goTo(n.id) } label: { Label("Go to the console", systemImage: "arrow.up.right").frame(maxWidth: .infinity) }
+            Button { goTo(n.id) } label: { Label(L("Go to the console"), systemImage: "arrow.up.right").frame(maxWidth: .infinity) }
                 .buttonStyle(PillButtonStyle(prominent: true))
             HStack(spacing: 8) {
                 Button { _ = model.sessions.session(for: n.id)?.signal(paused ? SIGCONT : SIGSTOP) } label: {
-                    Label(paused ? "Resume" : "Pause", systemImage: paused ? "play.fill" : "pause.fill").frame(maxWidth: .infinity)
+                    Label(L(paused ? "Resume" : "Pause"), systemImage: paused ? "play.fill" : "pause.fill").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PillButtonStyle())
                 Button { model.sessions.session(for: n.id)?.terminate() } label: {
-                    Label("Kill", systemImage: "xmark.circle").frame(maxWidth: .infinity).foregroundStyle(Color.symAccent)
+                    Label(L("Kill"), systemImage: "xmark.circle").frame(maxWidth: .infinity).foregroundStyle(Color.symAccent)
                 }
                 .buttonStyle(PillButtonStyle())
             }
-            Text("Now").font(.system(size: 11)).foregroundStyle(Color.symDim)
+            Text(L("Now")).font(.system(size: 11)).foregroundStyle(Color.symDim)
             VStack(spacing: 8) {
                 HStack {
                     Circle().fill(Color(nsColor: st.color)).frame(width: 6, height: 6)
-                    Text("Status").foregroundStyle(Color.symDim)
+                    Text(L("Status")).foregroundStyle(Color.symDim)
                     Spacer()
-                    Text(paused ? "Paused" : (onHold(n.id) ? "On hold" : st.label)).foregroundStyle(Color(nsColor: st.color))
+                    Text(L(paused ? "Paused" : (onHold(n.id) ? "On hold" : st.label))).foregroundStyle(Color(nsColor: st.color))
                 }
                 HStack {
-                    Text("For").foregroundStyle(Color.symDim)
+                    Text(L("For")).foregroundStyle(Color.symDim)
                     Spacer()
                     Text(Self.duration(Date().timeIntervalSince(since))).font(.system(.body, design: .monospaced)).foregroundStyle(Color.symText)
                 }
@@ -362,7 +362,7 @@ struct MissionMapView: View {
             .font(.system(size: 13))
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
-            Text("Belongs to").font(.system(size: 11)).foregroundStyle(Color.symDim)
+            Text(L("Belongs to")).font(.system(size: 11)).foregroundStyle(Color.symDim)
             if let tn = teamName(n) { belongs(icon: "circle.fill", title: tn, sub: "Group") }
             if orchs.isEmpty { belongs(icon: "command", title: "Command center", sub: "Not wired to any orchestrator") }
             ForEach(orchs) { o in belongs(icon: "point.3.connected.trianglepath.dotted", title: o.title, sub: "Orchestrator") }
@@ -373,8 +373,8 @@ struct MissionMapView: View {
         HStack(spacing: 10) {
             Image(systemName: icon).font(.system(size: icon == "circle.fill" ? 7 : 12)).foregroundStyle(Color.symDim)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
-                Text(sub).font(.system(size: 11)).foregroundStyle(Color.symDim)
+                Text(L(title)).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                Text(L(sub)).font(.system(size: 11)).foregroundStyle(Color.symDim)
             }
             Spacer()
         }

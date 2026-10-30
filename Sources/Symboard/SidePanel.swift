@@ -30,7 +30,7 @@ final class SidePanelController {
     let state = SidePanelState()
     var onFocusNode: ((UUID) -> Void)?
     lazy var view: NSView = {
-        let host = NSHostingView(rootView: SidePanelView(state: state, focus: { [weak self] id in self?.onFocusNode?(id) }))
+        let host = NSHostingView(rootView: SidePanelView(state: state, focus: { [weak self] id in self?.onFocusNode?(id) }).localized())
         host.translatesAutoresizingMaskIntoConstraints = false
         return host
     }()
@@ -80,7 +80,7 @@ struct SidePanelView: View {
     var body: some View {
         VStack(spacing: 0) {
             Picker("", selection: $state.tab) {
-                Text("Mission").tag("Mission")
+                Text(L("Mission")).tag("Mission")
                 ForEach(state.extraTabs.map(\.0), id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.menu)
@@ -114,13 +114,13 @@ struct MissionListView: View {
                         Circle().fill(Color(nsColor: item.0.color)).frame(width: 8, height: 8)
                         Text("\(item.1)").font(.system(size: 11, weight: .semibold))
                     }
-                    .hint(item.0.label)
+                    .hint(L(item.0.label))
                 }
                 Spacer()
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
             if state.rows.isEmpty {
-                Text("No terminal nodes yet.\nDouble-click the board or press Cmd+T.")
+                Text(L("No terminal nodes yet.\nDouble-click the board or press Cmd+T."))
                     .font(.system(size: 12)).foregroundStyle(.secondary).padding(12)
                 Spacer()
             } else {
@@ -145,8 +145,8 @@ struct MissionRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
                 HStack(spacing: 4) {
-                    Text(row.status.label)
-                    if !row.idleText.isEmpty { Text("for \(row.idleText)") }
+                    Text(L(row.status.label))
+                    if !row.idleText.isEmpty { Text(L("for %@", row.idleText)) }
                     Text("- \(row.workspace)")
                 }
                 .font(.system(size: 10)).foregroundStyle(.secondary)

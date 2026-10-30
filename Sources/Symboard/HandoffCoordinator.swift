@@ -121,7 +121,7 @@ final class HandoffCoordinator {
         }
         var text = Handoff.message(from: src.title, summary: summary)
         if !job.autoSend {
-            guard let edited = Prompt.multiline(title: "Send handoff", message: "Edit before sending to \"\(model.node(job.target)?.title ?? "")\".", value: text) else {
+            guard let edited = Prompt.multiline(title: L("Send handoff"), message: L("Edit before sending to \"%@\".", model.node(job.target)?.title ?? ""), value: text) else {
                 lastResult = "cancelled"
                 return
             }

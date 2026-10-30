@@ -63,7 +63,9 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         view.processDelegate = self
         view.font = TerminalFont.current
         view.nativeBackgroundColor = Theme.terminalBackground
-        view.nativeForegroundColor = Theme.text
+        view.nativeForegroundColor = Theme.terminalText
+        // 콘솔 몸통은 두 모드 모두 어둡다(DECISIONS 10차-1). 스크롤 막대·선택 색도 어두운 모드로.
+        view.appearance = NSAppearance(named: .darkAqua)
         view.onOutput = { [weak self] slice in
             MainActor.assumeIsolated { self?.handleOutput(slice) }
         }

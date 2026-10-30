@@ -30,15 +30,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                   eventNumber: e.eventNumber, clickCount: max(e.clickCount, 1), pressure: e.pressure)
     }
 
+    /// 시험용 배경 실행(SYMBOARD_NO_ACTIVATE=1): 앞으로 가져오지 않고 창을 다른 앱 뒤에 둔다.
+    static let background = ProcessInfo.processInfo.environment["SYMBOARD_NO_ACTIVATE"] == "1"
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiatedAllowingIdleSystemSleep],
                                                           reason: "Monitoring agent terminals")
         model = AppModel(store: StateStore(directory: StateStore.defaultDirectory))
+        // 화면 모드·언어(10차). 창을 만들기 전에 정해 둔다.
+        Theme.apply(UIPrefs.appearance(Prefs.shared))
+        Theme.watchSystemAppearance()
+        L10n.apply(UIPrefs.language(Prefs.shared))
         MainMenu.install()
         windowController = MainWindowController(model: model)
         windowController.showWindow(nil)
         debugBridge = DebugBridge(controller: windowController, home: model.store.directory)
-        NSApp.activate(ignoringOtherApps: true)
+        // 언어를 바꾸면 메뉴 글도 다시 만든다(10차).
+        NotificationCenter.default.addObserver(forName: L10n.didChange, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { MainMenu.install() }
+        }
+        // 처음 켤 때 화면 모드·언어를 고른다(10차).
+        if UIPrefs.needsFirstRunChoice(Prefs.shared) {
+            DispatchQueue.main.async { [weak self] in FirstRunWindow.show(over: self?.windowController.window) }
+        }
+        // 시험용: SYMBOARD_NO_ACTIVATE=1 이면 앞으로 가져오지 않는다(사용자가 다른 앱을 쓰는 중일 때 입력을 빼앗지 않게).
+        if Self.background { windowController.window?.orderBack(nil) } else { NSApp.activate(ignoringOtherApps: true) }
         // 창이 없는 마우스 이벤트(일부 자동 입력 도구의 끌기)는 화면 좌표로 온다. 그 자리의 우리 창으로 다시 겨눈다.
         // 실제 마우스 이벤트는 늘 창을 달고 오므로 영향이 없다.
         retargetMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp,

@@ -79,6 +79,7 @@ open /Applications/Symboard.app
 | 명령 바(8차) | ⇧Enter 여러 줄(3줄까지 자람), ⇧⌘E 전체 화면 편집, claude·codex 에는 여러 줄을 한 메시지로. `@Ada 글 @Pip 글` 은 대상마다 다른 글. 왼쪽 아래 ? 단추·? 키로 단축키 표 |
 | 보드 도구(8차·9차) | claude·codex 콘솔에 MCP 도구를 인자로만 붙인다(사용자 설정 파일은 그대로). 콘솔 띄우기·보내기·읽기·닫기, `hand_off`(프롬프트 카드를 보드에 붙이고 새 세션을 띄워 넘김, 새 세션도 다시 넘길 수 있음), `add_note`·`draw_diagram`(메모·손그림 다이어그램). 이어 띄우기는 기본 4단계·12개까지, 넘으면 아래 띠에서 묻는다. 설정 창 AGENTS 에서 끄거나 숫자를 바꾼다 |
 | 콘솔 입력(9차) | 콘솔 안 ⇧Enter 는 보내지 않고 줄바꿈(claude·codex·zsh). 작업공간 폴더가 지워졌으면 홈 폴더에서 띄우지 않고 "Folder not found" 로 알린다 |
+| 화면 모드·언어(10차) | 처음 켤 때 화면 모드(기기 따라가기·다크·라이트)와 언어를 고른다. 설정 창 GENERAL 에서 바꾸고, 위쪽 막대 "EN/한" 단추로 언어를 바로 바꾼다. 다시 켜지 않아도 바로 적용. 콘솔 화면은 두 모드 모두 어둡다 |
 
 ## 구조
 
@@ -97,5 +98,5 @@ open /Applications/Symboard.app
 - 2차(원본과 같게 보이고 움직이게): `PLAN-2.md`(항목마다 비교한 원본 장면·스크린샷·남은 차이), `REPORT-2.md`, 스크린샷 `docs/screens/v2/`.
 - 3~5차: `PLAN-3.md`~`PLAN-5.md`, `REPORT-3.md`~`REPORT-5.md`.
 - 6차(영상별 작은 차이): `PLAN-6.md`, `REPORT-6.md`. 원본과 나란히 둔 그림은 `docs/screens/v6/compare/`(커밋하지 않음).
-- 7차·8차·9차(실제로 써 보고 요청한 것): `PLAN-7.md`·`PLAN-8.md`·`PLAN-9.md`, `REPORT-7.md`·`REPORT-8.md`·`REPORT-9.md`, 스크린샷 `docs/screens/v8/`·`docs/screens/v9/`.
+- 7차~10차(실제로 써 보고 요청한 것): `PLAN-7.md`~`PLAN-10.md`, `REPORT-7.md`~`REPORT-10.md`, 스크린샷 `docs/screens/v8/`~`docs/screens/v10/`.
 - 결정 기록: `DECISIONS.md`.

@@ -150,12 +150,12 @@ struct StudioOverlay: View {
                 }
                 Spacer()
                 Button { c.studioAddFolder() } label: { Image(systemName: "plus").frame(width: 26, height: 26) }
-                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Add a folder")
+                    .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Add a folder"))
             }
             if kind == "Markdown" {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Color.symDim)
-                    TextField("", text: $studio.query, prompt: Text("Search files").foregroundColor(Color.symDim))
+                    TextField("", text: $studio.query, prompt: Text(L("Search files")).foregroundColor(Color.symDim))
                         .textFieldStyle(.plain).foregroundStyle(Color.symText)
                 }
                 .font(.system(size: 12)).padding(8).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
@@ -187,8 +187,8 @@ struct StudioOverlay: View {
                 Text(studio.selected?.lastPathComponent ?? "No file").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
                 let w = Markdown.wordCount(studio.text)
                 if studio.selected != nil {
-                    Text("\(w.words) words · ~\(w.minutes) min").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
-                    if studio.dirty { Text("• Edited").font(.system(size: 11, weight: .medium)).foregroundStyle(Color(hex: "#E9C46A")) }
+                    Text(L("%d words · ~%d min", w.words, w.minutes)).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                    if studio.dirty { Text(L("• Edited")).font(.system(size: 11, weight: .medium)).foregroundStyle(Color(hex: "#E9C46A")) }
                 }
                 Spacer()
                 HStack(spacing: 2) {
@@ -199,12 +199,12 @@ struct StudioOverlay: View {
                 // 코드 스튜디오와 같은 Save → "✓ Saved"(원본 studio-code). 마크다운도 Source 에서 고친 것을 저장한다.
                 let justSaved = !studio.dirty && studio.note == "Saved"
                 Button { studio.save() } label: {
-                    Label(justSaved ? "Saved" : "Save", systemImage: justSaved ? "checkmark" : "square.and.arrow.down")
+                    Label(L(justSaved ? "Saved" : "Save"), systemImage: justSaved ? "checkmark" : "square.and.arrow.down")
                 }
                 .buttonStyle(PillButtonStyle()).axName(justSaved ? "Saved" : "Save")
                 .keyboardShortcut("s", modifiers: .command).disabled(!studio.dirty)
-                Button { c.studioAddToBoard() } label: { Label("Add to Board", systemImage: "rectangle.on.rectangle") }.buttonStyle(PillButtonStyle())
-                Button { c.studioExportPDF() } label: { Label("Export PDF", systemImage: "arrow.down.doc") }.buttonStyle(PillButtonStyle(prominent: true))
+                Button { c.studioAddToBoard() } label: { Label(L("Add to Board"), systemImage: "rectangle.on.rectangle") }.buttonStyle(PillButtonStyle())
+                Button { c.studioExportPDF() } label: { Label(L("Export PDF"), systemImage: "arrow.down.doc") }.buttonStyle(PillButtonStyle(prominent: true))
             } else {
                 Image(systemName: "chevron.left.forwardslash.chevron.right").foregroundStyle(Color.symAccent).font(.system(size: 11))
                 ForEach(Array(studio.crumbs.enumerated()), id: \.offset) { i, part in
@@ -215,23 +215,23 @@ struct StudioOverlay: View {
                 if studio.selected != nil {
                     Text(studio.language).font(.system(size: 9, weight: .bold, design: .monospaced)).foregroundStyle(Color(hex: "#56A8F5"))
                         .padding(.horizontal, 5).padding(.vertical, 2).background(RoundedRectangle(cornerRadius: 4).fill(Color(hex: "#56A8F5").opacity(0.15)))
-                    Text("\(studio.lineCount) lines · \(Self.bytes(studio.byteCount))").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
-                    if studio.dirty { Text("• Edited").font(.system(size: 11, weight: .medium)).foregroundStyle(Color(hex: "#E9C46A")) }
+                    Text(L("%d lines · %@", studio.lineCount, Self.bytes(studio.byteCount))).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                    if studio.dirty { Text(L("• Edited")).font(.system(size: 11, weight: .medium)).foregroundStyle(Color(hex: "#E9C46A")) }
                     else if !studio.note.isEmpty, studio.note != "Saved" { Text(studio.note).font(.system(size: 11)).foregroundStyle(Color.symAccent) }
                 }
                 Spacer()
-                Button { c.studioAddFolder() } label: { Label("Add folder", systemImage: "folder.badge.plus") }.buttonStyle(PillButtonStyle())
+                Button { c.studioAddFolder() } label: { Label(L("Add folder"), systemImage: "folder.badge.plus") }.buttonStyle(PillButtonStyle())
                 // 원본처럼 저장하면 단추 자체가 흐린 "✓ Saved" 로 바뀌고, 다시 고치면 Save 로 돌아온다.
                 let justSaved = !studio.dirty && studio.note == "Saved"
                 Button { studio.save() } label: {
-                    Label(justSaved ? "Saved" : "Save", systemImage: justSaved ? "checkmark" : "square.and.arrow.down")
+                    Label(L(justSaved ? "Saved" : "Save"), systemImage: justSaved ? "checkmark" : "square.and.arrow.down")
                 }
                 .buttonStyle(PillButtonStyle()).axName(justSaved ? "Saved" : "Save")
                 .keyboardShortcut("s", modifiers: .command).disabled(!studio.dirty)
-                Button { c.studioInsert() } label: { Label("Insert", systemImage: "rectangle.on.rectangle") }.buttonStyle(PillButtonStyle(prominent: true))
+                Button { c.studioInsert() } label: { Label(L("Insert"), systemImage: "rectangle.on.rectangle") }.buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(studio.selected == nil)
             }
-            Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }.tip("Close studio")
+            Button { c.closeStudio() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)) }.tip(L("Close studio"))
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim).padding(.leading, 4)
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
@@ -253,7 +253,7 @@ struct StudioOverlay: View {
                         .buttonStyle(.plainHit).axName("Tab \(u.lastPathComponent)")
                         if on && studio.dirty { Circle().fill(Color(hex: "#E9C46A")).frame(width: 6, height: 6) }
                         Button { studio.closeTab(u) } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).frame(width: 16, height: 16).contentShape(Rectangle()) }
-                            .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close \(u.lastPathComponent)")
+                            .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Close %@", u.lastPathComponent))
                     }
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(RoundedRectangle(cornerRadius: 7).fill(on ? Color.symRaised : Color.clear))
@@ -267,7 +267,7 @@ struct StudioOverlay: View {
         if studio.selected == nil {
             VStack(spacing: 8) {
                 Image(systemName: Self.icon(kind)).font(.system(size: 28)).foregroundStyle(Color.symDim)
-                Text("Pick a file on the left").font(.system(size: 13)).foregroundStyle(Color.symDim)
+                Text(L("Pick a file on the left")).font(.system(size: 13)).foregroundStyle(Color.symDim)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if kind == "Markdown" {
@@ -386,7 +386,7 @@ struct CodeEditor: NSViewRepresentable {
         scroll.wantsLayer = true
         scroll.layer?.cornerRadius = 10
         scroll.layer?.borderWidth = 1
-        scroll.layer?.borderColor = Theme.border.cgColor
+        Theme.paint { [weak scroll] in scroll?.layer?.borderColor = Theme.border.cgColor }
         context.coordinator.apply(tv, text)
         return scroll
     }
@@ -517,7 +517,7 @@ struct LinkGraph2: View {
                     }
                 }
                 HStack {
-                    Text("Link graph · \(layout?.names.count ?? 0) notes").font(.system(size: 11, weight: .medium)).foregroundStyle(Color.symDim)
+                    Text(L("Link graph") + " · " + Ln(layout?.names.count ?? 0, "%d note", "%d notes")).font(.system(size: 11, weight: .medium)).foregroundStyle(Color.symDim)
                     Spacer()
                 }
                 .padding(12)

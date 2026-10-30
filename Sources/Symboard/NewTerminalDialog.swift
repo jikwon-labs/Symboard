@@ -30,7 +30,7 @@ enum NewTerminalDialog {
             if panel.runModal() == .OK, let url = panel.url { cwdField.stringValue = url.path }
         }
         let profilePopup = NSPopUpButton(frame: .zero, pullsDown: false)
-        profilePopup.addItem(withTitle: "Default account")
+        profilePopup.addItem(withTitle: L("Default account"))
         for p in profiles { profilePopup.addItem(withTitle: "\(p.name) (\(p.agent.displayName))") }
 
         let grid = NSGridView(views: [

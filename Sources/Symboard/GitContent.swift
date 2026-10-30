@@ -226,22 +226,22 @@ struct GitCardView: View {
         if let s = card.status {
             VStack(alignment: .leading, spacing: 10) {
                 if s.isClean {
-                    section("CHANGES")
+                    section(L("CHANGES"))
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.seal.fill").foregroundStyle(Color(hex: "#6FCF97"))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Working tree clean").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
-                            Text("Nothing to commit.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                            Text(L("Working tree clean")).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
+                            Text(L("Nothing to commit.")).font(.system(size: 11)).foregroundStyle(Color.symDim)
                         }
                     }
                 } else {
                     HStack(spacing: 6) {
-                        section("CHANGES")
+                        section(L("CHANGES"))
                         Text("\(card.selected.count)/\(s.changes.count)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                         Text("+\(card.added)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color(hex: "#6FCF97"))
                         Text("\u{2212}\(card.removed)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color(hex: "#E8564A"))
                         Spacer()
-                        Button(card.excluded.isEmpty ? "None" : "All") {
+                        Button(L(card.excluded.isEmpty ? "None" : "All")) {
                             card.excluded = card.excluded.isEmpty ? Set(s.changes.map(\.path)) : []
                         }
                         .buttonStyle(.plainHit).font(.system(size: 11)).foregroundStyle(Color.symDim)
@@ -260,7 +260,7 @@ struct GitCardView: View {
                             .onSubmit { Task { await card.commit() } }
                         if card.generating { ProgressView().controlSize(.mini) } else {
                             Button { Task { await card.generateMessage(agent: "claude") } } label: { Image(systemName: "sparkles") }
-                                .buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip("Write the message with Claude (uses your plan)")
+                                .buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip(L("Write the message with Claude (uses your plan)"))
                         }
                     }
                     .padding(.horizontal, 10).padding(.vertical, 8)
@@ -276,7 +276,7 @@ struct GitCardView: View {
                     }
                     .buttonStyle(.plainHit).axName(buttonTitle(s)).disabled(card.busy || card.selected.isEmpty)
                 }
-                section("RECENT").padding(.top, 4)
+                section(L("RECENT")).padding(.top, 4)
                 ForEach(card.recent.prefix(3), id: \.hash) { c in
                     HStack(spacing: 8) {
                         Circle().fill(Color.symDim).frame(width: 4, height: 4)
@@ -303,8 +303,8 @@ struct GitCardView: View {
             .padding(12)
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Not a git repository").foregroundStyle(Color.symDim).font(.system(size: 12))
-                TextField("Repository path", text: $card.repo).textFieldStyle(.roundedBorder)
+                Text(L("Not a git repository")).foregroundStyle(Color.symDim).font(.system(size: 12))
+                TextField(L("Repository path"), text: $card.repo).textFieldStyle(.roundedBorder)
                     .onSubmit {
                         card.repo = (card.repo as NSString).expandingTildeInPath
                         card.onRepoChange(card.repo)
@@ -345,7 +345,7 @@ struct GitCardView: View {
 
     var history: some View {
         VStack(alignment: .leading, spacing: 8) {
-            section("HISTORY")
+            section(L("HISTORY"))
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(card.recent, id: \.hash) { c in
@@ -376,13 +376,13 @@ final class GitContent: NodeContent {
         card = GitCardModel(repo: node.text ?? NSHomeDirectory()) { [weak model] path in
             model?.mutateNode(id) { $0.text = path }
         }
-        host = CanvasHostingView(rootView: GitCardView(card: card).environment(\.colorScheme, .dark))
+        host = CanvasHostingView(rootView: GitCardView(card: card).localized())
     }
 
     func sync(node: BoardNode) {}
 
     func menuItems() -> [NSMenuItem] {
-        [ClosureMenuItem(title: "Refresh") { [weak self] in
+        [ClosureMenuItem(title: L("Refresh")) { [weak self] in
             guard let self else { return }
             Task { await self.card.refresh() }
         }]

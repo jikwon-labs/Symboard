@@ -71,9 +71,9 @@ final class ProfilesModel: ObservableObject {
         let folder = NSTextField(string: "~/.symboard-profiles/claude-work")
         agentPopup.target = nil
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Name"), name],
-            [NSTextField(labelWithString: "CLI"), agentPopup],
-            [NSTextField(labelWithString: "Settings folder"), folder],
+            [NSTextField(labelWithString: L("Name")), name],
+            [NSTextField(labelWithString: L("CLI")), agentPopup],
+            [NSTextField(labelWithString: L("Settings folder")), folder],
         ])
         grid.column(at: 0).xPlacement = .trailing
         grid.rowSpacing = 8
@@ -94,11 +94,11 @@ struct ProfilesPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Account Profiles").font(.system(size: 12, weight: .semibold))
+                Text(L("Account Profiles")).font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Button("Add") { profiles.addWithDialog() }.controlSize(.small).axName("Add")
+                Button(L("Add")) { profiles.addWithDialog() }.controlSize(.small).axName("Add")
             }
-            Text("Each profile gives a CLI its own settings folder (Claude Code: CLAUDE_CONFIG_DIR, Codex: CODEX_HOME). Pick a profile in the New Terminal dialog.")
+            Text(L("Each profile gives a CLI its own settings folder (Claude Code: CLAUDE_CONFIG_DIR, Codex: CODEX_HOME). Pick a profile in the New Terminal dialog."))
                 .font(.system(size: 10)).foregroundStyle(.secondary)
             List(profiles.profiles) { p in
                 HStack {
@@ -107,8 +107,8 @@ struct ProfilesPanelView: View {
                         Text(p.configDir).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     }
                     Spacer()
-                    Button("Launch") { launch(p) }.controlSize(.small).axName("Launch")
-                    Button { profiles.remove(p.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit).tip("Delete profile")
+                    Button(L("Launch")) { launch(p) }.controlSize(.small).axName("Launch")
+                    Button { profiles.remove(p.id) } label: { Image(systemName: "trash") }.buttonStyle(.plainHit).tip(L("Delete profile"))
                 }
             }
             .listStyle(.plain)

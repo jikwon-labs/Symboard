@@ -266,6 +266,13 @@ final class CanvasView: NSView {
         layoutLinks()
     }
 
+    /// 화면 모드가 바뀌면 층에 그린 선·화살표 색을 이 뷰의 모드로 다시 넣는다(10차).
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        effectiveAppearance.performAsCurrentDrawingAppearance { layoutLinks() }
+        needsDisplay = true
+    }
+
     /// 연결선 끝점: 노드면 노드 사각형, 팀이면 그룹 프레임 몸통.
     func layoutLinks() {
         guard let ws = workspace else { return }

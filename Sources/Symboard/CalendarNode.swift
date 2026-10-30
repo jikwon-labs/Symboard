@@ -25,11 +25,11 @@ struct CalendarNodeView: View {
                 HStack(spacing: 8) {
                     Text(month, format: .dateTime.month(.wide).year()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                     Spacer()
-                    Button { editing = (cal.startOfDay(for: Date()), nil) } label: { Label("New", systemImage: "plus") }
+                    Button { editing = (cal.startOfDay(for: Date()), nil) } label: { Label(L("New"), systemImage: "plus") }
                         .buttonStyle(.plainHit).foregroundStyle(Color.symAccent).font(.system(size: 12, weight: .medium)).axName("New event")
-                    Button("Today") { month = Date() }.buttonStyle(ChipStyle(on: false)).axName("Today")
-                    Button { month = cal.date(byAdding: .month, value: -1, to: month)! } label: { Image(systemName: "chevron.up") }.buttonStyle(.plainHit).tip("Previous month")
-                    Button { month = cal.date(byAdding: .month, value: 1, to: month)! } label: { Image(systemName: "chevron.down") }.buttonStyle(.plainHit).tip("Next month")
+                    Button(L("Today")) { month = Date() }.buttonStyle(ChipStyle(on: false)).axName("Today")
+                    Button { month = cal.date(byAdding: .month, value: -1, to: month)! } label: { Image(systemName: "chevron.up") }.buttonStyle(.plainHit).tip(L("Previous month"))
+                    Button { month = cal.date(byAdding: .month, value: 1, to: month)! } label: { Image(systemName: "chevron.down") }.buttonStyle(.plainHit).tip(L("Next month"))
                 }
                 .foregroundStyle(Color.symDim)
                 HStack(spacing: 0) {
@@ -167,11 +167,11 @@ struct EventEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                TextField("", text: $title, prompt: Text("Event title").foregroundColor(Color.symDim))
+                TextField("", text: $title, prompt: Text(L("Event title")).foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.symText)
                     .autoFocus()
                     .onSubmit(submit)
-                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close")
+                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Close"))
             }
             HStack(spacing: 6) {
                 Image(systemName: "calendar").foregroundStyle(Color.symDim)
@@ -181,7 +181,7 @@ struct EventEditor: View {
         .onExitCommand(perform: cancel)
             HStack {
                 Image(systemName: "clock").foregroundStyle(Color.symDim)
-                Text("All day").font(.system(size: 12)).foregroundStyle(Color.symText)
+                Text(L("All day")).font(.system(size: 12)).foregroundStyle(Color.symText)
                 Spacer()
                 Toggle("", isOn: $allDay).toggleStyle(.switch).labelsHidden().tint(Color.symAccent).controlSize(.mini)
             }
@@ -194,14 +194,14 @@ struct EventEditor: View {
                     .buttonStyle(.plainHit).axName("Color \(hex)")
                 }
             }
-            TextField("", text: $notes, prompt: Text("Notes").foregroundColor(Color.symDim))
+            TextField("", text: $notes, prompt: Text(L("Notes")).foregroundColor(Color.symDim))
                 .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText)
                 .onSubmit(submit)
             HStack {
-                if event != nil { Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip("Delete event") }
+                if event != nil { Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip(L("Delete event")) }
                 Spacer()
-                Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
-                Button(event == nil ? "Add event" : "Save", action: submit)
+                Button(L("Cancel"), action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
+                Button(L(event == nil ? "Add event" : "Save"), action: submit)
                 .buttonStyle(PillButtonStyle(prominent: true)).axName(event == nil ? "Add event" : "Save").disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }

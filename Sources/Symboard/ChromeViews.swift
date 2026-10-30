@@ -14,10 +14,10 @@ struct TopLeftBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Button { c.goHome() } label: {
-                HStack(spacing: 6) { Image(systemName: "arrow.left"); Text("Home") }
+                HStack(spacing: 6) { Image(systemName: "arrow.left"); Text(L("Home")) }
             }
             .buttonStyle(PillButtonStyle(active: chrome.showingHome))
-            .tip("Back to projects")
+            .tip(L("Back to projects"))
 
             if !chrome.showingHome {
                 HStack(spacing: 4) {
@@ -26,7 +26,7 @@ struct TopLeftBar: View {
                             Button((p as NSString).lastPathComponent) { c.openProject(p) }
                         }
                         Divider()
-                        Button("Open Folder...") { c.chooseProjectFolder() }
+                        Button(L("Open Folder...")) { c.chooseProjectFolder() }
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "folder.fill").foregroundStyle(Color.symDim)
@@ -51,16 +51,16 @@ struct TopLeftBar: View {
                     Button { c.newWorkspace(nil) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }
                         .buttonStyle(.plainHit)
                         .foregroundStyle(Color.symDim)
-                        .tip("New workspace")
+                        .tip(L("New workspace"))
                 }
                 .padding(4)
                 .floatingCapsule(radius: 12)
 
                 Button { c.closeProject() } label: {
-                    HStack(spacing: 6) { Image(systemName: "xmark"); Text("Close") }
+                    HStack(spacing: 6) { Image(systemName: "xmark"); Text(L("Close")) }
                 }
                 .buttonStyle(PillButtonStyle())
-                .tip("Close this project and return home")
+                .tip(L("Close this project and return home"))
             }
         }
         .foregroundStyle(Color.symText)
@@ -86,7 +86,7 @@ struct WorkspaceTab: View {
                 Button { c.closeWorkspace(ws.id) } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
                     .buttonStyle(.plainHit)
                     .foregroundStyle(Color.symDim)
-                    .tip("Close workspace")
+                    .tip(L("Close workspace"))
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 5)
@@ -111,14 +111,14 @@ struct TopRightBar: View {
                 // 일하는 콘솔이 있으면 점을 강조색으로 바꾸고 개수를 붙인다.
                 Circle().fill(chrome.workingCount > 0 ? Color.symAccent : (chrome.liveCount > 0 ? Color.green : Color.symDim)).frame(width: 7, height: 7)
                 Text("\(chrome.liveCount)").font(.system(size: 12, weight: .semibold))
-                Text("live").font(.system(size: 12)).foregroundStyle(Color.symDim)
+                Text(L("live")).font(.system(size: 12)).foregroundStyle(Color.symDim)
                 if chrome.workingCount > 0 {
-                    Text("· \(chrome.workingCount) working").font(.system(size: 12)).foregroundStyle(Color.symAccent)
+                    Text("· " + L("%d working", chrome.workingCount)).font(.system(size: 12)).foregroundStyle(Color.symAccent)
                 }
             }
             .padding(.horizontal, 11).padding(.vertical, 6)
             .floatingCapsule(radius: 10)
-            .hint("Running consoles")
+            .hint(L("Running consoles"))
 
             Button { chrome.usageOpen.toggle() } label: {
                 HStack(spacing: 6) {
@@ -130,31 +130,41 @@ struct TopRightBar: View {
                 }
             }
             .buttonStyle(PillButtonStyle(active: chrome.usageOpen))
-            .tip("Usage")
+            .tip(L("Usage"))
             .popover(isPresented: $chrome.usageOpen, arrowEdge: .bottom) {
                 UsagePopover(store: c.model.usage) { chrome.usageOpen = false }
             }
 
             HStack(spacing: 2) {
-                iconButton("person.crop.circle", "Accounts") { chrome.accountsOpen.toggle() }
+                // 언어 바꾸기(10차): 지금 언어를 보이고, 누르면 다른 언어로.
+                Button { c.toggleLanguage() } label: {
+                    Text(L10n.current == .ko ? "한" : "EN")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .frame(width: 30, height: 28)
+                }
+                .buttonStyle(.plainHit)
+                .foregroundStyle(Color.symText.opacity(0.85))
+                .tip(L10n.current == .ko ? "Switch to English" : "한국어로 바꾸기")
+                .axName("Language")
+                iconButton("person.crop.circle", L("Accounts")) { chrome.accountsOpen.toggle() }
                     .popover(isPresented: $chrome.accountsOpen, arrowEdge: .bottom) { AccountsPopover(profiles: c.model.profiles, c: c) }
-                iconButton("gearshape", "Settings") { c.openSettings() }
+                iconButton("gearshape", L("Settings")) { c.openSettings() }
                 Menu {
-                    Button("Mission Map") { c.openMission() }
-                    Button("Loops") { c.openLoops() }
-                    Button("Memory") { c.openMemory() }
-                    Button("Usage") { c.openUsage() }
-                    Button("Accounts") { c.openProfiles() }
+                    Button(L("Mission Map")) { c.openMission() }
+                    Button(L("Loops")) { c.openLoops() }
+                    Button(L("Memory")) { c.openMemory() }
+                    Button(L("Usage")) { c.openUsage() }
+                    Button(L("Accounts")) { c.openProfiles() }
                     Divider()
-                    Button("Studio") { c.openStudio(nil) }
-                    Button("Zoom to Fit") { c.zoomToFit(nil) }
+                    Button(L("Studio")) { c.openStudio(nil) }
+                    Button(L("Zoom to Fit")) { c.zoomToFit(nil) }
                 } label: {
                     Image(systemName: "square.grid.2x2")
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .frame(width: 30, height: 28)
-                .hint("Tools")
+                .hint(L("Tools"))
             }
             .padding(.horizontal, 4).padding(.vertical, 2)
             .floatingCapsule(radius: 10)
@@ -181,12 +191,12 @@ struct LeftRail: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            toolButton("cursorarrow", "Select (V)", active: chrome.tool == .select) { c.setTool(.select) }
+            toolButton("cursorarrow", L("Select (V)"), active: chrome.tool == .select) { c.setTool(.select) }
             Button { chrome.spawnMenuOpen.toggle() } label: {
                 Image(systemName: "sparkle").font(.system(size: 16, weight: .semibold))
             }
             .buttonStyle(RailToolStyle(active: isPlacingAgent, tint: .symAccent))
-            .tip("Spawn agent")
+            .tip(L("Spawn agent"))
             .popover(isPresented: $chrome.spawnMenuOpen, arrowEdge: .trailing) {
                 SpawnAgentMenu(catalog: catalog) { choice in
                     chrome.spawnMenuOpen = false
@@ -194,24 +204,24 @@ struct LeftRail: View {
                     c.setTool(.place(.agent(choice.id)))
                 }
             }
-            toolButton("plus.square.on.square", "Duplicate selection", active: false) { c.duplicateSelection() }
-            Button { c.setTool(.place(.text)) } label: { Text("Aa").font(.system(size: 14, weight: .medium)) }
+            toolButton("plus.square.on.square", L("Duplicate selection"), active: false) { c.duplicateSelection() }
+            Button { c.setTool(.place(.text)) } label: { Text(L("Aa")).font(.system(size: 14, weight: .medium)) }
                 .buttonStyle(RailToolStyle(active: chrome.tool == .place(.text)))
-                .tip("Text")
-            toolButton("pencil.tip", "Pen", active: chrome.tool == .pen) { c.setTool(chrome.tool == .pen ? .select : .pen) }
-            toolButton("eraser", "Eraser", active: chrome.tool == .eraser) { c.setTool(chrome.tool == .eraser ? .select : .eraser) }
+                .tip(L("Text"))
+            toolButton("pencil.tip", L("Pen"), active: chrome.tool == .pen) { c.setTool(chrome.tool == .pen ? .select : .pen) }
+            toolButton("eraser", L("Eraser"), active: chrome.tool == .eraser) { c.setTool(chrome.tool == .eraser ? .select : .eraser) }
             Divider().frame(width: 24).overlay(Color.symBorder)
             Button { chrome.shapeOpen.toggle() } label: { Image(systemName: "square.on.circle") }
                 .buttonStyle(RailToolStyle(active: { if case .place(.shape) = chrome.tool { return true } else { return false } }()))
-                .tip("Shapes")
+                .tip(L("Shapes"))
                 .popover(isPresented: $chrome.shapeOpen, arrowEdge: .trailing) {
                     ShapePicker { k in chrome.shapeOpen = false; c.setTool(.place(k == "sticky" ? .sticky : .shape(k))) }
                 }
             DiagramRailButton(maker: c.diagrams)
-            toolButton("globe", "Web tile", active: chrome.tool == .place(.web)) { c.setTool(.place(.web)) }
-            toolButton("photo", "Image", active: false) { c.addImageFromPanel() }
+            toolButton("globe", L("Web tile"), active: chrome.tool == .place(.web)) { c.setTool(.place(.web)) }
+            toolButton("photo", L("Image"), active: false) { c.addImageFromPanel() }
             Divider().frame(width: 24).overlay(Color.symBorder)
-            toolButton("arrow.up.left.and.arrow.down.right", "Zoom to fit", active: false) { c.zoomToFit(nil) }
+            toolButton("arrow.up.left.and.arrow.down.right", L("Zoom to fit"), active: false) { c.zoomToFit(nil) }
         }
         .padding(.vertical, 8).padding(.horizontal, 5)
         .floatingCapsule(radius: 22)
@@ -249,7 +259,7 @@ struct SpawnAgentMenu: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("SPAWN AGENT")
+            Text(L("SPAWN AGENT"))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .tracking(1.5)
                 .foregroundStyle(Color.symDim)
@@ -266,7 +276,7 @@ struct SpawnAgentMenu: View {
                         if choice.id == catalog.lastChoiceID {
                             Image(systemName: "checkmark").foregroundStyle(Color.symAccent)
                         } else if !catalog.installed.contains(choice.id) {
-                            Text("not found").font(.system(size: 10)).foregroundStyle(Color.symDim)
+                            Text(L("not found")).font(.system(size: 10)).foregroundStyle(Color.symDim)
                         }
                     }
                     .padding(.horizontal, 12).padding(.vertical, 6)
@@ -277,7 +287,7 @@ struct SpawnAgentMenu: View {
             Button { showAll.toggle() } label: {
                 HStack {
                     Image(systemName: "square.grid.2x2").foregroundStyle(Color.symDim)
-                    Text(showAll ? "Installed only" : "All agents").foregroundStyle(Color.symText)
+                    Text(L(showAll ? "Installed only" : "All agents")).foregroundStyle(Color.symText)
                     Spacer()
                     Text("\(AgentCatalog.known.count)").foregroundStyle(Color.symDim).font(.system(size: 11, design: .monospaced))
                     Image(systemName: "chevron.right").foregroundStyle(Color.symDim)
@@ -287,7 +297,7 @@ struct SpawnAgentMenu: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(HoverRowStyle()).axName(showAll ? "Fewer agents" : "All agents")
-            Text("then click the canvas to drop it")
+            Text(L("then click the canvas to drop it"))
                 .font(.system(size: 11)).foregroundStyle(Color.symDim)
                 .padding(.horizontal, 12).padding(.bottom, 10)
         }
@@ -305,7 +315,7 @@ struct HoverRowStyle: ButtonStyle {
         @State private var hover = false
         var body: some View {
             configuration.label
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(hover || configuration.isPressed ? 0.06 : 0)))
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.symText.opacity(hover || configuration.isPressed ? 0.06 : 0)))
                 .onHover { hover = $0 }
         }
     }
@@ -322,26 +332,26 @@ struct RightRail: View {
     var body: some View {
         VStack(spacing: 4) {
             Button { layersOpen.toggle() } label: { Image(systemName: "square.3.layers.3d") }
-                .buttonStyle(RailButtonStyle()).tip("Layers")
+                .buttonStyle(RailButtonStyle()).tip(L("Layers"))
                 .popover(isPresented: $layersOpen, arrowEdge: .leading) { LayersList(model: c.model, c: c) }
             Button { chrome.insertOpen.toggle() } label: { Image(systemName: "checklist") }
-                .buttonStyle(RailButtonStyle()).tip("Insert checklist, board, note")
+                .buttonStyle(RailButtonStyle()).tip(L("Insert checklist, board, note"))
                 .popover(isPresented: $chrome.insertOpen, arrowEdge: .leading) {
                     InsertMenu { p in chrome.insertOpen = false; c.setTool(.place(p)) }
                 }
             // 원본 오른쪽 막대 셋째: 오케스트레이터를 바로 놓는다(설정은 위쪽 톱니).
             Button { c.addOrchestratorNearSelection() } label: { Image(systemName: "circle.hexagongrid") }
-                .buttonStyle(RailButtonStyle()).tip("Orchestrator")
+                .buttonStyle(RailButtonStyle()).tip(L("Orchestrator"))
             Divider().frame(width: 22).overlay(Color.symBorder)
             Button { c.openStudio(tab: "Code") } label: { Image(systemName: "folder") }
-                .buttonStyle(RailButtonStyle()).tip("Code studio")
+                .buttonStyle(RailButtonStyle()).tip(L("Code studio"))
             Button { c.openStudio(tab: "Markdown") } label: { Image(systemName: "doc.text") }
-                .buttonStyle(RailButtonStyle()).tip("Markdown studio")
+                .buttonStyle(RailButtonStyle()).tip(L("Markdown studio"))
             // 원본처럼 먼저 작은 GENERATE PDF 메뉴. 이미 열려 있으면 바로 닫는다.
             Button {
                 if c.studioState.kind == "Documents" { c.closeStudio() } else { docMenuOpen.toggle() }
             } label: { Image(systemName: "doc.richtext") }
-                .buttonStyle(RailButtonStyle()).tip("Document studio")
+                .buttonStyle(RailButtonStyle()).tip(L("Document studio"))
                 .popover(isPresented: $docMenuOpen, arrowEdge: .leading) {
                     DocGenerateMenu { kind in docMenuOpen = false; c.openDocuments(kind: kind) }
                 }
@@ -359,7 +369,7 @@ struct RightRail: View {
                         }
                     }
             }
-            .buttonStyle(RailButtonStyle()).tip("Loops")
+            .buttonStyle(RailButtonStyle()).tip(L("Loops"))
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .floatingCapsule(radius: 20)
@@ -374,12 +384,12 @@ struct DocGenerateMenu: View {
     var pick: (String?) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("GENERATE PDF").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Color.symDim)
+            Text(L("GENERATE PDF")).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Color.symDim)
                 .padding(.horizontal, 8).padding(.top, 4).padding(.bottom, 4)
             ForEach(DocKind.all.prefix(3)) { k in row(k.icon, k.title) { pick(k.id) } }
             Divider().overlay(Color.symBorder).padding(.vertical, 4)
-            row("sparkles", "Ask for anything...") { pick(nil) }
-            Text("Written by your CLI, exported as PDF.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+            row("sparkles", L("Ask for anything...")) { pick(nil) }
+            Text(L("Written by your CLI, exported as PDF.")).font(.system(size: 11)).foregroundStyle(Color.symDim)
                 .padding(.horizontal, 8).padding(.top, 2).padding(.bottom, 4)
         }
         .padding(8)
@@ -406,11 +416,11 @@ struct InsertMenu: View {
     var pick: (Placement) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            row("checklist", "Checklist", "Objectives with a progress counter") { pick(.checklist) }
-            row("rectangle.split.3x1", "Board", "Kanban columns with cards") { pick(.kanban) }
-            row("calendar", "Calendar", "A month with events") { pick(.calendar) }
-            row("note.text", "Sticky note", "A paper note") { pick(.sticky) }
-            row("point.3.connected.trianglepath.dotted", "Orchestrator", "Watch and command many consoles") { pick(.orchestrator) }
+            row("checklist", L("Checklist"), L("Objectives with a progress counter")) { pick(.checklist) }
+            row("rectangle.split.3x1", L("Board"), L("Kanban columns with cards")) { pick(.kanban) }
+            row("calendar", L("Calendar"), L("A month with events")) { pick(.calendar) }
+            row("note.text", L("Sticky note"), L("A paper note")) { pick(.sticky) }
+            row("point.3.connected.trianglepath.dotted", L("Orchestrator"), L("Watch and command many consoles")) { pick(.orchestrator) }
         }
         .padding(6)
         .frame(width: 250)
@@ -441,7 +451,7 @@ struct LayersList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("LAYERS").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.5)
+            Text(L("LAYERS")).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.5)
                 .foregroundStyle(Color.symDim).padding(10)
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
@@ -507,16 +517,16 @@ struct BottomBar: View {
                     Text(cf.message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.symText)
                     Button(cf.button) { chrome.confirm = nil; cf.action() }
                         .buttonStyle(PillButtonStyle(prominent: true)).axName(cf.button)
-                    Button("Cancel") { chrome.confirm = nil; cf.onCancel?() }.axName("Cancel")
+                    Button(L("Cancel")) { chrome.confirm = nil; cf.onCancel?() }.axName("Cancel")
                         .buttonStyle(PillButtonStyle())
                 }
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .floatingCapsule(radius: 14)
             } else if let s = chrome.suggestion, !chrome.overlayOpen {
                 HStack(spacing: 6) {
-                    Button(s) { chrome.command = "@all git status"; focusRequest += 1 }
+                    Button(L(s)) { chrome.command = "@all git status"; focusRequest += 1 }
                         .buttonStyle(.plainHit).axName(s)
-                    Button { chrome.suggestion = nil } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.tip("Dismiss hint")
+                    Button { chrome.suggestion = nil } label: { Image(systemName: "xmark").font(.system(size: 8, weight: .bold)) }.tip(L("Dismiss hint"))
                         .buttonStyle(.plainHit)
                 }
                 .font(.system(size: 11))
@@ -525,18 +535,18 @@ struct BottomBar: View {
                 .floatingCapsule(radius: 10)
             }
             HStack(spacing: 6) {
-                Button("New console") { c.spawnQuick(count: 1) }.axName("New console")
-                Button("Spawn 4") { c.spawnQuick(count: 4) }.axName("Spawn 4")
-                Button("Group") { c.openComposer(nil) }.axName("Group")
+                Button(L("New console")) { c.spawnQuick(count: 1) }.axName("New console")
+                Button(L("Spawn 4")) { c.spawnQuick(count: 4) }.axName("Spawn 4")
+                Button(L("Group")) { c.openComposer(nil) }.axName("Group")
                     .background(PopoverAnchor { c.composerAnchor = $0 })
-                Menu("Presets") {
+                Menu(L("Presets")) {
                     ForEach(ComposerPreset.all) { p in Button(p.name) { c.spawnPreset(p) } }
                 }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .modifier(PillLook())
-                Button("Pause all") { c.pauseAll(true) }.axName("Pause all")
-                Button("Resume all") { c.pauseAll(false) }.axName("Resume all")
-                Button("Memory") { c.openMemory() }.axName("Memory")
+                Button(L("Pause all")) { c.pauseAll(true) }.axName("Pause all")
+                Button(L("Resume all")) { c.pauseAll(false) }.axName("Resume all")
+                Button(L("Memory")) { c.openMemory() }.axName("Memory")
             }
             .buttonStyle(PillButtonStyle())
             if mention.isOpen {
@@ -567,7 +577,7 @@ struct BottomBar: View {
                         .background(Circle().fill(chrome.command.isEmpty ? Color.symRaised : Color.symAccent))
                 }
                 .buttonStyle(.plainHit)
-                .tip("Send")
+                .tip(L("Send"))
             }
             .padding(.leading, 8).padding(.trailing, 8).padding(.vertical, 7)
             .frame(width: 520)
@@ -580,9 +590,9 @@ struct BottomBar: View {
 
     var placeholder: String {
         if let id = chrome.selectedNodeID, let n = c.model.node(id), n.kind == .terminal {
-            return "Message \(n.title) · @ to direct"
+            return L("Message %@ · @ to direct", n.title)
         }
-        return "Type a command · @ to direct"
+        return L("Type a command · @ to direct")
     }
 }
 
@@ -594,10 +604,10 @@ struct CommandThreadView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                Text("THREAD").font(.system(size: 12, weight: .semibold, design: .monospaced)).tracking(1.6).foregroundStyle(Color.symDim)
+                Text(L("THREAD")).font(.system(size: 12, weight: .semibold, design: .monospaced)).tracking(1.6).foregroundStyle(Color.symDim)
                 Spacer()
                 Label(folder, systemImage: "folder").font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.8))
-                Button("Clear") { chrome.thread.clear(); chrome.threadOpen = false }
+                Button(L("Clear")) { chrome.thread.clear(); chrome.threadOpen = false }
                     .buttonStyle(.plainHit).font(.system(size: 12)).foregroundStyle(Color.symDim).axName("Clear thread")
             }
             ScrollViewReader { proxy in
@@ -609,7 +619,7 @@ struct CommandThreadView: View {
                                 mark
                                 Button(cf.button) { chrome.confirm = nil; cf.action() }
                                     .buttonStyle(PillButtonStyle(prominent: true)).axName(cf.button)
-                                Button("Cancel") { chrome.confirm = nil; cf.onCancel?() }
+                                Button(L("Cancel")) { chrome.confirm = nil; cf.onCancel?() }
                                     .buttonStyle(PillButtonStyle()).axName("Cancel")
                             }
                             .id("confirm")
@@ -680,7 +690,7 @@ struct BranchChip: View {
                     .frame(width: 28, height: 28)
                     .floatingCapsule(radius: 14)
             }
-            .buttonStyle(.plainHit).tip("Keyboard shortcuts (?)").axName("Keyboard shortcuts")
+            .buttonStyle(.plainHit).tip(L("Keyboard shortcuts (?)")).axName("Keyboard shortcuts")
             .hiddenOnHome(chrome)
         }
     }
@@ -689,7 +699,7 @@ struct BranchChip: View {
         if let b = chrome.branch {
             Button { chrome.gitOpen.toggle() } label: { chip(b) }
                 .buttonStyle(.plainHit)
-                .tip("Branch and changes: click to commit")
+                .tip(L("Branch and changes: click to commit"))
                 .popover(isPresented: $chrome.gitOpen, arrowEdge: .top) {
                     if let card = chrome.gitCard {
                         GitCardView(card: card) { chrome.gitOpen = false }
@@ -729,12 +739,12 @@ struct ZoomControl: View {
     let c: MainWindowController
     var body: some View {
         HStack(spacing: 2) {
-            Button { c.zoomOut(nil) } label: { Image(systemName: "minus").frame(width: 24, height: 24) }.tip("Zoom out")
+            Button { c.zoomOut(nil) } label: { Image(systemName: "minus").frame(width: 24, height: 24) }.tip(L("Zoom out"))
             Button { c.zoomReset(nil) } label: {
                 Text("\(chrome.zoomPercent)%").font(.system(size: 12, weight: .medium, design: .monospaced)).frame(minWidth: 44)
             }
-            .tip("Reset to 100%")
-            Button { c.zoomIn(nil) } label: { Image(systemName: "plus").frame(width: 24, height: 24) }.tip("Zoom in")
+            .tip(L("Reset to 100%"))
+            Button { c.zoomIn(nil) } label: { Image(systemName: "plus").frame(width: 24, height: 24) }.tip(L("Zoom in"))
         }
         .buttonStyle(.plainHit)
         .foregroundStyle(Color.symText)
@@ -761,15 +771,15 @@ struct ResumeToast: View {
             HStack(spacing: 12) {
                 Image(systemName: "clock.arrow.circlepath").font(.system(size: 16)).foregroundStyle(Color.symAccent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Resume all conversations?").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
-                    Text("\(chrome.resumeCount) console\(chrome.resumeCount == 1 ? "" : "s") can pick up their last chat")
+                    Text(L("Resume all conversations?")).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                    Text(Ln(chrome.resumeCount, "%d console can pick up its last chat", "%d consoles can pick up their last chat"))
                         .font(.system(size: 11)).foregroundStyle(Color.symDim)
                 }
-                Button("Yes") { c.answerResumeAll(true) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Yes")
-                Button("No") { c.answerResumeAll(false) }.buttonStyle(PillButtonStyle()).axName("No")
+                Button(L("Yes")) { c.answerResumeAll(true) }.buttonStyle(PillButtonStyle(prominent: true)).axName("Yes")
+                Button(L("No")) { c.answerResumeAll(false) }.buttonStyle(PillButtonStyle()).axName("No")
                 Button { chrome.resumeDismissed = true } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
                     .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
-                    .tip("Decide per console")
+                    .tip(L("Decide per console"))
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
             .floatingCapsule(radius: 14)
@@ -808,7 +818,7 @@ struct HomeView: View {
     var body: some View {
         let paths = Projects.paths(in: model.state.workspaces)
         VStack(alignment: .leading, spacing: 18) {
-            Text("Projects").font(Font(Theme.handwriting(size: 40))).foregroundStyle(Color.symText)
+            Text(L("Projects")).font(Font(Theme.handwriting(size: 40))).foregroundStyle(Color.symText)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 240, maximum: 300), spacing: 14)], alignment: .leading, spacing: 14) {
                 ForEach(paths, id: \.self) { p in
                     let wss = model.state.workspaces.filter { $0.projectPath == p }
@@ -821,7 +831,7 @@ struct HomeView: View {
                             }
                             Text((p as NSString).abbreviatingWithTildeInPath).font(.system(size: 11, design: .monospaced))
                                 .foregroundStyle(Color.symDim).lineLimit(1).truncationMode(.middle)
-                            Text("\(wss.count) workspace\(wss.count == 1 ? "" : "s") · \(wss.reduce(0) { $0 + $1.nodes.count }) items")
+                            Text(Ln(wss.count, "%d workspace", "%d workspaces") + " · " + Ln(wss.reduce(0) { $0 + $1.nodes.count }, "%d item", "%d items"))
                                 .font(.system(size: 11)).foregroundStyle(Color.symDim)
                         }
                         .foregroundStyle(Color.symText)
@@ -835,7 +845,7 @@ struct HomeView: View {
                 Button { c.chooseProjectFolder() } label: {
                     VStack(spacing: 8) {
                         Image(systemName: "plus").font(.system(size: 20))
-                        Text("Open folder").font(.system(size: 13, weight: .medium))
+                        Text(L("Open folder")).font(.system(size: 13, weight: .medium))
                     }
                     .foregroundStyle(Color.symDim)
                     .frame(maxWidth: .infinity, minHeight: 92)
@@ -856,7 +866,7 @@ struct DiagramRailButton: View {
     var body: some View {
         Button { maker.open.toggle() } label: { Image(systemName: "point.3.connected.trianglepath.dotted") }
             .buttonStyle(RailToolStyle(active: maker.open || maker.drawing != nil))
-            .tip("Diagram")
+            .tip(L("Diagram"))
             .popover(isPresented: $maker.open, arrowEdge: .trailing) { DiagramPopover(maker: maker) }
     }
 }

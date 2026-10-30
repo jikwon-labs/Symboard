@@ -43,10 +43,13 @@ public enum AgentLimits {
         return consoles.filter { targets.contains($0) }.count
     }
 
-    /// 하나 더 열면 넘는 제한. 없으면 nil. 문구는 사용자 확인 띠에 그대로 쓴다(앱 글자가 영어).
-    public static func exceeded(callerDepth: Int, opened: Int, maxDepth: Int, maxOpened: Int) -> String? {
-        if callerDepth + 1 > maxDepth { return "chain step \(callerDepth + 1) is past the limit of \(maxDepth)" }
-        if opened + 1 > maxOpened { return "agents already opened \(opened) console\(opened == 1 ? "" : "s") (limit \(maxOpened))" }
+    /// 하나 더 열면 넘는 제한. 없으면 nil. 에이전트에게 돌려줄 글이라 영어(DECISIONS 10차-3). 확인 띠 글은 `localized`.
+    public static func exceeded(callerDepth: Int, opened: Int, maxDepth: Int, maxOpened: Int, localized: Bool = false) -> String? {
+        let tr: (String) -> String = localized ? L : { $0 }
+        if callerDepth + 1 > maxDepth { return String(format: tr("chain step %d is past the limit of %d"), callerDepth + 1, maxDepth) }
+        if opened + 1 > maxOpened {
+            return String(format: tr(opened == 1 ? "agents already opened %d console (limit %d)" : "agents already opened %d consoles (limit %d)"), opened, maxOpened)
+        }
         return nil
     }
 }

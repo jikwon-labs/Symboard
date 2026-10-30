@@ -26,61 +26,61 @@ struct SelectionPanel: View {
             VStack(alignment: .leading, spacing: 10) {
                 switch n.kind {
                 case .sticky:
-                    section("PAPER") { swatches(Self.paper, current: n.colorHex) { hex in update(n.id) { $0.colorHex = hex } } }
+                    section(L("PAPER")) { swatches(Self.paper, current: n.colorHex) { hex in update(n.id) { $0.colorHex = hex } } }
                 case .text:
                     let st = n.style ?? NodeStyle()
-                    section("COLOR") { swatches(Self.ink, current: st.textColorHex ?? Self.ink[0]) { hex in style(n.id) { $0.textColorHex = hex } } }
-                    section("FONT") {
+                    section(L("COLOR")) { swatches(Self.ink, current: st.textColorHex ?? Self.ink[0]) { hex in style(n.id) { $0.textColorHex = hex } } }
+                    section(L("FONT")) {
                         HStack(spacing: 4) {
                             ForEach(TextStyleFonts.fonts, id: \.0) { f in
                                 chip(f.1, on: (st.font ?? "hand") == f.0) { style(n.id) { $0.font = f.0 } }
                             }
                         }
                     }
-                    section("SIZE") {
+                    section(L("SIZE")) {
                         HStack(spacing: 4) {
                             ForEach(TextStyleFonts.sizes, id: \.0) { sz in
                                 chip(sz.0, on: (st.fontSize ?? 28) == sz.1) { style(n.id) { $0.fontSize = sz.1 } }
                             }
                             Divider().frame(height: 18)
                             ForEach([("left", "text.alignleft"), ("center", "text.aligncenter"), ("right", "text.alignright")], id: \.0) { a in
-                                Button { style(n.id) { $0.align = a.0 } } label: { Image(systemName: a.1) }.tip("Align \(a.0)")
+                                Button { style(n.id) { $0.align = a.0 } } label: { Image(systemName: a.1) }.tip(L("Align %@", L(a.0)))
                                     .buttonStyle(ChipStyle(on: (st.align ?? "left") == a.0))
                             }
                         }
                     }
-                    section("OPACITY") {
+                    section(L("OPACITY")) {
                         Slider(value: Binding(get: { st.opacity ?? 1 }, set: { v in style(n.id) { $0.opacity = v } }), in: 0.2...1)
                             .tint(Color.symAccent).frame(width: 200)
                     }
                 case .shape where n.role == DiagramMaker.role && n.shape?.kind != "arrow" && !(n.text ?? "").isEmpty:
                     // 원본 studio-diagrams 의 노드 편집 패널: 글자 색·글꼴·크기·정렬·불투명도.
                     let st = n.style ?? NodeStyle()
-                    section("TEXT COLOR") { swatches(Self.nodeInk, current: st.textColorHex ?? Self.nodeInk[0]) { hex in style(n.id) { $0.textColorHex = hex } } }
-                    section("FONT") {
+                    section(L("TEXT COLOR")) { swatches(Self.nodeInk, current: st.textColorHex ?? Self.nodeInk[0]) { hex in style(n.id) { $0.textColorHex = hex } } }
+                    section(L("FONT")) {
                         HStack(spacing: 4) {
                             ForEach(TextStyleFonts.fonts, id: \.0) { f in
-                                Button { style(n.id) { $0.font = f.0 } } label: { Text("Ag").font(Font(TextStyleFonts.font(NodeStyle(fontSize: 13, font: f.0)))).frame(width: 34) }
+                                Button { style(n.id) { $0.font = f.0 } } label: { Text(L("Ag")).font(Font(TextStyleFonts.font(NodeStyle(fontSize: 13, font: f.0)))).frame(width: 34) }
                                     .buttonStyle(ChipStyle(on: (st.font ?? "hand") == f.0)).axName("Font \(f.1)")
                             }
                         }
                     }
-                    section("FONT SIZE") {
+                    section(L("FONT SIZE")) {
                         HStack(spacing: 4) {
                             ForEach(Self.nodeSizes, id: \.0) { sz in
                                 chip(sz.0, on: (st.fontSize ?? 18) == sz.1) { style(n.id) { $0.fontSize = sz.1 } }.frame(width: 48)
                             }
                         }
                     }
-                    section("ALIGNMENT") {
+                    section(L("ALIGNMENT")) {
                         HStack(spacing: 4) {
                             ForEach([("left", "text.alignleft"), ("center", "text.aligncenter"), ("right", "text.alignright")], id: \.0) { a in
-                                Button { style(n.id) { $0.align = a.0 } } label: { Image(systemName: a.1).frame(width: 52) }.tip("Align \(a.0)")
+                                Button { style(n.id) { $0.align = a.0 } } label: { Image(systemName: a.1).frame(width: 52) }.tip(L("Align %@", L(a.0)))
                                     .buttonStyle(ChipStyle(on: (st.align ?? "center") == a.0))
                             }
                         }
                     }
-                    section("OPACITY") {
+                    section(L("OPACITY")) {
                         HStack {
                             Slider(value: Binding(get: { st.opacity ?? 1 }, set: { v in style(n.id) { $0.opacity = v } }), in: 0.2...1)
                                 .tint(Color.symAccent).frame(width: 160)
@@ -90,9 +90,9 @@ struct SelectionPanel: View {
                 case .shape:
                     let sp = n.shape ?? ShapeSpec()
                     let st = n.style ?? NodeStyle()
-                    section("STROKE") { swatches(Self.ink, current: sp.strokeHex) { hex in shape(n.id) { $0.strokeHex = hex } } }
+                    section(L("STROKE")) { swatches(Self.ink, current: sp.strokeHex) { hex in shape(n.id) { $0.strokeHex = hex } } }
                     if sp.kind != "arrow" {
-                        section("BACKGROUND") {
+                        section(L("BACKGROUND")) {
                             HStack(spacing: 6) {
                                 Button { shape(n.id) { $0.fillHex = nil } } label: {
                                     Image(systemName: "nosign").font(.system(size: 11)).frame(width: 18, height: 18)
@@ -103,7 +103,7 @@ struct SelectionPanel: View {
                             }
                         }
                     }
-                    section("WIDTH · STYLE") {
+                    section(L("WIDTH · STYLE")) {
                         HStack(spacing: 4) {
                             ForEach([(1.0, "S"), (2.0, "M"), (4.0, "L")], id: \.0) { w in
                                 chip(w.1, on: sp.strokeWidth == w.0) { shape(n.id) { $0.strokeWidth = w.0 } }
@@ -114,20 +114,20 @@ struct SelectionPanel: View {
                             }
                         }
                     }
-                    section("SLOPPINESS · EDGES") {
+                    section(L("SLOPPINESS · EDGES")) {
                         HStack(spacing: 4) {
                             ForEach([(0.0, "Neat"), (1.0, "Sketch"), (2.0, "Rough")], id: \.0) { r in
                                 chip(r.1, on: sp.roughness == r.0) { shape(n.id) { $0.roughness = r.0 } }
                             }
                             if sp.kind == "rect" {
                                 Divider().frame(height: 18)
-                                Button { shape(n.id) { $0.cornerRadius = 0 } } label: { Image(systemName: "square") }.buttonStyle(ChipStyle(on: sp.cornerRadius == 0)).tip("Square corners")
-                                Button { shape(n.id) { $0.cornerRadius = 14 } } label: { Image(systemName: "app") }.buttonStyle(ChipStyle(on: sp.cornerRadius > 0)).tip("Rounded corners")
+                                Button { shape(n.id) { $0.cornerRadius = 0 } } label: { Image(systemName: "square") }.buttonStyle(ChipStyle(on: sp.cornerRadius == 0)).tip(L("Square corners"))
+                                Button { shape(n.id) { $0.cornerRadius = 14 } } label: { Image(systemName: "app") }.buttonStyle(ChipStyle(on: sp.cornerRadius > 0)).tip(L("Rounded corners"))
                             }
                         }
                     }
                     if sp.kind != "arrow" {
-                        section("TEXT") {
+                        section(L("TEXT")) {
                             HStack(spacing: 4) {
                                 ForEach(TextStyleFonts.sizes, id: \.0) { sz in chip(sz.0, on: (st.fontSize ?? 20) == sz.1) { style(n.id) { $0.fontSize = sz.1 } } }
                             }
@@ -136,7 +136,7 @@ struct SelectionPanel: View {
                             }
                         }
                     }
-                    section("OPACITY") {
+                    section(L("OPACITY")) {
                         Slider(value: Binding(get: { st.opacity ?? 1 }, set: { v in style(n.id) { $0.opacity = v } }), in: 0.2...1)
                             .tint(Color.symAccent).frame(width: 200)
                     }
@@ -201,7 +201,7 @@ struct SelectionPanel: View {
                     .background(Circle().fill(Color(hex: current ?? colors[0])))
             }
             .buttonStyle(.plainHit)
-            .tip("Custom color")
+            .tip(L("Custom color"))
         }
     }
 

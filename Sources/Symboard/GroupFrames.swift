@@ -160,11 +160,11 @@ final class GroupFrameView: NSView {
     override func rightMouseDown(with event: NSEvent) {
         guard let canvas, let c = canvas.controller else { return }
         let m = NSMenu()
-        m.addItem(ClosureMenuItem(title: "Rename Group...") { c.renameTeam(self.teamID) })
+        m.addItem(ClosureMenuItem(title: L("Rename Group...")) { c.renameTeam(self.teamID) })
         m.addItem(ClosureMenuItem(title: collapsed ? "Expand" : "Collapse") { canvas.setGroup(self.teamID, collapsed: !self.collapsed) })
-        m.addItem(ClosureMenuItem(title: "Ungroup") { c.ungroup(self.teamID) })
+        m.addItem(ClosureMenuItem(title: L("Ungroup")) { c.ungroup(self.teamID) })
         m.addItem(.separator())
-        m.addItem(ClosureMenuItem(title: "Close \(memberCount) Console\(memberCount == 1 ? "" : "s")...") { c.closeTeam(self.teamID) })
+        m.addItem(ClosureMenuItem(title: Ln(memberCount, "Close %d Console...", "Close %d Consoles...")) { c.closeTeam(self.teamID) })
         NSMenu.popUpContextMenu(m, with: event, for: self)
     }
 
@@ -245,7 +245,7 @@ final class LinksView: NSView {
             let shape = arrows[id]?.0 ?? CAShapeLayer()
             shape.path = path
             shape.fillColor = nil
-            shape.strokeColor = NSColor(hex: color).cgColor
+            shape.strokeColor = Theme.resolved(Theme.ink(color) ?? Theme.text).cgColor
             shape.lineWidth = 2
             shape.lineCap = .round
             shape.lineJoin = .round
@@ -253,7 +253,8 @@ final class LinksView: NSView {
             var text = arrows[id]?.1
             if let label, !label.isEmpty {
                 let t = text ?? CATextLayer()
-                t.string = NSAttributedString(string: label, attributes: [.font: Theme.handwriting(size: 15), .foregroundColor: Theme.text])
+                // 층 글자는 동적 색을 그릴 때 다시 풀지 않으므로 지금 모드의 색으로 고정해 넣는다(모드가 바뀌면 다시 불린다).
+                t.string = NSAttributedString(string: label, attributes: [.font: Theme.handwriting(size: 15), .foregroundColor: Theme.resolved(Theme.text)])
                 t.contentsScale = 2
                 let size = (label as NSString).size(withAttributes: [.font: Theme.handwriting(size: 15)])
                 t.frame = CGRect(x: mid.x + 8, y: mid.y - size.height / 2, width: size.width + 4, height: size.height + 2)

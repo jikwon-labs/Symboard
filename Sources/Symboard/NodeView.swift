@@ -66,7 +66,9 @@ final class NodeView: NSView {
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
         layer?.borderWidth = 1
-        layer?.backgroundColor = Theme.terminalBackground.cgColor
+        // 콘솔 몸통만 두 모드 모두 어두운 바탕, 다른 카드는 화면 모드 바탕(10차).
+        isConsoleBody = node.kind == .terminal
+        layer?.backgroundColor = bodyColor.cgColor
 
         addSubview(content.view)
         addSubview(header)
@@ -166,6 +168,17 @@ final class NodeView: NSView {
         }
     }
 
+    private var isConsoleBody = false
+    private var bodyColor: NSColor { isConsoleBody ? Theme.terminalBackground : Theme.surface }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            if !headerless { layer?.backgroundColor = bodyColor.cgColor }
+            updateBorder()
+        }
+    }
+
     private func updateBorder() {
         if headerless {
             layer?.borderColor = Theme.accent.cgColor
@@ -201,20 +214,20 @@ final class NodeView: NSView {
         let menu = NSMenu()
         for item in content.menuItems() { menu.addItem(item) }
         if !menu.items.isEmpty { menu.addItem(.separator()) }
-        menu.addItem(ClosureMenuItem(title: "Rename...") { [weak self] in self?.rename() })
-        menu.addItem(ClosureMenuItem(title: "Set Role...") { [weak self] in self?.setRole() })
+        menu.addItem(ClosureMenuItem(title: L("Rename...")) { [weak self] in self?.rename() })
+        menu.addItem(ClosureMenuItem(title: L("Set Role...")) { [weak self] in self?.setRole() })
         if let ws = canvas?.workspace {
-            let linkItem = NSMenuItem(title: "Link To", action: nil, keyEquivalent: "")
+            let linkItem = NSMenuItem(title: L("Link To"), action: nil, keyEquivalent: "")
             let lsub = NSMenu()
             for t in ws.teams where ws.nodes.contains(where: { $0.teamID == t.id }) {
-                lsub.addItem(ClosureMenuItem(title: "Group: \(t.name)") { [weak self] in self?.link(to: t.id) })
+                lsub.addItem(ClosureMenuItem(title: L("Group: %@", t.name)) { [weak self] in self?.link(to: t.id) })
             }
             for n in ws.nodes where n.id != nodeID {
                 lsub.addItem(ClosureMenuItem(title: n.title) { [weak self] in self?.link(to: n.id) })
             }
             if ws.links?.contains(where: { $0.from == nodeID || $0.to == nodeID }) == true {
                 lsub.addItem(.separator())
-                lsub.addItem(ClosureMenuItem(title: "Remove Links") { [weak self] in
+                lsub.addItem(ClosureMenuItem(title: L("Remove Links")) { [weak self] in
                     guard let self else { return }
                     self.model.mutateWorkspace(ws.id) { $0.links?.removeAll { $0.from == self.nodeID || $0.to == self.nodeID } }
                     self.canvas?.layoutLinks()
@@ -222,12 +235,12 @@ final class NodeView: NSView {
             }
             linkItem.submenu = lsub
             menu.addItem(linkItem)
-            let teamItem = NSMenuItem(title: "Team", action: nil, keyEquivalent: "")
+            let teamItem = NSMenuItem(title: L("Team"), action: nil, keyEquivalent: "")
             let sub = NSMenu()
-            sub.addItem(ClosureMenuItem(title: "None") { [weak self] in self?.assignTeam(nil) })
+            sub.addItem(ClosureMenuItem(title: L("None")) { [weak self] in self?.assignTeam(nil) })
             for t in ws.teams { sub.addItem(ClosureMenuItem(title: t.name) { [weak self] in self?.assignTeam(t.id) }) }
             sub.addItem(.separator())
-            sub.addItem(ClosureMenuItem(title: "New Team...") { [weak self] in self?.newTeam() })
+            sub.addItem(ClosureMenuItem(title: L("New Team...")) { [weak self] in self?.newTeam() })
             teamItem.submenu = sub
             menu.addItem(teamItem)
         }
@@ -253,7 +266,7 @@ final class NodeView: NSView {
 
     private func setRole() {
         let current = model.node(nodeID)?.role ?? ""
-        if let role = Prompt.text(title: "Role name", message: "Leave empty to clear.", value: current) {
+        if let role = Prompt.text(title: "Role name", message: L("Leave empty to clear."), value: current) {
             model.mutateNode(nodeID) { $0.role = role.isEmpty ? nil : role }
             syncFromModel()
         }
@@ -337,6 +350,11 @@ final class NodeHeaderView: NSView {
     let kindIcon = NSImageView()
     var isTerminal = false { didSet { applyKind() } }
     private var dragStart: (NSPoint, NSPoint)?
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        effectiveAppearance.performAsCurrentDrawingAppearance { layer?.backgroundColor = Theme.surface.cgColor }
+    }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -453,7 +471,7 @@ final class NodeHeaderView: NSView {
         statusDot.isHidden = false
         statusPill.isHidden = false
         statusDot.layer?.backgroundColor = ((paused || onHold) ? Theme.textDim : status.color).cgColor
-        let text = onHold ? "ON HOLD" : (paused ? "PAUSED" : status.pillText)
+        let text = L(onHold ? "ON HOLD" : (paused ? "PAUSED" : status.pillText))
         if statusPill.text != text || wasHidden {
             statusPill.set(text: text, color: (paused || onHold) ? Theme.textDim : status.color, filled: false)
             needsLayout = true
@@ -774,7 +792,7 @@ final class WirePortView: NSView {
             let name = nv.model.selectedWorkspace.teams.first { $0.id == id }?.name ?? "group"
             c.chrome.flash(Self.message(c, orch: nv.nodeID, target: id, name: name))
         } else {
-            c.chrome.flash("Drop on a group or a console to wire it")
+            c.chrome.flash(L("Drop on a group or a console to wire it"))
         }
     }
 

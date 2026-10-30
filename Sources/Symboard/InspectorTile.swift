@@ -12,7 +12,7 @@ final class InspectorContent: NodeContent {
 
     init(node: BoardNode, model: AppModel) {
         inspector = InspectorModel(webID: node.text.flatMap(UUID.init(uuidString:)))
-        host = CanvasHostingView(rootView: InspectorView(model: inspector).environment(\.colorScheme, .dark))
+        host = CanvasHostingView(rootView: InspectorView(model: inspector).localized())
     }
 
     func sync(node: BoardNode) {}
@@ -110,7 +110,7 @@ struct InspectorView: View {
                     Button(t) { model.tab = t }.buttonStyle(ChipStyle(on: model.tab == t)).axName(t)
                 }
                 Spacer()
-                Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Refresh inspector")
+                Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Refresh inspector"))
             }
             .padding(8)
             Divider().overlay(Color.symBorder)
@@ -167,7 +167,7 @@ struct InspectorView: View {
 
     var boxModel: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("BOX MODEL").font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+            Text(L("BOX MODEL")).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
             ZStack {
                 RoundedRectangle(cornerRadius: 3).fill(Color(hex: "#C8862E").opacity(0.45)).frame(width: 180, height: 76)
                 RoundedRectangle(cornerRadius: 3).fill(Color(hex: "#E9C46A").opacity(0.5)).frame(width: 144, height: 54)
@@ -206,7 +206,7 @@ struct InspectorView: View {
             }
             HStack {
                 Text("›").foregroundStyle(Color.symAccent)
-                TextField("", text: $model.expr, prompt: Text("Evaluate in page").foregroundColor(Color.symDim))
+                TextField("", text: $model.expr, prompt: Text(L("Evaluate in page")).foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symText)
                     .onSubmit { model.evaluate() }
             }

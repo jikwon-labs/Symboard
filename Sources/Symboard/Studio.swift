@@ -88,7 +88,7 @@ enum CodeStyle {
         let rules: [(String, NSColor)] = [
             (#"(?m)^#{1,6} .*$"#, Theme.accent),
             (#"`[^`\n]+`"#, NSColor(hex: "#E9C46A")),
-            (#"\*\*[^*\n]+\*\*"#, NSColor(hex: "#ECE7E2")),
+            (#"\*\*[^*\n]+\*\*"#, Theme.text),
             (#"\[[^\]\n]+\]\([^)\n]+\)|\[\[[^\]\n]+\]\]"#, NSColor(hex: "#56A8F5")),
             (#"(?m)^\s*([-*]|\d+\.) "#, Theme.accent),
             (#"(?m)^>.*$"#, Theme.textDim),
@@ -143,18 +143,18 @@ final class FileContent: NodeContent {
 
     private func reload() {
         let url = URL(fileURLWithPath: path)
-        host.rootView = AnyView(FileCardView(url: url, text: CodeStyle.load(url)).environment(\.colorScheme, .dark))
+        host.rootView = AnyView(FileCardView(url: url, text: CodeStyle.load(url)).localized())
     }
 
     func sync(node: BoardNode) {}
 
     func menuItems() -> [NSMenuItem] {
-        [ClosureMenuItem(title: "Open in Studio") { [weak self] in
+        [ClosureMenuItem(title: L("Open in Studio")) { [weak self] in
              guard let self, let c = (NSApp.delegate as? AppDelegate)?.windowController else { return }
              c.openStudio(file: URL(fileURLWithPath: self.path))
          },
-         ClosureMenuItem(title: "Reload File") { [weak self] in self?.reload() },
-         ClosureMenuItem(title: "Reveal in Finder") { [weak self] in
+         ClosureMenuItem(title: L("Reload File")) { [weak self] in self?.reload() },
+         ClosureMenuItem(title: L("Reveal in Finder")) { [weak self] in
              guard let self else { return }
              NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: self.path)])
          }]
@@ -181,7 +181,7 @@ struct FileCardView: View {
                 Text("\(text.split(separator: "\n", omittingEmptySubsequences: false).count - (text.hasSuffix("\n") ? 1 : 0)) lines").font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim)
                 if url.pathExtension.lowercased() != "md" {
                     Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                        .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Open in studio")
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Open in studio"))
                 }
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
@@ -192,11 +192,11 @@ struct FileCardView: View {
                     Text(relativePath).font(.system(size: 10, design: .monospaced)).foregroundStyle(Color.symDim).lineLimit(1).truncationMode(.head)
                     Spacer()
                     Button { (NSApp.delegate as? AppDelegate)?.windowController.openStudio(file: url) } label: {
-                        Label("Open in Studio", systemImage: "rectangle.portrait.and.arrow.right").font(.system(size: 11))
+                        Label(L("Open in Studio"), systemImage: "rectangle.portrait.and.arrow.right").font(.system(size: 11))
                     }
                     .buttonStyle(.plainHit).foregroundStyle(Color.symText.opacity(0.8)).axName("Open in Studio")
                     Button { (NSApp.delegate as? AppDelegate)?.windowController.exportCardPDF(url) } label: {
-                        Label("PDF", systemImage: "doc").font(.system(size: 11))
+                        Label(L("PDF"), systemImage: "doc").font(.system(size: 11))
                     }
                     .buttonStyle(.plainHit).foregroundStyle(Color.symText.opacity(0.8)).axName("PDF")
                 }
@@ -368,7 +368,7 @@ struct StudioView: View {
                 .frame(width: 360)
                 Spacer()
                 Text(model.root.path).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
-                Button("Folder...") { model.chooseRoot() }.axName("Folder...")
+                Button(L("Folder...")) { model.chooseRoot() }.axName("Folder...")
             }
             .padding(8)
             Divider()
@@ -400,12 +400,12 @@ struct CodeTab: View {
                     HStack {
                         Text(u.lastPathComponent).font(.system(size: 12, weight: .semibold))
                         Spacer()
-                        Button("Pin to Board") { model.pinToBoard?(u) }.axName("Pin to Board")
+                        Button(L("Pin to Board")) { model.pinToBoard?(u) }.axName("Pin to Board")
                     }
                     .padding(6)
                     CodeTextView(text: CodeStyle.attributed(CodeStyle.load(u), ext: u.pathExtension))
                 } else {
-                    Text("Select a file").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Text(L("Select a file")).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
@@ -425,7 +425,7 @@ struct MarkdownTab: View {
                     Text(model.mdSelection?.lastPathComponent ?? "No file").font(.system(size: 12, weight: .semibold))
                     Text(model.mdSavedNote).font(.system(size: 11)).foregroundStyle(.secondary)
                     Spacer()
-                    Toggle("Link graph", isOn: $model.showGraph).toggleStyle(.switch).controlSize(.small)
+                    Toggle(L("Link graph"), isOn: $model.showGraph).toggleStyle(.switch).controlSize(.small)
                 }
                 .padding(6)
                 if model.showGraph {
@@ -434,7 +434,7 @@ struct MarkdownTab: View {
                     TextEditor(text: $model.mdText)
                         .font(.system(size: 13, design: .monospaced))
                 } else {
-                    Text("Select a markdown file. Edits save automatically.").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Text(L("Select a markdown file. Edits save automatically.")).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
@@ -479,7 +479,7 @@ struct LinkGraphView: View {
                     .buttonStyle(.plainHit)
                     .position(pos[n] ?? center)
                 }
-                if g.nodes.isEmpty { Text("No markdown files in this folder").foregroundStyle(.secondary) }
+                if g.nodes.isEmpty { Text(L("No markdown files in this folder")).foregroundStyle(.secondary) }
             }
         }
     }
@@ -497,7 +497,7 @@ struct DocsTab: View {
                 HStack {
                     Text(model.mdSelection?.lastPathComponent ?? "Pick a markdown file").font(.system(size: 12, weight: .semibold))
                     Spacer()
-                    Button("Export PDF...") { export() }.disabled(model.mdSelection == nil).axName("Export PDF...")
+                    Button(L("Export PDF...")) { export() }.disabled(model.mdSelection == nil).axName("Export PDF...")
                 }
                 .padding(6)
                 if let u = model.mdSelection {
@@ -565,7 +565,7 @@ struct DiagramTab: View {
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Write one edge per line: A -> B: label").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(L("Write one edge per line: A -> B: label")).font(.system(size: 11)).foregroundStyle(.secondary)
                 TextEditor(text: $model.diagramText).font(.system(size: 12, design: .monospaced))
             }
             .padding(6)
@@ -573,7 +573,7 @@ struct DiagramTab: View {
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
-                    Button("Export PNG...") {
+                    Button(L("Export PNG...")) {
                         let panel = NSSavePanel()
                         panel.allowedContentTypes = [.png]
                         panel.nameFieldStringValue = "diagram.png"
@@ -679,8 +679,7 @@ final class StudioWindowController: NSWindowController {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 720),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "Symboard Studio"
-        window.appearance = NSAppearance(named: .darkAqua)
-        window.contentView = NSHostingView(rootView: StudioView(model: studio))
+        window.contentView = NSHostingView(rootView: StudioView(model: studio).localized())
         window.isReleasedWhenClosed = false
         super.init(window: window)
         WindowFrames.track(window, key: "studio")

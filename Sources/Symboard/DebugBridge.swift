@@ -259,6 +259,40 @@ final class DebugBridge {
             for w in NSApp.windows where w.isVisible {
                 log.append("  \(type(of: w)) \(w.windowNumber) canKey=\(w.canBecomeKey) level=\(w.level.rawValue)")
             }
+        case "click":
+            // 창 안 한 점(창 왼쪽 위 기준 포인트)에 마우스 누르기를 바로 넣는다. 앱을 앞으로 가져오지 않아 사용자 입력과 섞이지 않는다(10차).
+            let title = cmd["window"] as? String
+            let wid = cmd["wid"] as? Int
+            if let w = NSApp.windows.first(where: { $0.isVisible && (wid != nil ? $0.windowNumber == wid : (title == nil ? $0 === controller.window : $0.title == title)) }) {
+                let x = cmd["x"] as? Double ?? 0, y = cmd["y"] as? Double ?? 0
+                let p = NSPoint(x: x, y: (w.contentView?.bounds.height ?? w.frame.height) - y)
+                for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                    if let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: w.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                        w.sendEvent(e)
+                    }
+                }
+                let hit = w.contentView?.hitTest(p)
+                log.append("click \(w.title) hit=\(hit.map { String(describing: type(of: $0)) } ?? "nil")")
+            } else { log.append("click: no window \(title ?? "main")") }
+        case "pick":
+            // 팝업 단추(접근성 이름)에서 항목을 고르고 동작을 보낸다(누르면 메뉴가 입력을 붙잡아서 클릭 대신).
+            let label = cmd["label"] as? String ?? ""
+            func find(_ v: NSView) -> NSPopUpButton? {
+                if let b = v as? NSPopUpButton, b.accessibilityLabel() == label { return b }
+                for sub in v.subviews { if let f = find(sub) { return f } }
+                return nil
+            }
+            if let b = NSApp.windows.lazy.compactMap({ $0.contentView.flatMap(find) }).first {
+                b.selectItem(at: cmd["index"] as? Int ?? 0)
+                if let a = b.action { NSApp.sendAction(a, to: b.target, from: b) }
+                log.append("pick \(label) = \(b.titleOfSelectedItem ?? "")")
+            } else { log.append("pick: no popup \(label)") }
+        case "theme":
+            log.append("isLight=\(Theme.isLight) app=\(NSApp.effectiveAppearance.name.rawValue) set=\(NSApp.appearance?.name.rawValue ?? "nil") text=\(Theme.resolved(Theme.text))")
+        case "winshot":
+            // 창 번호(실제 화면 캡처용, screencapture -l).
+            for w in NSApp.windows where w.isVisible { log.append("win \(w.windowNumber) \(w.title)") }
         case "wait":
             delay = cmd["seconds"] as? Double ?? 1
         case "zoom":

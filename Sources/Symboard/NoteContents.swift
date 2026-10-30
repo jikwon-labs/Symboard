@@ -44,7 +44,7 @@ final class HostedContent: NodeContent {
             }
         }
         extraMenu = menu
-        host = CanvasHostingView(rootView: make(box).environment(\.colorScheme, .dark).environment(\.locale, Locale(identifier: "en_US")))
+        host = CanvasHostingView(rootView: make(box).localized().environment(\.locale, Locale(identifier: "en_US")))
     }
 
     func sync(node: BoardNode) {
@@ -64,7 +64,12 @@ struct StickyView: View {
     var isSticky: Bool
 
     var paper: Color { Color(hex: box.node.colorHex ?? "#C9A227") }
-    var ink: Color { (box.node.colorHex ?? "").uppercased() == "#2B2926" ? Color.symText : Color(hex: "#FFF8EC") }
+    /// 메모 바탕 밝기에 따라 글자색(10차). 밝은 노랑·분홍 등에서 흰 글자가 읽히지 않았다.
+    var ink: Color {
+        let c = NSColor(hex: box.node.colorHex ?? "#C9A227").usingColorSpace(.sRGB) ?? .gray
+        let lum = 0.2126 * c.redComponent + 0.7152 * c.greenComponent + 0.0722 * c.blueComponent
+        return lum > 0.7 ? Color(hex: "#2A2117") : Color(hex: "#FFF8EC")
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -134,11 +139,11 @@ struct TitleTextView: View {
             .multilineTextAlignment(TextStyleFonts.alignment(style))
             .scrollContentBackground(.hidden)
             .scrollIndicators(.never)
-            .foregroundStyle(Color(hex: style.textColorHex ?? "#ECE7E2"))
+            .foregroundStyle(Color(nsColor: Theme.ink(style.textColorHex) ?? Theme.text))
             .opacity(style.opacity ?? 1)
             .overlay(alignment: .topLeading) {
                 if (box.node.text ?? "").isEmpty {
-                    Text("Type something").font(Font(TextStyleFonts.font(style))).foregroundStyle(Color.symDim.opacity(0.5))
+                    Text(L("Type something")).font(Font(TextStyleFonts.font(style))).foregroundStyle(Color.symDim.opacity(0.5))
                         .padding(.leading, 5).allowsHitTesting(false)
                 }
             }
@@ -170,7 +175,7 @@ enum StickyColors {
 
     @MainActor
     static func menu(_ box: NodeBox) -> [NSMenuItem] {
-        let item = NSMenuItem(title: "Color", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: L("Color"), action: nil, keyEquivalent: "")
         let sub = NSMenu()
         for (name, hex) in all { sub.addItem(ClosureMenuItem(title: name) { box.update { $0.colorHex = hex } }) }
         item.submenu = sub
@@ -200,8 +205,8 @@ struct ChecklistView: View {
                 }
                 .frame(width: 30, height: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(items.isEmpty ? "No objectives" : "\(done) of \(items.count) done").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
-                    Text(items.isEmpty ? "Add one to begin" : (done == items.count ? "All clear" : "\(items.count - done) left")).font(.system(size: 11)).foregroundStyle(Color.symDim)
+                    Text(items.isEmpty ? L("No objectives") : L("%d of %d done", done, items.count)).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                    Text(items.isEmpty ? L("Add one to begin") : (done == items.count ? L("All clear") : L("%d left", items.count - done))).font(.system(size: 11)).foregroundStyle(Color.symDim)
                 }
             }
             .padding(12)
@@ -232,7 +237,7 @@ struct ChecklistView: View {
                             Spacer()
                             Button {
                                 box.update { $0.checklist?.removeAll { $0.id == item.id } }
-                            } label: { Image(systemName: "xmark").font(.system(size: 9)) }.tip("Delete objective")
+                            } label: { Image(systemName: "xmark").font(.system(size: 9)) }.tip(L("Delete objective"))
                                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
                         }
                         .font(.system(size: 13))
@@ -241,7 +246,7 @@ struct ChecklistView: View {
                 }
             }
             if adding {
-                TextField("", text: $draft, prompt: Text("New objective").foregroundColor(Color.symDim))
+                TextField("", text: $draft, prompt: Text(L("New objective")).foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 13)).foregroundStyle(Color.symText)
                     .focused($focused)
                     .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
@@ -254,7 +259,7 @@ struct ChecklistView: View {
                     }
             } else {
                 Button { adding = true; focused = true } label: {
-                    Label("Add an objective", systemImage: "plus").font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.85))
+                    Label(L("Add an objective"), systemImage: "plus").font(.system(size: 12)).foregroundStyle(Color.symText.opacity(0.85))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                 }
@@ -300,12 +305,12 @@ struct KanbanView: View {
                     Button { addColumn() } label: {
                         VStack(spacing: 4) {
                             Image(systemName: "plus").font(.system(size: 14))
-                            Text("Column").font(.system(size: 11))
+                            Text(L("Column")).font(.system(size: 11))
                         }
                         .foregroundStyle(Color.symDim)
                         .frame(width: 90, height: 90)
                     }
-                    .buttonStyle(.plainHit).tip("Add column")
+                    .buttonStyle(.plainHit).tip(L("Add column"))
                 }
                 .padding(10)
             }
@@ -350,11 +355,11 @@ struct KanbanView: View {
                 Text("\(cards.count)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                 Spacer()
                 Menu {
-                    Button("Rename...") {
+                    Button(L("Rename...")) {
                         if let t = Prompt.text(title: "Rename column", value: col.title), !t.isEmpty { box.update { $0.kanban?[ci].title = t } }
                     }
-                    Button("Delete column", role: .destructive) { box.update { $0.kanban?.remove(at: ci) } }
-                } label: { Image(systemName: "ellipsis") }.tip("Column actions")
+                    Button(L("Delete column"), role: .destructive) { box.update { $0.kanban?.remove(at: ci) } }
+                } label: { Image(systemName: "ellipsis") }.tip(L("Column actions"))
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 20).foregroundStyle(Color.symDim)
             }
             ScrollView {
@@ -362,7 +367,7 @@ struct KanbanView: View {
                     if cards.isEmpty {
                         VStack(spacing: 4) {
                             Image(systemName: "tray").font(.system(size: 16))
-                            Text("No cards").font(.system(size: 11))
+                            Text(L("No cards")).font(.system(size: 11))
                         }
                         .foregroundStyle(Color.symDim.opacity(0.7))
                         .frame(maxWidth: .infinity).padding(.vertical, 18)
@@ -391,10 +396,10 @@ struct KanbanView: View {
                 }
             }
             Button { editor = (col.id, nil) } label: {
-                Label("Add card", systemImage: "plus").font(.system(size: 12)).foregroundStyle(Color.symDim)
+                Label(L("Add card"), systemImage: "plus").font(.system(size: 12)).foregroundStyle(Color.symDim)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 8).padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.symText.opacity(0.03)))
             }
             .buttonStyle(.plainHit).axName("Add card to \(col.title)")
         }
@@ -552,19 +557,19 @@ struct CardEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(editing == nil ? "NEW CARD" : "EDIT CARD").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Color.symDim)
+                Text(L(editing == nil ? "NEW CARD" : "EDIT CARD")).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.4).foregroundStyle(Color.symDim)
                 Spacer()
-                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Close")
+                Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Close"))
             }
             HStack(spacing: 8) {
                 Circle().fill(Priority.color(priority)).frame(width: 7, height: 7)
-                TextField("", text: $title, prompt: Text("Card title").foregroundColor(Color.symDim))
+                TextField("", text: $title, prompt: Text(L("Card title")).foregroundColor(Color.symDim))
                     .textFieldStyle(.plain).font(.system(size: 14, weight: .medium)).foregroundStyle(Color.symText)
                     .autoFocus()
                     .onSubmit(submit)
             }
             .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
-            TextField("", text: $notes, prompt: Text("Notes (optional)").foregroundColor(Color.symDim), axis: .vertical)
+            TextField("", text: $notes, prompt: Text(L("Notes (optional)")).foregroundColor(Color.symDim), axis: .vertical)
                 .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(Color.symText).lineLimit(2...4)
                 .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised))
             // 원본처럼 날짜를 고르기 전에는 빠른 칩, 고른 뒤에는 그 자리가 고칠 수 있는 날짜 칸과 지우기 단추가 된다.
@@ -574,7 +579,7 @@ struct CardEditor: View {
                     DatePicker("", selection: Binding(get: { d }, set: { due = Calendar.current.startOfDay(for: $0) }), displayedComponents: .date)
                         .labelsHidden().datePickerStyle(.field).font(.system(size: 13)).axName("Due date")
                     Spacer()
-                    Button { due = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip("Clear due date")
+                    Button { due = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).tip(L("Clear due date"))
                 } else {
                     ForEach([("Today", 0), ("Tomorrow", 1), ("Next week", 7)], id: \.1) { item in
                         let d = Calendar.current.startOfDay(for: Date().addingTimeInterval(Double(item.1) * 86400))
@@ -598,11 +603,11 @@ struct CardEditor: View {
             }
             HStack {
                 if editing != nil {
-                    Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip("Delete card")
+                    Button(action: delete) { Image(systemName: "trash") }.buttonStyle(.plainHit).foregroundStyle(Color.symAccent).tip(L("Delete card"))
                 }
                 Spacer()
-                Button("Cancel", action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
-                Button(editing == nil ? "Add card" : "Save", action: submit)
+                Button(L("Cancel"), action: cancel).buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
+                Button(L(editing == nil ? "Add card" : "Save"), action: submit)
                 .buttonStyle(PillButtonStyle(prominent: true)).axName(editing == nil ? "Add card" : "Save")
                 .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }

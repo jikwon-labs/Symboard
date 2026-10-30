@@ -29,7 +29,7 @@ final class ImageContent: NodeContent {
     }
 
     func menuItems() -> [NSMenuItem] {
-        [ClosureMenuItem(title: "Clear Markup") { [weak self] in
+        [ClosureMenuItem(title: L("Clear Markup")) { [weak self] in
             guard let self else { return }
             self.model.mutateNode(self.nodeID) { $0.strokes = [] }
             self.markup.strokes = []

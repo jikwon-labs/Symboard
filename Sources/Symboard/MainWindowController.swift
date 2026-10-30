@@ -73,7 +73,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         window.isReleasedWhenClosed = false
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.appearance = NSAppearance(named: .darkAqua)
         window.backgroundColor = Theme.canvas
         window.minSize = NSSize(width: 900, height: 560)
         super.init(window: window)
@@ -116,8 +115,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     // MARK: 화면 구성
 
-    private func host<V: View>(_ v: V) -> NSHostingView<V> {
-        let h = NSHostingView(rootView: v)
+    private func host<V: View>(_ v: V) -> NSHostingView<AnyView> {
+        let h = NSHostingView(rootView: AnyView(v.localized()))
         h.translatesAutoresizingMaskIntoConstraints = false
         return h
     }
@@ -128,7 +127,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(scrollView)
 
-        let home = HiddenAwareHostingView(rootView: HomeView(model: model, c: self))
+        let home = HiddenAwareHostingView(rootView: HomeView(model: model, c: self).localized())
         home.translatesAutoresizingMaskIntoConstraints = false
         home.sizingOptions = []
         home.isHidden = true
@@ -142,8 +141,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         panelContainer.layer?.cornerRadius = 16
         panelContainer.layer?.masksToBounds = true
         panelContainer.layer?.borderWidth = 1
-        panelContainer.layer?.borderColor = Theme.border.cgColor
-        panelContainer.layer?.backgroundColor = Theme.surface.cgColor
+        Theme.paint { [weak panelContainer] in
+            panelContainer?.layer?.borderColor = Theme.border.cgColor
+            panelContainer?.layer?.backgroundColor = Theme.surface.cgColor
+        }
         panelContainer.isHidden = true
         panelContainer.addSubview(sidePanel.view)
         content.addSubview(panelContainer)
@@ -163,7 +164,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         content.addSubview(drawingChip)
         let resume = host(ResumeToast(chrome: chrome, c: self))
         for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume] as [NSView] { content.addSubview(v) }
-        let mission = HiddenAwareHostingView(rootView: MissionHost(model: model, chrome: chrome, c: self))
+        let mission = HiddenAwareHostingView(rootView: MissionHost(model: model, chrome: chrome, c: self).localized())
         mission.translatesAutoresizingMaskIntoConstraints = false
         mission.sizingOptions = []
         mission.isHidden = true
@@ -177,7 +178,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         ])
         missionObserver = chrome.$missionOpen.sink { [weak self] open in self?.missionHost?.isHidden = !open }
         // 스튜디오 패널은 보드 위, 위쪽·아래 막대보다는 아래에 둔다.
-        let studioHost = HiddenAwareHostingView(rootView: StudioOverlay(studio: studioState, c: self))
+        let studioHost = HiddenAwareHostingView(rootView: StudioOverlay(studio: studioState, c: self).localized())
         studioHostView = studioHost
         studioHost.translatesAutoresizingMaskIntoConstraints = false
         studioHost.sizingOptions = []
@@ -190,7 +191,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             studioHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         studioObserver = studioState.$kind.sink { k in studioHost.isHidden = k == nil }
-        let memHost = HiddenAwareHostingView(rootView: MemoryModalView(hub: memoryHub, model: model))
+        let memHost = HiddenAwareHostingView(rootView: MemoryModalView(hub: memoryHub, model: model).localized())
         memHost.translatesAutoresizingMaskIntoConstraints = false
         memHost.sizingOptions = []
         memHost.isHidden = true
@@ -202,7 +203,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             memHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         memObserver = memoryHub.$page.sink { p in memHost.isHidden = p == nil }
-        let loopsHost = HiddenAwareHostingView(rootView: LoopsHost(model: model, chrome: chrome, draft: loopDraft, c: self))
+        let loopsHost = HiddenAwareHostingView(rootView: LoopsHost(model: model, chrome: chrome, draft: loopDraft, c: self).localized())
         loopsHost.translatesAutoresizingMaskIntoConstraints = false
         loopsHost.sizingOptions = []
         loopsHost.isHidden = true
@@ -214,7 +215,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             loopsHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         loopsObserver = chrome.$loopsPage.sink { page in loopsHost.isHidden = page == nil }
-        let promptHost = HiddenAwareHostingView(rootView: PromptEditorView(editor: promptEditor))
+        let promptHost = HiddenAwareHostingView(rootView: PromptEditorView(editor: promptEditor).localized())
         promptHost.translatesAutoresizingMaskIntoConstraints = false
         promptHost.sizingOptions = []
         promptHost.isHidden = true
@@ -225,7 +226,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             promptHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             promptHost.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
-        let keysHost = HiddenAwareHostingView(rootView: ShortcutsSheet(chrome: chrome))
+        let keysHost = HiddenAwareHostingView(rootView: ShortcutsSheet(chrome: chrome).localized())
         keysHost.translatesAutoresizingMaskIntoConstraints = false
         keysHost.sizingOptions = []
         keysHost.isHidden = true
@@ -392,7 +393,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         startBoardTools()
         model.sessions.onMissingFolder = { [weak self] path in
-            self?.chrome.flash("Folder not found: \((path as NSString).lastPathComponent) · open a folder from Home")
+            self?.chrome.flash(L("Folder not found: %@ · open a folder from Home", (path as NSString).lastPathComponent))
         }
         (window as? BoardWindow)?.boardUndo = { [weak self] redo in
             MainActor.assumeIsolated {
@@ -400,7 +401,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                 if self.model.stepBoard(redo: redo) {
                     self.currentCanvas?.select(nil)
                     self.currentCanvas?.layoutLinks()
-                    self.chrome.flash(redo ? "Redo" : "Undo")
+                    self.chrome.flash(L(redo ? "Redo" : "Undo"))
                 }
             }
         }
@@ -430,6 +431,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                 guard let id = note.object as? UUID else { return }
                 self?.canvases[id]?.reloadNodes()
                 self?.sidePanel.reload()
+            }
+        })
+        // 화면 모드가 바뀌면 캔버스(바탕·점)와 층에 그린 선·화살표를 다시 칠한다(10차).
+        observers.append(nc.addObserver(forName: Theme.didChange, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.window?.backgroundColor = Theme.canvas
+                for cv in self.canvases.values {
+                    cv.effectiveAppearance.performAsCurrentDrawingAppearance { cv.layoutLinks() }
+                    cv.needsDisplay = true
+                    cv.subviews.forEach { $0.needsDisplay = true }
+                }
             }
         })
         observers.append(nc.addObserver(forName: .statusTick, object: nil, queue: .main) { [weak self] _ in
@@ -801,9 +814,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func exportPDF(markdown md: URL, to out: URL) {
         let m = StudioModel(root: md.deletingLastPathComponent())
         pdfExporter = m
-        chrome.flash("Exporting PDF...")
+        chrome.flash(L("Exporting PDF..."))
         m.exportPDF(from: md, to: out) { [weak self] ok in
-            self?.chrome.flash(ok ? "Saved \(out.lastPathComponent)" : "PDF export failed")
+            self?.chrome.flash(ok ? L("Saved %@", out.lastPathComponent) : L("PDF export failed"))
             self?.pdfExporter = nil
         }
     }
@@ -848,8 +861,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     /// 편집 창 위에 보이는 대상: 명령 바 자리표시와 같은 말.
     var commandBarTitle: String {
-        if let id = currentCanvas?.selectedNodeID, let n = model.node(id), n.kind == .terminal { return "Message \(n.title) · @ to direct" }
-        return "Command the board · @ to direct"
+        if let id = currentCanvas?.selectedNodeID, let n = model.node(id), n.kind == .terminal { return L("Message %@ · @ to direct", n.title) }
+        return L("Command the board · @ to direct")
     }
 
     func togglePromptEditor() {
@@ -1006,7 +1019,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     /// 선택한 노드를 옆에 하나 더 만든다. 터미널은 같은 CLI 로 새 세션.
     func duplicateSelection() {
         guard let id = currentCanvas?.selectedNodeID, let n = model.node(id) else {
-            chrome.flash("Select something to duplicate"); return
+            chrome.flash(L("Select something to duplicate")); return
         }
         var copy = BoardNode(kind: n.kind, frame: Rect(x: n.frame.x + 40, y: n.frame.y + 40, w: n.frame.w, h: n.frame.h), title: n.title,
                              terminal: n.terminal, text: n.text, colorHex: n.colorHex, checklist: n.checklist, kanban: n.kanban,
@@ -1073,14 +1086,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let cands = targets.map { n in CommandTargets.Candidate(id: n.id, name: n.title, team: n.teamID.flatMap { id in ws.teams.first { $0.id == id }?.name }) }
         if let split = CommandTargets.split(text, candidates: cands) {
             let n = deliver(split, said: text)
-            if n > 0 { chrome.flash("Sent to \(n) agent\(n == 1 ? "" : "s")") }
+            if n > 0 { chrome.flash(Ln(n, "Sent to %d agent", "Sent to %d agents")) }
             return n
         }
         let parsed = CommandTargets.parse(text, candidates: cands)
         let ids = parsed.implicit ? targets.map(\.id) : parsed.nodeIDs
         guard !parsed.body.isEmpty, !ids.isEmpty else { return 0 }
         for id in ids { model.sessions.session(for: id)?.sendText(parsed.body, submit: true) }
-        chrome.flash("Sent to \(ids.count) agent\(ids.count == 1 ? "" : "s")")
+        chrome.flash(Ln(ids.count, "Sent to %d agent", "Sent to %d agents"))
         return ids.count
     }
 
@@ -1107,7 +1120,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     /// 오케스트레이터 Connect/Done.
     func toggleConnect(_ orch: UUID) {
         chrome.connectingOrchestrator = chrome.connectingOrchestrator == orch ? nil : orch
-        if chrome.connectingOrchestrator != nil { chrome.flash("Click consoles or a group's pill to wire them · Done when finished") }
+        if chrome.connectingOrchestrator != nil { chrome.flash(L("Click consoles or a group's pill to wire them · Done when finished")) }
         currentCanvas?.layoutGroups()
     }
 
@@ -1208,26 +1221,26 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if !closing, let split = CommandTargets.split(text, candidates: cands) {
             let n = deliver(split, said: text)
             if n > 0 || !split.missingBody.isEmpty { chrome.command = "" }
-            if n > 0 { chrome.flash("Sent to \(n) console\(n == 1 ? "" : "s")") }
-            else if split.missingBody.isEmpty { chrome.flash("Type something to send") }
+            if n > 0 { chrome.flash(Ln(n, "Sent to %d console", "Sent to %d consoles")) }
+            else if split.missingBody.isEmpty { chrome.flash(L("Type something to send")) }
             return
         }
         let parsed = CommandTargets.parse(text, candidates: cands)
         var targets = parsed.nodeIDs
         if parsed.implicit, let sel = currentCanvas?.selectedNodeID, model.node(sel)?.kind == .terminal { targets = [sel] }
-        if !parsed.unknown.isEmpty { chrome.flash("No console named @\(parsed.unknown[0])"); return }
+        if !parsed.unknown.isEmpty { chrome.flash(L("No console named @%@", parsed.unknown[0])); return }
         if closing {
             chrome.command = ""
             closeNodes(targets)
             return
         }
         guard !targets.isEmpty, !parsed.body.isEmpty else {
-            chrome.flash(parsed.body.isEmpty ? "Type something to send" : "Select a console or start with @name")
+            chrome.flash(L(parsed.body.isEmpty ? "Type something to send" : "Select a console or start with @name"))
             return
         }
         for id in targets { model.sessions.session(for: id)?.sendText(parsed.body, submit: true) }
         chrome.command = ""
-        chrome.flash("Sent to \(targets.count) console\(targets.count == 1 ? "" : "s")")
+        chrome.flash(Ln(targets.count, "Sent to %d console", "Sent to %d consoles"))
     }
 
     /// 명령 바의 보드 명령을 실행하고, 친 글·계획·결과를 THREAD 패널에 쌓는다.
@@ -1404,6 +1417,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if point == nil { reveal([node.frame]) }
     }
 
+    /// 위쪽 막대 언어 단추(10차): 한국어 ↔ English.
+    @objc func toggleLanguage() {
+        let next: LanguageMode = L10n.current == .ko ? .en : .ko
+        UIPrefs.setLanguage(next, Prefs.shared)
+        L10n.apply(next)
+    }
+
     /// 새 루프 양식을 연다. nodeID 가 있으면 그 콘솔만 고른 상태로.
     func newLoop(for nodeID: UUID?) {
         loopDraft.reset()
@@ -1473,12 +1493,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         guard composerPopover?.isShown != true, let anchor = composerAnchor, anchor.window != nil else { return }
         let host = NSHostingController(rootView: ComposerCard(state: composer) { [weak self] in self?.spawnComposer() }
-            .environment(\.colorScheme, .dark))
+            .localized())
         host.sizingOptions = [.preferredContentSize]
         let pop = NSPopover()
         pop.behavior = .transient
         pop.animates = false
-        pop.appearance = NSAppearance(named: .darkAqua)
         pop.contentViewController = host
         pop.delegate = self
         composerPopover = pop
@@ -1586,13 +1605,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         guard let img = NSImage(pasteboard: pb), let tiff = img.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) else {
-            chrome.flash("No image on the clipboard")
+            chrome.flash(L("No image on the clipboard"))
             return false
         }
         let dir = model.store.directory.appendingPathComponent("images", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let url = dir.appendingPathComponent("pasted-\(UUID().uuidString.prefix(8)).png")
-        guard (try? png.write(to: url)) != nil else { chrome.flash("Could not save the pasted image"); return false }
+        guard (try? png.write(to: url)) != nil else { chrome.flash(L("Could not save the pasted image")); return false }
         addImage(url: url, at: nil)
         return true
     }

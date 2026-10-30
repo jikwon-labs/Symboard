@@ -13,19 +13,19 @@ struct LoopTemplate: Identifiable {
 
     static let all: [LoopTemplate] = [
         LoopTemplate(icon: "text.bubble", name: "Pulse check", blurb: "A quick pulse from every agent each quarter hour: finished, up next, stuck on.",
-                     message: "Give a short status: what you finished, what you will do next, and anything blocking you.", trigger: .interval(seconds: 900)),
+                     message: L("Give a short status: what you finished, what you will do next, and anything blocking you."), trigger: .interval(seconds: 900)),
         LoopTemplate(icon: "figure.walk", name: "Nudge when quiet", blurb: "A console that has gone silent gets a nudge to pick up the next useful task.",
-                     message: "If your current task is done, pick the next most useful task from the plan and continue.", trigger: .idle(seconds: 30)),
+                     message: L("If your current task is done, pick the next most useful task from the plan and continue."), trigger: .idle(seconds: 30)),
         LoopTemplate(icon: "wrench.and.screwdriver", name: "Red-line fixer", blurb: "The moment FAILED shows up in a console, that agent drops everything and repairs it.",
-                     message: "The last command failed. Stop, read the error, fix the cause, then run it again.", trigger: .output(pattern: "FAILED")),
+                     message: L("The last command failed. Stop, read the error, fix the cause, then run it again."), trigger: .output(pattern: "FAILED")),
         LoopTemplate(icon: "checkmark.shield", name: "Suite watchdog", blurb: "Twice an hour the tests run, and a red result is traced to its real cause.",
-                     message: "Run the test suite. If anything fails, fix the underlying cause rather than the test, then re-run.", trigger: .interval(seconds: 1800)),
+                     message: L("Run the test suite. If anything fails, fix the underlying cause rather than the test, then re-run."), trigger: .interval(seconds: 1800)),
         LoopTemplate(icon: "arrow.triangle.branch", name: "Save point", blurb: "Every 20 minutes work in progress becomes a local commit. Nothing is pushed.",
-                     message: "If you have working changes, commit them with a clear message. Do not push.", trigger: .interval(seconds: 1200)),
+                     message: L("If you have working changes, commit them with a clear message. Do not push."), trigger: .interval(seconds: 1200)),
         LoopTemplate(icon: "magnifyingglass", name: "Second look", blurb: "Every half hour an agent rereads what changed, hunting bugs and leftovers to tidy.",
-                     message: "Review the changes made since the last review for bugs and dead code, and fix what you find.", trigger: .interval(seconds: 1800)),
+                     message: L("Review the changes made since the last review for bugs and dead code, and fix what you find."), trigger: .interval(seconds: 1800)),
         LoopTemplate(icon: "clock", name: "Three-line hour", blurb: "On the hour each agent writes exactly three lines: done, doing, blocked.",
-                     message: "Write a three-line stand-up: done, doing, blocked.", trigger: .interval(seconds: 3600)),
+                     message: L("Write a three-line stand-up: done, doing, blocked."), trigger: .interval(seconds: 3600)),
     ]
 }
 
@@ -55,7 +55,7 @@ final class LoopDraft: ObservableObject {
     @Published var background = true
 
     func apply(_ t: LoopTemplate) {
-        name = t.name
+        name = L(t.name)
         message = t.message
         switch t.trigger {
         case .interval(let s): when = "interval"; intervalMinutes = s / 60
@@ -161,16 +161,16 @@ struct LoopsModal: View {
             Image(systemName: "arrow.triangle.2.circlepath").foregroundStyle(Color.symAccent)
                 .frame(width: 36, height: 36).background(RoundedRectangle(cornerRadius: 10).fill(Color.symAccent.opacity(0.12)))
             VStack(alignment: .leading, spacing: 3) {
-                Text("Loops").font(.system(size: 20, weight: .semibold)).foregroundStyle(Color.symText)
-                Text("Instructions that repeat for your agents: on a timer, when they go quiet, or when their output says so. A loop can switch itself off once its goal is reached.")
+                Text(L("Loops")).font(.system(size: 20, weight: .semibold)).foregroundStyle(Color.symText)
+                Text(L("Instructions that repeat for your agents: on a timer, when they go quiet, or when their output says so. A loop can switch itself off once its goal is reached."))
                     .font(.system(size: 12)).foregroundStyle(Color.symDim).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             if (chrome.loopsPage ?? "list") == "list" && !runner.rows.isEmpty {
-                Button { draft.reset(); chrome.loopsPage = "gallery" } label: { Label("New loop", systemImage: "plus") }
+                Button { draft.reset(); chrome.loopsPage = "gallery" } label: { Label(L("New loop"), systemImage: "plus") }
                     .buttonStyle(PillButtonStyle(prominent: true))
             }
-            Button { chrome.loopsPage = nil } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }.tip("Close loops")
+            Button { chrome.loopsPage = nil } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)) }.tip(L("Close loops"))
                 .buttonStyle(.plainHit).foregroundStyle(Color.symDim).padding(.top, 4)
         }
         .padding(18)
@@ -190,16 +190,16 @@ struct LoopsModal: View {
     var gallery: some View {
         fitOrScroll {
             VStack(alignment: .leading, spacing: 12) {
-                Text("TEMPLATES").font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+                Text(L("TEMPLATES")).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                     ForEach(LoopTemplate.all) { t in
                         Button { draft.reset(); draft.apply(t); chrome.loopsPage = "form" } label: {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 8) {
                                     Image(systemName: t.icon).foregroundStyle(Color.symAccent)
-                                    Text(t.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                                    Text(L(t.name)).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
                                 }
-                                Text(t.blurb).font(.system(size: 11)).foregroundStyle(Color.symDim).lineLimit(2)
+                                Text(L(t.blurb)).font(.system(size: 11)).foregroundStyle(Color.symDim).lineLimit(2)
                                     .multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(12)
@@ -212,7 +212,7 @@ struct LoopsModal: View {
                 }
                 HStack {
                     Spacer()
-                    Button("Start from scratch") { draft.reset(); chrome.loopsPage = "form" }.buttonStyle(PillButtonStyle()).axName("Start from scratch")
+                    Button(L("Start from scratch")) { draft.reset(); chrome.loopsPage = "form" }.buttonStyle(PillButtonStyle()).axName("Start from scratch")
                     Spacer()
                 }
                 .padding(.top, 8)
@@ -232,7 +232,7 @@ struct LoopsModal: View {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack(spacing: 8) {
                                 Text(row.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
-                                Text("\(row.runCount) runs").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
+                                Text(Ln(row.runCount, "%d run", "%d runs")).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                                 if !row.note.isEmpty { Text(row.note).font(.system(size: 11)).foregroundStyle(Color.symDim) }
                             }
                             Text(row.summary).font(.system(size: 11)).foregroundStyle(Color.symText.opacity(0.8)).lineLimit(1)
@@ -242,7 +242,7 @@ struct LoopsModal: View {
                         if row.checking {
                             ProgressView().controlSize(.small)
                         } else if let n = row.nextIn {
-                            Text("in \(n / 60):\(String(format: "%02d", n % 60))")
+                            Text(L("in %@", "\(n / 60):\(String(format: "%02d", n % 60))"))
                                 .font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(Color.symAccent)
                                 .padding(.horizontal, 7).padding(.vertical, 3)
                                 .background(Capsule().fill(Color.symAccent.opacity(0.12)))
@@ -251,13 +251,13 @@ struct LoopsModal: View {
                             Image(systemName: "play.fill").font(.system(size: 10)).frame(width: 26, height: 26)
                                 .background(Circle().fill(Color.symRaised))
                         }
-                        .buttonStyle(.plainHit).foregroundStyle(Color.symText).tip("Run now")
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symText).tip(L("Run now"))
                         Toggle("", isOn: Binding(get: { row.enabled }, set: { runner.setEnabled(row.id, $0) }))
                             .toggleStyle(.switch).labelsHidden().tint(Color.symAccent).controlSize(.small)
                         Menu {
-                            Button("Edit") { if let r = runner.rule(row.id) { draft.load(r); chrome.loopsPage = "form" } }
-                            Button("Delete", role: .destructive) { runner.remove(row.id) }
-                        } label: { Image(systemName: "ellipsis") }.tip("Loop actions")
+                            Button(L("Edit")) { if let r = runner.rule(row.id) { draft.load(r); chrome.loopsPage = "form" } }
+                            Button(L("Delete"), role: .destructive) { runner.remove(row.id) }
+                        } label: { Image(systemName: "ellipsis") }.tip(L("Loop actions"))
                             .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 24)
                     }
                     .padding(12)
@@ -277,24 +277,24 @@ struct LoopsModal: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
                             ForEach(LoopTemplate.all) { t in
-                                Button { draft.apply(t) } label: { Label(t.name, systemImage: t.icon) }
-                                    .buttonStyle(ChipStyle(on: draft.name == t.name))
+                                Button { draft.apply(t) } label: { Label(L(t.name), systemImage: t.icon) }
+                                    .buttonStyle(ChipStyle(on: draft.name == L(t.name)))
                             }
                         }
                     }
-                    section("NAME") {
-                        TextField("", text: $draft.name, prompt: Text("e.g. Suite watchdog").foregroundColor(Color.symDim)).modifier(FieldLook())
+                    section(L("NAME")) {
+                        TextField("", text: $draft.name, prompt: Text(L("e.g. Suite watchdog")).foregroundColor(Color.symDim)).modifier(FieldLook())
                             .autoFocus(draft.editing == nil && draft.name.isEmpty)
                             .onSubmit { if draft.isValid { c.saveLoop() } }
                     }
-                    section("INSTRUCTION") {
+                    section(L("INSTRUCTION")) {
                         TextEditor(text: $draft.message)
                             .font(.system(size: 13)).scrollContentBackground(.hidden).foregroundStyle(Color.symText)
                             .frame(height: 70).padding(6)
                             .background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
-                        Text("Typed into each targeted console exactly as written.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                        Text(L("Typed into each targeted console exactly as written.")).font(.system(size: 11)).foregroundStyle(Color.symDim)
                     }
-                    section("WHEN") {
+                    section(L("WHEN")) {
                         HStack(spacing: 10) {
                             whenCard("interval", "clock", "On a timer", "Repeats at a fixed interval.")
                             whenCard("idle", "moon.zzz", "When an agent goes quiet", "Fires once a targeted console has finished.")
@@ -302,10 +302,10 @@ struct LoopsModal: View {
                         }
                         switch draft.when {
                         case "idle":
-                            HStack { Text("Quiet for").foregroundStyle(Color.symDim); Stepper("\(Int(draft.idleSeconds)) s", value: $draft.idleSeconds, in: 3...600, step: 5) }
+                            HStack { Text(L("Quiet for")).foregroundStyle(Color.symDim); Stepper("\(Int(draft.idleSeconds)) s", value: $draft.idleSeconds, in: 3...600, step: 5) }
                                 .font(.system(size: 12))
                         case "output":
-                            TextField("", text: $draft.pattern, prompt: Text("Text to watch for, e.g. FAILED").foregroundColor(Color.symDim)).modifier(FieldLook())
+                            TextField("", text: $draft.pattern, prompt: Text(L("Text to watch for, e.g. FAILED")).foregroundColor(Color.symDim)).modifier(FieldLook())
                         default:
                             HStack(spacing: 6) {
                                 ForEach([5.0, 10, 15, 30, 60, 120], id: \.self) { m in
@@ -318,7 +318,7 @@ struct LoopsModal: View {
                             }
                         }
                     }
-                    section("TARGET") {
+                    section(L("TARGET")) {
                         radio(draft.targetAll, "All consoles", "\(consoles.count) on the board, plus any opened later") { draft.targetAll = true }
                         radio(!draft.targetAll, "Pick consoles", "Choose exactly which consoles receive it") { draft.targetAll = false }
                         if !draft.targetAll {
@@ -330,7 +330,7 @@ struct LoopsModal: View {
                             .padding(.leading, 28)
                         }
                     }
-                    section("STOP") {
+                    section(L("STOP")) {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 toggle($draft.useRuns, "After a number of runs")
@@ -346,9 +346,9 @@ struct LoopsModal: View {
                         .padding(12)
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color.symRaised.opacity(0.6)))
                     }
-                    section("BEHAVIOR") {
+                    section(L("BEHAVIOR")) {
                         toggle($draft.background, "Keep running while another workspace is open")
-                        Text("Off: the loop only runs while this workspace is on screen.").font(.system(size: 11)).foregroundStyle(Color.symDim).padding(.leading, 44)
+                        Text(L("Off: the loop only runs while this workspace is on screen.")).font(.system(size: 11)).foregroundStyle(Color.symDim).padding(.leading, 44)
                     }
                 }
                 .padding(18)
@@ -361,28 +361,28 @@ struct LoopsModal: View {
     var goalEditor: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Button { draft.goalMode = "command" } label: { Label("A command passes", systemImage: "terminal") }
+                Button { draft.goalMode = "command" } label: { Label(L("A command passes"), systemImage: "terminal") }
                     .buttonStyle(ChipStyle(on: draft.goalMode == "command"))
-                Button { draft.goalMode = "agent" } label: { Label("An agent judges", systemImage: "scope") }
+                Button { draft.goalMode = "agent" } label: { Label(L("An agent judges"), systemImage: "scope") }
                     .buttonStyle(ChipStyle(on: draft.goalMode == "agent"))
                 if draft.goalMode == "agent" {
                     ForEach(["claude", "codex"], id: \.self) { a in
                         Button(LoopSummary.agentName(a)) { draft.goalAgent = a }.buttonStyle(ChipStyle(on: draft.goalAgent == a))
                     }
                 }
-                Button { draft.goalMode = "text" } label: { Label("Output shows text", systemImage: "text.magnifyingglass") }
+                Button { draft.goalMode = "text" } label: { Label(L("Output shows text"), systemImage: "text.magnifyingglass") }
                     .buttonStyle(ChipStyle(on: draft.goalMode == "text"))
             }
             switch draft.goalMode {
             case "command":
-                TextField("", text: $draft.goalCommand, prompt: Text("e.g. swift test").foregroundColor(Color.symDim)).modifier(FieldLook())
-                Text("Runs in the project folder before each round. Exit code 0 means the goal is met.").font(.system(size: 11)).foregroundStyle(Color.symDim)
+                TextField("", text: $draft.goalCommand, prompt: Text(L("e.g. swift test")).foregroundColor(Color.symDim)).modifier(FieldLook())
+                Text(L("Runs in the project folder before each round. Exit code 0 means the goal is met.")).font(.system(size: 11)).foregroundStyle(Color.symDim)
             case "agent":
-                TextField("", text: $draft.goal, prompt: Text("e.g. all tests are green").foregroundColor(Color.symDim)).modifier(FieldLook())
-                Text("Before each round a one-off \(LoopSummary.agentName(draft.goalAgent)) run reads the consoles' recent output and answers yes or no. It changes nothing.")
+                TextField("", text: $draft.goal, prompt: Text(L("e.g. all tests are green")).foregroundColor(Color.symDim)).modifier(FieldLook())
+                Text(L("Before each round a one-off %@ run reads the consoles' recent output and answers yes or no. It changes nothing.", LoopSummary.agentName(draft.goalAgent)))
                     .font(.system(size: 11)).foregroundStyle(Color.symDim)
             default:
-                TextField("", text: $draft.goal, prompt: Text("e.g. ALL TESTS PASSED").foregroundColor(Color.symDim)).modifier(FieldLook())
+                TextField("", text: $draft.goal, prompt: Text(L("e.g. ALL TESTS PASSED")).foregroundColor(Color.symDim)).modifier(FieldLook())
             }
         }
     }
@@ -399,8 +399,8 @@ struct LoopsModal: View {
                 }
             }
             Spacer()
-            Button("Cancel") { chrome.loopsPage = runner.rows.isEmpty ? nil : "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
-            Button(draft.editing == nil ? "Create loop" : "Save loop") { c.saveLoop() }
+            Button(L("Cancel")) { chrome.loopsPage = runner.rows.isEmpty ? nil : "list" }.buttonStyle(.plainHit).foregroundStyle(Color.symDim).axName("Cancel")
+            Button(L(draft.editing == nil ? "Create loop" : "Save loop")) { c.saveLoop() }
                 .keyboardShortcut(.return, modifiers: .command)
                 .buttonStyle(PillButtonStyle(prominent: true)).disabled(!draft.isValid).opacity(draft.isValid ? 1 : 0.5)
         }

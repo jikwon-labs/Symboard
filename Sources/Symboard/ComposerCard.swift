@@ -70,7 +70,7 @@ struct ComposerCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Circle().fill(roleColor).frame(width: 9, height: 9)
-                TextField("Team name", text: $state.teamName)
+                TextField(L("Team name"), text: $state.teamName)
                     .textFieldStyle(.plain)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.symText)
@@ -86,7 +86,7 @@ struct ComposerCard: View {
                     }
                     .foregroundStyle(state.role == r ? Color.symText : Color.symDim)
                     .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Capsule().fill(state.role == r ? Color.white.opacity(0.08) : .clear))
+                    .background(Capsule().fill(state.role == r ? Color.symText.opacity(0.08) : .clear))
                     .overlay(Capsule().stroke(state.role == r ? Color.symBorder : .clear))
                 }
                 .buttonStyle(.plainHit).axName("Role \(r.name)")
@@ -108,7 +108,7 @@ struct ComposerCard: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: choice.colorHex).opacity(0.35)))
                     }
                     .buttonStyle(.plainHit)
-                    .tip("Agent \(i + 1): \(choice.name). Click to switch this one to another CLI")
+                    .tip(L("Agent %d: %@. Click to switch this one to another CLI", i + 1, choice.name))
                     .transition(.scale.combined(with: .opacity))
                 }
             }
@@ -116,7 +116,7 @@ struct ComposerCard: View {
 
             // 원본처럼 아는 CLI 를 모두 늘어놓는다. 이 맥에 없는 것은 흐리게, 누르면 안내만(계정 팝오버와 같은 규칙).
             HStack(alignment: .top, spacing: 6) {
-                Text("Fill all").font(.system(size: 12)).foregroundStyle(Color.symDim).padding(.top, 6)
+                Text(L("Fill all")).font(.system(size: 12)).foregroundStyle(Color.symDim).padding(.top, 6)
                 CLIIconStrip(ids: AgentCatalog.known.map(\.id), supported: Set(AgentCatalog.known.map(\.id)),
                              selected: state.tiles.first.flatMap { f in state.tiles.allSatisfy { $0 == f } ? f : nil },
                              size: 24, feature: "teams", perRow: 6,
@@ -134,14 +134,14 @@ struct ComposerCard: View {
 
             HStack {
                 HStack(spacing: 10) {
-                    Button { state.setCount(state.count - 1) } label: { Image(systemName: "minus").frame(width: 22, height: 22) }.tip("Fewer agents")
+                    Button { state.setCount(state.count - 1) } label: { Image(systemName: "minus").frame(width: 22, height: 22) }.tip(L("Fewer agents"))
                     Text("\(state.count)").font(.system(size: 14, weight: .semibold, design: .monospaced)).frame(minWidth: 22)
-                    Button { state.setCount(state.count + 1) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }.tip("More agents")
+                    Button { state.setCount(state.count + 1) } label: { Image(systemName: "plus").frame(width: 22, height: 22) }.tip(L("More agents"))
                 }
                 .buttonStyle(.plainHit)
                 .foregroundStyle(Color.symText)
                 Spacer()
-                Button("Spawn \(state.count)", action: spawn)
+                Button(L("Spawn %d", state.count), action: spawn)
                     .buttonStyle(SpawnButtonStyle(color: roleColor)).axName("Spawn \(state.count)")
                     .keyboardShortcut(.defaultAction)
             }

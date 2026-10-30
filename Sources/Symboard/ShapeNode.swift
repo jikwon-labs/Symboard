@@ -113,14 +113,14 @@ struct ShapeNodeView: View {
                     fillShape(geo.size).fill(Color(hex: fill).opacity(0.85))
                 }
                 outline(in: geo.size)
-                    .stroke(Color(hex: spec.strokeHex), style: StrokeStyle(lineWidth: CGFloat(spec.strokeWidth), lineCap: .round, lineJoin: .round, dash: dash))
+                    .stroke(Color(nsColor: Theme.ink(spec.strokeHex) ?? Theme.text), style: StrokeStyle(lineWidth: CGFloat(spec.strokeWidth), lineCap: .round, lineJoin: .round, dash: dash))
                 if spec.kind != "arrow" {
                     TextEditor(text: Binding(get: { box.node.text ?? "" }, set: { v in box.update { $0.text = v } }))
                         .font(Font(TextStyleFonts.font(style)))
                         .multilineTextAlignment(TextStyleFonts.alignment(style))
                         .scrollContentBackground(.hidden)
                         .scrollIndicators(.never)
-                        .foregroundStyle(Color(hex: style.textColorHex ?? "#ECE7E2"))
+                        .foregroundStyle(Color(nsColor: Theme.ink(style.textColorHex) ?? Theme.text))
                         .frame(width: geo.size.width * (spec.kind == "rect" ? 0.86 : 0.68), height: textHeight(geo.size))
                 }
             }
