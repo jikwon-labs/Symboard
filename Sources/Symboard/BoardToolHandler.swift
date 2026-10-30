@@ -89,8 +89,13 @@ extension MainWindowController {
                 reply("draw_diagram needs title, nodes [{id, label}] and edges [{from, to}]", true); return
             }
             if model.selectedWorkspace.id != wsID { model.selectWorkspace(wsID) }
-            diagrams.draw(spec, center: scrollView.visibleCenter)
-            reply("Drew \"\(spec.title)\": \(spec.nodes.count) boxes, \(spec.edges.count) arrows.", false)
+            // 부른 콘솔 옆 빈 칸에 그리고, 다 그린 뒤 답한다(곧이어 hand_off 가 와도 상자와 겹치지 않게).
+            let size = DiagramMaker.footprint(spec)
+            let area = besideFrame(w: size.width, h: size.height, near: caller)
+            diagrams.draw(spec, center: scrollView.visibleCenter, area: area) { [weak self] in
+                if let caller { self?.currentCanvas?.select(caller) }
+                reply("Drew \"\(spec.title)\": \(spec.nodes.count) boxes, \(spec.edges.count) arrows.", false)
+            }
 
         case "send_to_console":
             guard let n = console(named: str("name"), in: wsID) else { reply("No console named \(str("name"))", true); return }

@@ -23,8 +23,11 @@ STATUS: DONE
 | 4 | 10-31 02:08 | codex 보드 도구 시험 다시. 같은 질문 |
 | 5 | 10-31 02:18 | 완료 기준. claude Ada 에 두 단계 넘겨주기 시험 질문 |
 | 6 | 10-31 02:19 | 완료 기준. Ada 가 넘긴 claude Pip 이 받은 프롬프트 |
+| 7 | 10-31 02:31 | 화면 시험(사용자 요청). 다이어그램 + hand_off + 메모 두 줄 요청 |
+| 8 | 10-31 02:35 | 화면 시험 다시(겹침 고친 뒤). 같은 요청 |
+| 9 | 10-31 02:37 | 화면 시험. 개수 제한 1 에서 한 번 더 hand_off |
 
-합계: 6
+합계: 9
 
 ## 할 일
 
@@ -69,3 +72,14 @@ STATUS: DONE
 4. 통과. 폴더가 없는 콘솔은 띄우지 않고 알림(4번, `relay.png`).
 
 `swift test` 216개 통과(8차 204), `scripts/bundle.sh`(release) 통과.
+
+## 화면 시험 (완료 보고 뒤 사용자 요청: "직접 창 띄워서 테스트")
+
+사용자 앱과 따로 상태 폴더를 둔 인스턴스를 위쪽 모니터에 띄우고, 실제 클릭·키(`cgclick`, 키는 앱 프로세스에 바로)와 실제 화면 캡처(`screencapture -R`)로 했다. 글자 입력만 DebugBridge `send`.
+
+1. 통과. Ada 를 클릭 → 첫 줄 → 실제 Shift+Return → 둘째 줄: 입력 줄에 두 줄, 보내지지 않음(`ui-shift-enter.png`). 실제 Return 으로 보냄(질문 7).
+2. 고침. 다이어그램 상자가 hand_off 카드·Pip 과 겹쳤다(`ui-overlap-before.png`). 원인: draw_diagram 이 상자를 시차를 두고 놓는데 바로 답해서, 곧이은 hand_off 가 아직 없는 상자 자리를 빈 칸으로 봤다. 다이어그램 자리도 화면 가운데였다. → 부른 콘솔 옆 빈 칸을 다이어그램 크기(`DiagramMaker.footprint`)로 찾아 그 안에 그리고, 마지막 화살표까지 놓은 뒤 답한다. 다시(질문 8): Ada 옆 다이어그램, 그 옆 카드 "Step 2 → Pip" 과 Pip(`echo step-2-ok` → `step-2-ok`), 위에 메모, 겹침 없음(`ui-diagram-handoff-note.png`).
+3. 통과. 톱니 실제 클릭 → Settings → "Max consoles opened by agents" 팝업 클릭 → 1 → prefs `agents.maxOpened: 1`. Ada 에 "Hand off once more …"(질문 9) → 아래 띠 "Ada wants to open another console: agents already opened 1 console (limit 1)."(`ui-limit-ask.png`) → Cancel 실제 클릭 → 콘솔 안 생김, claude 가 다시 시도하지 않고 "The handoff didn't go through … I won't retry" 와 방법을 알림.
+4. 고침. Settings 창이 낮아 마지막 설명 줄이 잘렸다 → 창 높이 446. "1 consoles" → "1 console". 다시 띄워 확인(`ui-settings.png`).
+5. claude 는 레포 파일을 바꾸지 않았다(`git status` 에 내 수정만).
+

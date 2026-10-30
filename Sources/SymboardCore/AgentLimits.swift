@@ -46,7 +46,7 @@ public enum AgentLimits {
     /// 하나 더 열면 넘는 제한. 없으면 nil. 문구는 사용자 확인 띠에 그대로 쓴다(앱 글자가 영어).
     public static func exceeded(callerDepth: Int, opened: Int, maxDepth: Int, maxOpened: Int) -> String? {
         if callerDepth + 1 > maxDepth { return "chain step \(callerDepth + 1) is past the limit of \(maxDepth)" }
-        if opened + 1 > maxOpened { return "agents already opened \(opened) consoles (limit \(maxOpened))" }
+        if opened + 1 > maxOpened { return "agents already opened \(opened) console\(opened == 1 ? "" : "s") (limit \(maxOpened))" }
         return nil
     }
 }

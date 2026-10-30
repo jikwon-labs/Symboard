@@ -20,7 +20,7 @@ final class SettingsWindowController: NSWindowController {
     private static let systemHangul = "System default (Apple SD Gothic Neo)"
 
     init() {
-        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 400), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 446), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = "Settings"
         w.appearance = NSAppearance(named: .darkAqua)
         w.backgroundColor = Theme.surface

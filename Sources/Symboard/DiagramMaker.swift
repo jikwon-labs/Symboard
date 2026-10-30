@@ -57,17 +57,23 @@ final class DiagramMaker: ObservableObject {
     }
 
     /// 사양을 보드에 그린다. 그룹 → 제목 → 노드 → 화살표 순서로 조금씩 시차를 두고 나타난다.
-    func draw(_ spec: DiagramSpec, center: Point) {
+    /// area 를 주면(보드 도구, 9차) 그 칸 안에 그린다. 칸은 `footprint` 크기로 미리 찾아 둔 빈 자리.
+    /// completion 은 마지막 화살표까지 놓은 뒤 불린다(그 전에 다른 노드 자리를 찾으면 아직 없는 상자와 겹친다).
+    func draw(_ spec: DiagramSpec, center: Point, area given: Rect? = nil, completion: (() -> Void)? = nil) {
         let est = spec.layout(origin: Point(x: 0, y: 0), nodeW: 250, nodeH: 120)
         let maxX = est.nodes.values.map { $0.x + $0.w }.max() ?? 0
         let maxY = est.nodes.values.map { $0.y + $0.h }.max() ?? 0
         var origin = Point(x: center.x - maxX / 2, y: center.y - maxY / 2)
-        // 원본은 빈 캔버스에 그린다. 그 자리에 이미 노드가 있으면 보드 오른쪽 빈 곳으로 옮긴다(겹쳐 그리지 않게).
-        let area = Rect(x: origin.x - 40, y: origin.y - 120, w: maxX + 80, h: maxY + 160)
-        let others = c.model.selectedWorkspace.nodes.map(\.frame)
-        if others.contains(where: { $0.x < area.x + area.w && $0.x + $0.w > area.x && $0.y < area.y + area.h && $0.y + $0.h > area.y }) {
-            let right = others.map { $0.x + $0.w }.max() ?? 0
-            origin = Point(x: right + 200, y: center.y - maxY / 2)
+        if let given {
+            origin = Point(x: given.x + 40, y: given.y + 120)
+        } else {
+            // 원본은 빈 캔버스에 그린다. 그 자리에 이미 노드가 있으면 보드 오른쪽 빈 곳으로 옮긴다(겹쳐 그리지 않게).
+            let area = Rect(x: origin.x - 40, y: origin.y - 120, w: maxX + 80, h: maxY + 160)
+            let others = c.model.selectedWorkspace.nodes.map(\.frame)
+            if others.contains(where: { $0.x < area.x + area.w && $0.x + $0.w > area.x && $0.y < area.y + area.h && $0.y + $0.h > area.y }) {
+                let right = others.map { $0.x + $0.w }.max() ?? 0
+                origin = Point(x: right + 200, y: center.y - maxY / 2)
+            }
         }
         let lay = spec.layout(origin: origin, nodeW: 250, nodeH: 120)
         let wsID = c.model.selectedWorkspace.id
@@ -147,7 +153,17 @@ final class DiagramMaker: ObservableObject {
             self.c.currentCanvas?.layoutLinks()
             let frames = madeIDs.compactMap { self.c.model.node($0)?.frame }
             if frames.isEmpty { self.c.zoomToFit(nil) } else { self.c.zoomToFit(frames: frames) }
+            completion?()
         }
+    }
+
+    /// 다이어그램이 차지할 크기(제목·그룹 여백 포함). draw 의 area 와 같은 셈.
+    static func footprint(_ spec: DiagramSpec) -> CGSize {
+        let est = spec.layout(origin: Point(x: 0, y: 0), nodeW: 250, nodeH: 120)
+        let maxX = est.nodes.values.map { $0.x + $0.w }.max() ?? 0
+        let maxY = est.nodes.values.map { $0.y + $0.h }.max() ?? 0
+        let titleW = max(560, Double(spec.title.count) * 22 + 60)
+        return CGSize(width: max(maxX, titleW) + 80, height: maxY + 160)
     }
 
     /// 다이어그램이 만든 노드 표시(BoardNode.role). 고르면 노드 편집 패널이 뜬다.

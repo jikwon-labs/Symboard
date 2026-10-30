@@ -90,6 +90,7 @@ import Testing
         #expect(AgentLimits.exceeded(callerDepth: 3, opened: 0, maxDepth: 4, maxOpened: 12) == nil)
         #expect(AgentLimits.exceeded(callerDepth: 4, opened: 0, maxDepth: 4, maxOpened: 12)?.contains("chain step 5") == true)
         #expect(AgentLimits.exceeded(callerDepth: 0, opened: 12, maxDepth: 4, maxOpened: 12)?.contains("12 consoles") == true)
+        #expect(AgentLimits.exceeded(callerDepth: 0, opened: 1, maxDepth: 4, maxOpened: 1)?.contains("opened 1 console (") == true)
     }
 
     @Test func prefsDefaultAndChange() throws {
