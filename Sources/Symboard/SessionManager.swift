@@ -40,6 +40,14 @@ final class SessionManager {
 
     func session(for nodeID: UUID) -> TerminalSession? { sessions[nodeID] }
 
+    /// 폴더가 없어 콘솔을 띄우지 않았을 때(창이 알림을 띄운다).
+    var onMissingFolder: ((String) -> Void)?
+
+    static func folderExists(_ path: String) -> Bool {
+        var dir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &dir) && dir.boolValue
+    }
+
     /// 세션이 없으면 만들고 프로세스를 띄운다.
     func ensureSession(for node: BoardNode) -> TerminalSession? {
         if let s = sessions[node.id] { return s }
@@ -83,6 +91,13 @@ final class SessionManager {
     }
 
     private func launch(_ s: TerminalSession, spec: TerminalSpec) {
+        // 폴더가 없으면(지워진 /tmp 시험 폴더 등) 띄우지 않는다. 예전에는 홈 폴더에서 띄워 claude 가 홈 폴더 신뢰를 묻고,
+        // 홈 아래 음악·사진 폴더를 훑어 macOS 가 Symboard 에 접근 허용을 물었다(9차 4번).
+        guard Self.folderExists(spec.cwd) else {
+            s.showMissingFolder(spec.cwd)
+            onMissingFolder?(spec.cwd)
+            return
+        }
         let profile = spec.profileID.flatMap { id in model.state.profiles.first { $0.id == id } }
         let configDir = profile?.agent == .claude ? profile?.configDir : nil
         let exists = spec.sessionID.map {

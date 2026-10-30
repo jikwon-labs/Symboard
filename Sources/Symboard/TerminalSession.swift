@@ -74,6 +74,7 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
 
     func start(plan: LaunchPlan, shell: String) {
         self.plan = plan
+        missingFolder = nil
         try? FileManager.default.createDirectory(at: statusFile.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? FileManager.default.removeItem(at: statusFile)
         try? FileManager.default.removeItem(atPath: statusFile.path + ".sid")
@@ -163,7 +164,18 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
     }
 
     /// 1초마다 부르는 최종 판정. 화면 끝 글자로 선택 대기를 잡고, 끝낸 일을 Done 으로 남긴다.
+    /// 폴더가 없어 띄우지 않은 콘솔의 폴더(9차 4번). 있으면 상태는 exited.
+    var missingFolder: String?
+
+    /// 폴더가 없어 띄우지 않는다. 홈 폴더로 몰래 넘어가지 않고 콘솔에 알린다.
+    func showMissingFolder(_ path: String) {
+        missingFolder = path
+        view.feed(text: "\u{1b}[33mFolder not found: \(path)\u{1b}[0m\r\n"
+                      + "\u{1b}[2mThis console did not start. Open a folder from Home → Open folder, then press Restart.\u{1b}[0m\r\n")
+    }
+
     func resolveStatus(now: Date = Date()) -> NodeStatus {
+        if missingFolder != nil, !running { return .exited }
         pollStatusFile()
         if isPlainShell { return tracker.resolve(now: now, shellAtPrompt: shellAtPrompt()) }
         if view.window?.firstResponder === view { tracker.acknowledge() }
