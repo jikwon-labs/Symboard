@@ -31,12 +31,15 @@ struct TopLeftBar: View {
                         HStack(spacing: 6) {
                             Image(systemName: "folder.fill").foregroundStyle(Color.symDim)
                             Text(project.map { ($0 as NSString).lastPathComponent } ?? "No project")
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
                         .font(.system(size: 12, weight: .medium))
                     }
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.visible)
-                    .fixedSize()
+                    // 폴더 이름 길이와 상관없이 같은 폭(9차). 이름이 바뀔 때마다 옆 탭·단추가 밀려 불편했다. 긴 이름은 가운데를 줄이고 전체 경로는 툴팁.
+                    .frame(width: 200, alignment: .leading)
                     .padding(.horizontal, 8)
                     .help(project ?? "")
 
