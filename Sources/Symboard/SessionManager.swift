@@ -96,8 +96,14 @@ final class SessionManager {
             let json = BoardTools.mcpConfigJSON(serverPath: exe, socketPath: model.boardTools.socketPath, nodeID: s.nodeID)
             if (try? json.write(to: cfg, atomically: true, encoding: .utf8)) != nil { claudeArgs = BoardTools.claudeArgs(configPath: cfg.path) }
         }
+        // codex 에도 같은 안내와 도구를 -c 인자로만 붙인다. 사용자 ~/.codex 는 그대로.
+        var codexArgs: [String] = []
+        if spec.agent == .codex, BoardTools.enabled(Prefs.shared), let exe = BoardToolServer.serverExecutable {
+            codexArgs = BoardTools.codexArgs(serverPath: exe, socketPath: model.boardTools.socketPath, nodeID: s.nodeID)
+        }
         let plan = LaunchPlanner.plan(for: spec, nodeID: s.nodeID, statusFile: s.statusFile.path,
-                                      profile: profile, claudeSessionExists: exists, defaultShell: shell, claudeExtraArgs: claudeArgs)
+                                      profile: profile, claudeSessionExists: exists, defaultShell: shell,
+                                      claudeExtraArgs: claudeArgs, codexExtraArgs: codexArgs)
         if spec.agent == .claude {
             s.onSessionID = { [weak self] sid in
                 guard let self, self.model.node(s.nodeID)?.terminal?.sessionID != sid else { return }

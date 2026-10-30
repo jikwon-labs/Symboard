@@ -10,7 +10,7 @@ final class BoardToolServer: @unchecked Sendable {
     var handler: (@MainActor (_ caller: String, _ tool: String, _ args: [String: Any], _ reply: @escaping (String, Bool) -> Void) -> Void)?
 
     init(directory: URL) {
-        socketPath = directory.appendingPathComponent("bridge.sock").path
+        socketPath = BoardTools.socketPath(directory: directory.path, temporary: NSTemporaryDirectory())
     }
 
     /// 앱 번들(또는 빌드 폴더) 안 stdio MCP 서버. 없으면 nil(도구를 붙이지 않는다).

@@ -2,7 +2,7 @@ import Foundation
 
 /// claude 가 보드에 콘솔을 띄우는 도구(8차 3번).
 /// 앱이 유닉스 소켓을 열고, 앱 번들 안 `symboard-mcp`(stdio MCP 서버)가 도구 호출마다 그 소켓에 한 줄 JSON 을 보낸다.
-/// claude 콘솔은 `--mcp-config <앱이 만든 임시 json>` 과 `--append-system-prompt` 로 붙인다. 사용자 ~/.claude 는 건드리지 않는다.
+/// claude 콘솔은 `--mcp-config <앱이 만든 임시 json>` 과 `--append-system-prompt` 로, codex 콘솔은 `-c` 인자로 붙인다. 사용자 ~/.claude·~/.codex 는 건드리지 않는다.
 public enum BoardTools {
     public static let serverName = "symboard"
     public static let prefKey = "agents.boardTools"
@@ -10,6 +10,16 @@ public enum BoardTools {
     /// 설정 "Let agents open consoles on the board"(기본 켬).
     public static func enabled(_ prefs: Prefs) -> Bool { prefs.string(prefKey) != "off" }
     public static func setEnabled(_ on: Bool, _ prefs: Prefs) { prefs.set(on ? nil : "off", for: prefKey) }
+
+    /// 앱 소켓 경로. 유닉스 소켓 경로는 103바이트까지라, 상태 폴더 경로가 길면 임시 폴더에 폴더별 이름으로 둔다.
+    public static func socketPath(directory: String, temporary: String) -> String {
+        let p = (directory as NSString).appendingPathComponent("bridge.sock")
+        if p.utf8.count < 104 { return p }
+        // 폴더마다 같은 이름이 나오게 경로의 FNV-1a 해시를 쓴다(Hasher 는 실행마다 바뀐다).
+        var h: UInt64 = 0xcbf29ce484222325
+        for b in directory.utf8 { h = (h ^ UInt64(b)) &* 0x100000001b3 }
+        return (temporary as NSString).appendingPathComponent("symboard-\(String(h, radix: 16)).sock")
+    }
 
     /// claude 에 덧붙이는 짧은 안내.
     public static let systemPrompt = """
@@ -23,6 +33,34 @@ public enum BoardTools {
 
     public static func claudeArgs(configPath: String) -> [String] {
         ["--mcp-config", configPath, "--append-system-prompt", systemPrompt]
+    }
+
+    /// codex 는 `-c 키=TOML값` 으로만 붙인다(사용자 ~/.codex/config.toml 은 그대로). 안내는 developer_instructions,
+    /// 도구는 claude 와 같은 `symboard-mcp` 를 mcp_servers.symboard 로. `codex resume` 에도 같은 인자가 통한다.
+    public static func codexArgs(serverPath: String, socketPath: String, nodeID: UUID) -> [String] {
+        let env = "{SYMBOARD_SOCKET=\(tomlString(socketPath)), SYMBOARD_CALLER=\(tomlString(nodeID.uuidString))}"
+        return [
+            "-c", "developer_instructions=\(tomlString(systemPrompt))",
+            "-c", "mcp_servers.\(serverName).command=\(tomlString(serverPath))",
+            "-c", "mcp_servers.\(serverName).env=\(env)",
+        ]
+    }
+
+    /// TOML 기본 문자열(큰따옴표). 역슬래시·따옴표·제어 문자를 이스케이프한다.
+    static func tomlString(_ s: String) -> String {
+        var out = "\""
+        for u in s.unicodeScalars {
+            switch u {
+            case "\\": out += "\\\\"
+            case "\"": out += "\\\""
+            case "\n": out += "\\n"
+            case "\t": out += "\\t"
+            case "\r": out += "\\r"
+            default:
+                if u.value < 0x20 || u.value == 0x7f { out += String(format: "\\u%04X", u.value) } else { out.unicodeScalars.append(u) }
+            }
+        }
+        return out + "\""
     }
 
     /// `--mcp-config` 에 줄 JSON. 서버는 콘솔마다 따로 뜨고, 부른 콘솔은 환경 변수로 안다.

@@ -71,7 +71,7 @@ public enum LaunchPlanner {
     ///   - claudeSessionExists: claude 세션 기록이 디스크에 있는지. 없으면 --resume 대신 같은 id 로 새로 시작한다.
     public static func plan(for spec: TerminalSpec, nodeID: UUID, statusFile: String,
                             profile: AccountProfile?, claudeSessionExists: Bool,
-                            defaultShell: String, claudeExtraArgs: [String] = []) -> LaunchPlan {
+                            defaultShell: String, claudeExtraArgs: [String] = [], codexExtraArgs: [String] = []) -> LaunchPlan {
         var env: [String: String] = [
             "SYMBOARD_NODE_ID": nodeID.uuidString,
             "SYMBOARD_STATUS_FILE": statusFile,
@@ -109,10 +109,10 @@ public enum LaunchPlanner {
             if spec.hasLaunched {
                 // codex 는 시작 전에 세션 id 를 정할 수 없다. 찾아 둔 id 가 있으면 그것을, 없으면 이 폴더의 마지막 세션을 잇는다.
                 let target = spec.sessionID.map { [$0] } ?? ["--last"]
-                return LaunchPlan(command: ["codex", "resume"] + target + daemon + spec.extraArgs,
+                return LaunchPlan(command: ["codex", "resume"] + target + daemon + codexExtraArgs + spec.extraArgs,
                                   environment: env, cwd: spec.cwd, isResume: true, sessionID: spec.sessionID)
             }
-            return LaunchPlan(command: ["codex"] + daemon + spec.extraArgs, environment: env, cwd: spec.cwd, isResume: false, sessionID: nil)
+            return LaunchPlan(command: ["codex"] + daemon + codexExtraArgs + spec.extraArgs, environment: env, cwd: spec.cwd, isResume: false, sessionID: nil)
         }
     }
 

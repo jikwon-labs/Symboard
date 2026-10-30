@@ -18,6 +18,8 @@ STATUS: IN PROGRESS
 |---|----|------|
 | 1 | 10-31 01:41 | Shift+Enter 시험 뒤 그냥 Enter 확인. "Reply with only the word OK." |
 | 2 | 10-31 01:58 | codex `-c developer_instructions` 확인(`codex exec`). "Where are you running? Answer in one word." |
+| 3 | 10-31 02:05 | codex 보드 도구 시험. 시험 폴더 경로가 길어 소켓 경로 초과로 실패(아래 3번) |
+| 4 | 10-31 02:08 | codex 보드 도구 시험 다시. 같은 질문 |
 
 ## 할 일
 
@@ -30,7 +32,11 @@ STATUS: IN PROGRESS
   - 원인: claude 는 그리기 전에 `ESC 7`(커서 저장) 뒤 kitty 키보드 질의 `ESC[?u` 를 보낸다. SwiftTerm 은 접두 글자와 상관없이 `CSI u` 를 커서 되돌리기(SCORC)로 처리해 커서를 저장 위치(위쪽)로 옮겼고, 그 뒤 상대 이동(`ESC[4A` 등)으로 고치는 줄이 맨 위에 찍혔다.
   - 고침: 접두 글자(? > < =)가 붙은 `CSI u` 는 무시(`Vendor/SwiftTerm/PATCHES.md` 7).
   - 확인: 같은 녹화 재생과 실제 claude 신뢰 화면에서 ↓↑↓ → 위쪽 조각 없음, 선택 표시만 바뀜. 평소 claude 첫 화면(대체 화면)도 그대로.
-- [ ] 3. codex 도 Symboard 안에 있음을 알고 보드 도구를 쓴다 (사용자 요청)
+- [x] 3. codex 도 Symboard 안에 있음을 알고 보드 도구를 쓴다 (사용자 요청)
+  - 원래: codex 콘솔에는 환경 변수(SYMBOARD_NODE_ID 등)만 있고 안내·도구가 없었다.
+  - 고침: `BoardTools.codexArgs` — `-c developer_instructions=<claude 와 같은 안내>`, `-c mcp_servers.symboard.command=<번들 symboard-mcp>`, `-c mcp_servers.symboard.env={SYMBOARD_SOCKET, SYMBOARD_CALLER}`. 새로 띄울 때와 `codex resume` 모두. 사용자 `~/.codex/config.toml` 은 그대로. 설정 스위치("Let agents open consoles on the board")를 같이 따른다.
+  - 더 고침: 유닉스 소켓 경로는 103바이트까지인데 상태 폴더 경로가 길면 소켓을 못 열었다(첫 시험에서 codex 가 "Socket path too long"). 길면 임시 폴더에 `symboard-<폴더 해시>.sock`.
+  - 확인: `codex exec -c developer_instructions=…` 로 안내를 따름(질문 2). `codex mcp list -c …` 에 symboard 가 enabled 로 보임. 새 번들, codex 콘솔에 "Where are you running? Then use the symboard tools to open a shell console with the prompt `echo codex-ok` …"(질문 4) → `Called symboard.spawn_console` → 보드에 셸 Pip, `read_console` → 답 "the Symboard shell printed codex-ok".
 - [ ] 4. 작업공간 폴더가 없으면 홈 폴더로 몰래 넘어가지 않고 알린다
 - [ ] 5. 멈춤 장치: 이어 띄우기 최대 단계, 에이전트가 연 콘솔 최대 개수, 설정 창에서 바꿈
 - [ ] 6. 넘겨주기 도구 hand_off: 프롬프트 카드 + 새 세션 + 선
