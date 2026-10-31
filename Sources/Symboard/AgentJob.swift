@@ -52,13 +52,20 @@ final class AgentJob {
         p.arguments = ["-lc", "exec " + cmd]
         p.currentDirectoryURL = URL(fileURLWithPath: options.cwd)
         p.environment = ProcessEnvironment.base()
-        let out = Pipe()
+        let out = Pipe(), err = Pipe()
         p.standardOutput = out
-        p.standardError = Pipe()
+        p.standardError = err
         p.standardInput = FileHandle.nullDevice
+        // 출력이 끝나면(빈 데이터) 읽기 핸들러를 꼭 뗀다. 그대로 두면 끝난 파이프에서 빈 데이터로 끝없이 다시 불려
+        // CPU 코어를 차지하고 메인 큐를 메웠다(작업 객체가 사라진 뒤에도).
         out.fileHandleForReading.readabilityHandler = { [weak self] h in
             let d = h.availableData
+            if d.isEmpty { h.readabilityHandler = nil; return }
             DispatchQueue.main.async { self?.consume(d) }
+        }
+        // stderr 는 쓰지 않지만 읽어서 버린다. 읽지 않으면 64KB 가 찼을 때 자식이 쓰기에서 멈춘다.
+        err.fileHandleForReading.readabilityHandler = { h in
+            if h.availableData.isEmpty { h.readabilityHandler = nil }
         }
         p.terminationHandler = { [weak self] proc in
             let code = proc.terminationStatus
@@ -75,9 +82,12 @@ final class AgentJob {
     private func consume(_ d: Data) {
         guard !d.isEmpty else { return }
         buffer.append(d)
-        while let nl = buffer.firstIndex(of: 0x0A) {
-            let line = String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self)
-            buffer.removeSubrange(buffer.startIndex...nl)
+        // 줄을 하나씩 앞에서 지우면 조각 하나 안에서 매번 남은 바이트를 당겨 와 줄 수에 비례해 느려진다. 끝에 한 번만 지운다.
+        var start = buffer.startIndex
+        defer { buffer.removeSubrange(buffer.startIndex..<start) }
+        while let nl = buffer[start...].firstIndex(of: 0x0A) {
+            let line = String(decoding: buffer[start..<nl], as: UTF8.self)
+            start = buffer.index(after: nl)
             for ev in parser.parse(line: line) {
                 switch ev {
                 case .text(let t):
