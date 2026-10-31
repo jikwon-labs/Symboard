@@ -1,7 +1,7 @@
 import Foundation
 
 /// 로컬 세션 로그에서 읽은 토큰 사용량.
-public struct TokenCounts: Equatable, Sendable {
+public struct TokenCounts: Equatable, Sendable, Codable {
     public var input = 0
     public var output = 0
     public var cacheRead = 0
@@ -19,7 +19,7 @@ public struct TokenCounts: Equatable, Sendable {
     }
 }
 
-public struct UsageRecord: Equatable, Sendable {
+public struct UsageRecord: Equatable, Sendable, Codable {
     /// 로컬 날짜 yyyy-MM-dd.
     public var day: String
     public var agent: AgentKind
@@ -73,14 +73,16 @@ public enum UsageParser {
     }
 
     /// 큰 로그를 빨리 읽으려고 줄 전체를 JSON 으로 풀지 않고, 바이트로 거른 뒤 usage 객체만 푼다.
-    public static func claude(data: Data, fallbackDay: String, seen: inout Set<String>) -> [UsageRecord] {
+    /// from: 이 바이트부터 읽는다(덧붙은 로그의 새 부분만 읽을 때). 줄 중간이면 그 줄의 시작으로 물러난다.
+    public static func claude(data: Data, fallbackDay: String, seen: inout Set<String>, from: Int = 0) -> [UsageRecord] {
         var out: [UsageRecord] = []
         let assistant = Data(#""type":"assistant""#.utf8)
         let usageKey = Data(#""usage":{"#.utf8)
         data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
             let bytes = raw.bindMemory(to: UInt8.self)
-            var lineStart = 0
             let n = bytes.count
+            var lineStart = min(max(0, from), n)
+            while lineStart > 0 && bytes[lineStart - 1] != 0x0A { lineStart -= 1 }
             while lineStart < n {
                 var lineEnd = lineStart
                 while lineEnd < n && bytes[lineEnd] != 0x0A { lineEnd += 1 }
@@ -267,10 +269,21 @@ public enum UsagePill {
     /// 지금보다 뒤의 가장 가까운 5시간 묶음 끝. 없으면 자리표시.
     public static func text(blockEnds: [Date], now: Date = Date(), timeZone: TimeZone = .current) -> String {
         guard let e = blockEnds.filter({ $0 > now }).min() else { return placeholder }
+        return L("resets %@", formatter(timeZone).string(from: e))
+    }
+
+    // 알약은 상태 틱(1초)마다 다시 계산된다. 그때마다 DateFormatter 를 새로 만들지 않고 시간대별로 하나를 둔다.
+    nonisolated(unsafe) private static var formatters: [String: DateFormatter] = [:]
+    private static let formattersLock = NSLock()
+
+    static func formatter(_ timeZone: TimeZone) -> DateFormatter {
+        formattersLock.lock(); defer { formattersLock.unlock() }
+        if let f = formatters[timeZone.identifier] { return f }
         let f = DateFormatter()
         f.dateFormat = "h:mma"; f.amSymbol = "am"; f.pmSymbol = "pm"
         f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = timeZone
-        return L("resets %@", f.string(from: e))
+        formatters[timeZone.identifier] = f
+        return f
     }
 
     /// 알약에 보일 것. percent 가 있으면 CLI 가 보여 준 세션 한도(링으로 그린다).
@@ -444,30 +457,60 @@ public enum CodexLimitParser {
 /// 파일마다 읽은 결과를 (수정 시각, 크기)로 기억해 두고, 바뀌지 않은 로그는 다시 읽지 않는다.
 /// 5분마다 다시 훑을 때 수백 개 로그를 매번 다시 읽느라 CPU·메모리가 튀던 것을 줄인다(5차 시험).
 public final class UsageFileCache: @unchecked Sendable {
-    public struct Stamp: Equatable, Sendable {
+    public struct Stamp: Equatable, Sendable, Codable {
         public var modified: Date
         public var size: Int
         public init(modified: Date, size: Int) { self.modified = modified; self.size = size }
     }
-    private var entries: [String: (Stamp, [UsageRecord])] = [:]
+    public struct Entry: Codable, Sendable {
+        public var stamp: Stamp
+        public var records: [UsageRecord]
+    }
+    private var entries: [String: Entry] = [:]
     private let lock = NSLock()
     public private(set) var hits = 0
     public private(set) var misses = 0
+    /// 마지막 저장 뒤로 바뀐 것이 있는가.
+    public private(set) var dirty = false
 
     public init() {}
 
     /// 같은 표식이면 기억한 결과, 아니면 parse 로 읽어 기억한다. seen 에 없던 경로는 지운다.
     public func records(path: String, stamp: Stamp, parse: () -> [UsageRecord]) -> [UsageRecord] {
+        records(path: path, stamp: stamp) { _ in parse() }
+    }
+
+    /// 표식이 다르면 update 에 지난 결과(있으면)를 넘겨 새 결과를 받는다. 덧붙기만 한 로그는 지난 결과에 새 줄만 더할 수 있다.
+    public func records(path: String, stamp: Stamp, update: (Entry?) -> [UsageRecord]) -> [UsageRecord] {
         lock.lock()
-        if let e = entries[path], e.0 == stamp { hits += 1; lock.unlock(); return e.1 }
+        let prev = entries[path]
+        if let e = prev, e.stamp == stamp { hits += 1; lock.unlock(); return e.records }
         lock.unlock()
-        let r = parse()
-        lock.lock(); entries[path] = (stamp, r); misses += 1; lock.unlock()
+        let r = update(prev)
+        lock.lock(); entries[path] = Entry(stamp: stamp, records: r); misses += 1; dirty = true; lock.unlock()
         return r
     }
 
     public func prune(keeping paths: Set<String>) {
-        lock.lock(); entries = entries.filter { paths.contains($0.key) }; lock.unlock()
+        lock.lock()
+        let before = entries.count
+        entries = entries.filter { paths.contains($0.key) }
+        if entries.count != before { dirty = true }
+        lock.unlock()
+    }
+
+    /// 디스크에 남겨 다음 실행에서 수 GB 로그를 다시 읽지 않게 한다.
+    public func save(to url: URL) throws {
+        lock.lock(); let snapshot = entries; dirty = false; lock.unlock()
+        let data = try JSONEncoder().encode(snapshot)
+        try data.write(to: url, options: .atomic)
+    }
+
+    /// 저장해 둔 결과를 읽는다. 못 읽으면 비운 채로 둔다(다시 훑으면 된다).
+    public func load(from url: URL) {
+        guard let data = try? Data(contentsOf: url),
+              let e = try? JSONDecoder().decode([String: Entry].self, from: data) else { return }
+        lock.lock(); entries = e; dirty = false; lock.unlock()
     }
 
     /// 파일들의 결과를 차례로 합치며, 같은 열쇠의 claude 기록은 처음 것만 남긴다.

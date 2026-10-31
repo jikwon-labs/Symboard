@@ -37,3 +37,8 @@
 7. 접두 글자가 붙은 CSI u(Symboard 8차 뒤 사용자 보고). `EscapeSequenceParser.dispatchCsi` 는 `CSI u` 를 접두 글자와 상관없이 커서 되돌리기(SCORC)로 처리했다.
    claude 2.1.314 는 시작할 때 kitty 키보드 프로토콜 질의 `ESC[?u` 를 보내는데, 이것이 앞서 `ESC 7` 로 저장한 위치(화면 위쪽)로 커서를 옮겨서
    폴더 신뢰 질문처럼 일반 화면에 상대 이동으로 다시 그리는 화면이 맨 위에 겹쳐 그려졌다(지난 화면 조각이 남음). 접두 글자(? > < =)가 있으면 아무것도 하지 않는다.
+8. 화면에 없는 터미널의 그리기 건너뛰기(Symboard 성능 점검). 창에 붙지 않았거나(보고 있지 않은 작업공간의 캔버스)
+   스스로나 조상이 숨겨졌으면(접힌 그룹) `AppleTerminalView.updateDisplay` 가 그리기 영역 계산·`setNeedsDisplay`·커서 옮기기·
+   접근성 알림 두 개를 건너뛰고 `offscreenDirty` 만 켠다. 출력 해석(`Terminal.feed`)은 그대로 해서 버퍼는 늘 최신이다.
+   다시 창에 붙거나 보이면(`viewDidMoveToWindow`·`viewDidUnhide`, MacTerminalView) 쌓인 갱신 범위를 비우고 전체를 다시 그린다.
+   원래는 보이지 않는 콘솔도 출력이 오면 초당 최대 60번 갱신과 접근성 알림을 했다.

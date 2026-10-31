@@ -253,7 +253,9 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         let text = stripper.feed(slice)
         guard !text.isEmpty else { return }
         recentText += text
-        if recentText.count > 64_000 { recentText = String(recentText.suffix(48_000)) }
+        // 길이는 utf8.count(바로 나옴)로 본다. 글자 수(count)는 조각마다 처음부터 세어, 대량 출력 때 메인 스레드 시간의 대부분이었다.
+        // 한글은 글자당 3바이트라 바이트 기준을 넉넉히 둔다(글자 기준 이전 64,000 / 48,000 과 비슷한 양).
+        if recentText.utf8.count > 192_000 { recentText = String(recentText.suffix(48_000)) }
         for l in outputListeners.values { l(text) }
     }
 

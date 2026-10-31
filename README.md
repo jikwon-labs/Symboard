@@ -47,7 +47,7 @@ open /Applications/Symboard.app
 - 의존성: SwiftTerm 1.11.2 를 `Vendor/SwiftTerm` 에 옮겨 두고 읽기 작업이 쌓이는 문제 하나를 고쳤다(`Vendor/SwiftTerm/PATCHES.md`). 1.12 부터는 Metal Toolchain 이 있어야 빌드된다(`DECISIONS.md`).
 - 시험할 때 Finder 와 같은 환경: `env -i HOME=$HOME USER=$USER LOGNAME=$USER SHELL=/bin/zsh PATH=/usr/bin:/bin:/usr/sbin:/sbin SYMBOARD_HOME=/tmp/sym-test build/Symboard.app/Contents/MacOS/Symboard`. `SYMBOARD_LAGLOG=1` 을 더하면 5초마다 메인 스레드 지연(p50·p95·최대)을 표준 오류에 남긴다.
 - 상태 저장: `~/Library/Application Support/Symboard/state.json`(버전 붙은 JSON). 환경 변수 `SYMBOARD_HOME` 으로 다른 폴더를 쓸 수 있다(시험용). 1차 상태 파일을 그대로 읽는다(작업공간에 프로젝트 폴더를 붙이고 콘솔 이름을 짧은 이름으로 바꿈).
-- 같은 폴더 아래: `status/`(훅 상태), `docs/`(문서 스튜디오 라이브러리), `profiles/`(새로 연결한 계정 설정 폴더).
+- 같은 폴더 아래: `status/`(훅 상태), `docs/`(문서 스튜디오 라이브러리), `profiles/`(새로 연결한 계정 설정 폴더), `usage-cache.json`(사용량 창이 읽은 로그 파일별 결과. 지워도 다음 훑기에서 다시 만든다).
 
 ## 화면
 
@@ -99,7 +99,7 @@ open /Applications/Symboard.app
 
 ### 디버그 통로
 
-`<상태 폴더>/debug/` 가 있으면 앱이 0.5초마다 `cmd.json` 을 읽어 명령을 실행하고 `result.txt` 에 결과를 쓴다. `scripts/drive.sh '<JSON 배열>' [상태 폴더]` 로 쓴다. 폴더가 없으면 아무 일도 하지 않는다.
+`<상태 폴더>/debug/` 가 있으면 앱이 0.5초마다 `cmd.json` 을 읽어 명령을 실행하고 `result.txt` 에 결과를 쓴다. 폴더가 없는 동안은 5초마다 폴더가 생겼는지만 본다. `scripts/drive.sh '<JSON 배열>' [상태 폴더]` 로 쓴다. 폴더가 없으면 아무 일도 하지 않는다.
 
 ## 기록
 

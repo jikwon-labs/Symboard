@@ -107,8 +107,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if model.selectedWorkspace.projectPath == nil, model.state.workspaces.allSatisfy({ $0.nodes.isEmpty }) { setHome(true) }
         refreshGit()
         gitTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refreshGit() }
+            MainActor.assumeIsolated {
+                // 앱을 쓰지 않는 동안(다른 앱이 앞, 창이 가려짐·닫힘)은 건너뛰고, 다시 앞으로 오면 바로 한 번 본다.
+                guard let self, NSApp.isActive, self.window?.occlusionState.contains(.visible) == true else { return }
+                self.refreshGit()
+            }
         }
+        observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshGit() }
+        })
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -463,9 +470,17 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         })
     }
 
+    private var viewportWork: DispatchWorkItem?
+
     private func viewportMoved() {
         let pct = Int((scrollView.magnification * 100).rounded())
         if chrome.zoomPercent != pct { chrome.zoomPercent = pct }
+        // 보는 위치는 움직임이 멎은 뒤 한 번만 모델에 적는다. 예전에는 상태 틱(1초)마다 적어,
+        // 움직이는 동안 매초 상태 알림·저장·되돌리기 비교가 돌았다.
+        viewportWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.captureViewports() }
+        viewportWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
     }
 
     // MARK: 작업공간
@@ -524,7 +539,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                 v.setStatus(model.sessions.status(of: id))
             }
         }
-        sidePanel.refreshStatuses()
+        // 접혀 있는 패널의 목록은 다시 만들지 않는다(쉬는 시간 글자가 매초 바뀌어 매번 새로 그려졌다). 열 때 채운다.
+        if !panelContainer.isHidden { sidePanel.refreshStatuses() }
         currentCanvas?.layoutGroups()
         StatusBeat.shared.tick &+= 1
         let pill = model.usage.pill
@@ -540,7 +556,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if chrome.workingCount != working { chrome.workingCount = working }
         let loops = model.selectedWorkspace.loops.filter(\.enabled).count
         if chrome.loopBadge != loops { chrome.loopBadge = loops }
-        captureViewports()
     }
 
     private var gitBusy = false
@@ -549,7 +564,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         gitBusy = true
         let path = projectPath
         Task { @MainActor in
-            let out = await GitRunner.run(["status", "--porcelain=v2", "--branch", "-uall"], cwd: path)
+            // --no-optional-locks: 읽기만 하는 status 가 .git/index 를 다시 쓰며 index.lock 을 잡지 않게(사용자 git 명령과 부딪히지 않게).
+            let out = await GitRunner.run(["--no-optional-locks", "status", "--porcelain=v2", "--branch", "-uall"], cwd: path)
             gitBusy = false
             if out.code == 0 {
                 let s = GitStatus.parse(out.out)
@@ -831,6 +847,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         sidePanel.state.tab = tab
         panelContainer.isHidden = false
         chrome.panelOpen = true
+        sidePanel.refreshStatuses()
     }
 
     func togglePanel(tab: String) {

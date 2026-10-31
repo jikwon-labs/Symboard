@@ -176,7 +176,7 @@ final class LoopRunner: ObservableObject {
             let key = Key(rule: ruleID, node: nid)
             guard var rt = self.runtimes[key] else { return }
             rt.pending += text
-            if rt.pending.count > 8000 { rt.pending = String(rt.pending.suffix(4000)) }
+            if rt.pending.utf8.count > 24_000 { rt.pending = String(rt.pending.suffix(4000)) }
             self.runtimes[key] = rt
         }
     }
@@ -258,9 +258,11 @@ final class LoopRunner: ObservableObject {
         if out != rows { rows = out }
     }
 
-    static func time(_ d: Date) -> String {
+    private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm:ss"
-        return f.string(from: d)
-    }
+        return f
+    }()
+
+    static func time(_ d: Date) -> String { timeFormatter.string(from: d) }
 }

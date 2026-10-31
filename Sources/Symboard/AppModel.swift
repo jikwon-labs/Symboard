@@ -12,7 +12,22 @@ extension Notification.Name {
 /// 앱 상태의 단일 원본. 바뀔 때마다 잠깐 모았다가 디스크에 저장한다.
 @MainActor
 final class AppModel: ObservableObject {
-    @Published private(set) var state: AppState
+    @Published private(set) var state: AppState {
+        // 상태가 바뀌면 노드 자리 색인을 버린다(다음에 찾을 때 한 번 다시 만든다).
+        didSet { nodeIndexCache = nil }
+    }
+    /// 노드 id → (작업공간 번호, 노드 번호). node(_:)·workspaceID(containing:) 를 매초 여러 번 부르는데,
+    /// 그때마다 모든 작업공간의 노드를 훑지 않게 한다.
+    private var nodeIndexCache: [UUID: (ws: Int, node: Int)]?
+    private var nodeIndex: [UUID: (ws: Int, node: Int)] {
+        if let c = nodeIndexCache { return c }
+        var idx: [UUID: (ws: Int, node: Int)] = [:]
+        for (i, ws) in state.workspaces.enumerated() {
+            for (j, n) in ws.nodes.enumerated() where idx[n.id] == nil { idx[n.id] = (i, j) }
+        }
+        nodeIndexCache = idx
+        return idx
+    }
     let store: StateStore
     lazy var sessions = SessionManager(model: self)
     lazy var loops = LoopRunner(model: self)
@@ -24,6 +39,10 @@ final class AppModel: ObservableObject {
     /// 작업공간마다 보드 되돌리기 기록(9차). 바뀐 뒤 0.6초 조용하면 한 칸.
     private var histories: [UUID: BoardHistory] = [:]
     private var historyWork: DispatchWorkItem?
+    /// 마지막 기록 뒤로 바뀐 작업공간. nil 이면 전부(누가 바꿨는지 모를 때).
+    private var historyDirty: Set<UUID>? = nil
+    /// 저장은 메인 밖 한 줄 큐에서(상태 JSON 만들기·쓰기가 메인을 붙잡지 않게). 순서는 큐가 지킨다.
+    private let saveQueue = DispatchQueue(label: "symboard.save", qos: .utility)
 
     init(store: StateStore) {
         self.store = store
@@ -39,18 +58,32 @@ final class AppModel: ObservableObject {
 
     // MARK: 저장
 
-    func scheduleSave() {
+    /// touched: 바뀐 작업공간. 모르면 nil(전부 되돌리기 기록을 살핀다).
+    func scheduleSave(touched: UUID? = nil) {
+        if let touched { historyDirty?.insert(touched) } else { historyDirty = nil }
         scheduleHistory()
         saveWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.saveNow() }
+        let work = DispatchWorkItem { [weak self] in self?.saveInBackground() }
         saveWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
     }
 
+    private func saveInBackground() {
+        saveWork = nil
+        let snapshot = state, store = store
+        saveQueue.async {
+            do { try store.save(snapshot) } catch { NSLog("Symboard: save failed: \(error)") }
+        }
+    }
+
+    /// 지금 바로 저장하고 끝날 때까지 기다린다(앱을 끌 때). 앞서 큐에 넣은 저장보다 뒤에 쓰인다.
     func saveNow() {
         saveWork?.cancel()
         saveWork = nil
-        do { try store.save(state) } catch { NSLog("Symboard: save failed: \(error)") }
+        let snapshot = state, store = store
+        saveQueue.sync {
+            do { try store.save(snapshot) } catch { NSLog("Symboard: save failed: \(error)") }
+        }
     }
 
     // MARK: 되돌리기
@@ -65,7 +98,12 @@ final class AppModel: ObservableObject {
     private func recordHistory() {
         historyWork?.cancel()
         historyWork = nil
-        for ws in state.workspaces { histories[ws.id, default: BoardHistory()].record(BoardSnapshot(ws)) }
+        let dirty = historyDirty
+        historyDirty = []
+        // 바뀐 작업공간만 본다(모든 작업공간의 노드·획을 매번 복사해 비교하지 않게).
+        for ws in state.workspaces where dirty?.contains(ws.id) ?? true {
+            histories[ws.id, default: BoardHistory()].record(BoardSnapshot(ws))
+        }
     }
 
     var canUndoBoard: Bool {
@@ -140,7 +178,7 @@ final class AppModel: ObservableObject {
     func mutateWorkspace(_ id: UUID, _ body: (inout Workspace) -> Void) {
         guard let i = state.workspaces.firstIndex(where: { $0.id == id }) else { return }
         body(&state.workspaces[i])
-        scheduleSave()
+        scheduleSave(touched: id)
     }
 
     /// 1차 상태를 2차 화면에 맞춘다: 프로젝트 폴더가 없는 작업공간에 폴더를 붙이고,
@@ -166,12 +204,17 @@ final class AppModel: ObservableObject {
     // MARK: 노드
 
     func node(_ id: UUID) -> BoardNode? {
-        for ws in state.workspaces { if let n = ws.nodes.first(where: { $0.id == id }) { return n } }
-        return nil
+        guard let p = nodeIndex[id] else { return nil }
+        return state.workspaces[p.ws].nodes[p.node]
     }
 
     func workspaceID(containing nodeID: UUID) -> UUID? {
-        state.workspaces.first { ws in ws.nodes.contains { $0.id == nodeID } }?.id
+        nodeIndex[nodeID].map { state.workspaces[$0.ws].id }
+    }
+
+    /// 노드가 든 작업공간.
+    func workspace(containing nodeID: UUID) -> Workspace? {
+        nodeIndex[nodeID].map { state.workspaces[$0.ws] }
     }
 
     func addNode(_ node: BoardNode, to wsID: UUID? = nil) {
@@ -192,13 +235,9 @@ final class AppModel: ObservableObject {
     }
 
     func mutateNode(_ id: UUID, _ body: (inout BoardNode) -> Void) {
-        for i in state.workspaces.indices {
-            if let j = state.workspaces[i].nodes.firstIndex(where: { $0.id == id }) {
-                body(&state.workspaces[i].nodes[j])
-                scheduleSave()
-                return
-            }
-        }
+        guard let p = nodeIndex[id] else { return }
+        body(&state.workspaces[p.ws].nodes[p.node])
+        scheduleSave(touched: state.workspaces[p.ws].id)
     }
 
     /// 노드를 맨 앞(배열 끝) 또는 맨 뒤(배열 처음)로 옮긴다.

@@ -303,6 +303,8 @@ final class LinksView: NSView {
             dot.shadowOpacity = 0.9
             dot.shadowRadius = 4
             dot.shadowOffset = .zero
+            // 그림자 모양을 알려 주면 매 프레임 층 모양으로 그림자를 다시 구하지 않는다(점은 끝없이 움직인다).
+            dot.shadowPath = CGPath(ellipseIn: dot.bounds, transform: nil)
             if shape.superlayer == nil { root.addSublayer(shape); root.addSublayer(dot) }
             let anim = CAKeyframeAnimation(keyPath: "position")
             anim.path = path

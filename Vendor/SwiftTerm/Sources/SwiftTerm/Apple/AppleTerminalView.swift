@@ -1322,6 +1322,14 @@ extension TerminalView {
     /// Update visible area
     func updateDisplay (notifyAccessibility: Bool)
     {
+        #if os(macOS)
+        // Symboard: 보이지 않으면 그리지 않고, 다시 보일 때 전체를 그린다(PATCHES.md 8번).
+        if isOffscreen {
+            offscreenDirty = true
+            pendingDisplay = false
+            return
+        }
+        #endif
         updateCursorPosition()
         guard let (rowStart, rowEnd) = terminal.getUpdateRange () else {
             if notifyUpdateChanges {

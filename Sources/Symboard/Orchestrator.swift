@@ -34,15 +34,20 @@ struct OrchestratorView: View {
     @State private var hoverRow: UUID?
     @StateObject private var mention = MentionState()
 
-    var ws: Workspace? { model.workspaceID(containing: nodeID).flatMap { model.workspace($0) } }
+    // 아래 값들은 body 에서 여러 번 읽힌다(상태 틱마다). 각각 노드 수에 비례해 한 번만 훑게 집합으로 찾는다.
+    var ws: Workspace? { model.workspace(containing: nodeID) }
     var links: [NodeLink] { (ws?.links ?? []).filter { $0.from == nodeID } }
-    var wiredTeams: [Team] { (ws?.teams ?? []).filter { t in links.contains { $0.to == t.id } } }
-    var wiredNodes: [BoardNode] { (ws?.nodes ?? []).filter { n in n.kind == .terminal && links.contains { $0.to == n.id } } }
-    /// 연결된 모든 콘솔(그룹 멤버 포함, 중복 없음).
+    private var linkedIDs: Set<UUID> { Set((ws?.links ?? []).lazy.filter { $0.from == nodeID }.map(\.to)) }
+    var wiredTeams: [Team] { let ids = linkedIDs; return (ws?.teams ?? []).filter { ids.contains($0.id) } }
+    var wiredNodes: [BoardNode] { let ids = linkedIDs; return (ws?.nodes ?? []).filter { $0.kind == .terminal && ids.contains($0.id) } }
+    /// 연결된 모든 콘솔(그룹 멤버 포함, 중복 없음). 순서: 직접 연결한 콘솔, 그다음 그룹별 멤버.
     var targets: [BoardNode] {
-        var out = wiredNodes
-        for t in wiredTeams {
-            for n in (ws?.nodes ?? []) where n.teamID == t.id && !out.contains(where: { $0.id == n.id }) { out.append(n) }
+        guard let ws else { return [] }
+        let ids = linkedIDs
+        var out = ws.nodes.filter { $0.kind == .terminal && ids.contains($0.id) }
+        var seen = Set(out.map(\.id))
+        for t in ws.teams where ids.contains(t.id) {
+            for n in ws.nodes where n.teamID == t.id && seen.insert(n.id).inserted { out.append(n) }
         }
         return out
     }

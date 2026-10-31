@@ -10,7 +10,14 @@ public struct ANSIStripper: Sendable {
     public init() {}
 
     public mutating func feed<S: Sequence>(_ bytes: S) -> String where S.Element == UInt8 {
+        feed(ArraySlice(bytes))
+    }
+
+    /// 터미널 출력 조각이 오는 경로. 제네릭은 다른 모듈(앱)에서 부르면 특수화되지 않아 바이트마다 느린 반복이 돌아서,
+    /// 구체 타입 판을 따로 둔다.
+    public mutating func feed(_ bytes: ArraySlice<UInt8>) -> String {
         var out: [UInt8] = []
+        out.reserveCapacity(bytes.count)
         for b in bytes {
             switch mode {
             case .text:

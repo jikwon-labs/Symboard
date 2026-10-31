@@ -101,76 +101,93 @@ final class UsageStore: ObservableObject {
     /// 15분이 지났거나 세션 초기화 시각이 지났으면 /usage 를 다시 읽는다. claude 가 없으면 하지 않는다.
     func refreshLimitsIfStale() {
         guard AgentCatalog.shared.installed.contains("claude") else { return }
+        // 읽기에 실패해 limitsAt 이 그대로면 5분마다 claude 를 새로 띄웠다. 마지막 시도에서 15분은 쉰다.
+        // 성공한 뒤(limitsAt 이 시도 시각보다 뒤)는 예전처럼 바로 다시 읽는다.
+        if let tried = limitsTriedAt, (limitsAt ?? .distantPast) < tried, Date().timeIntervalSince(tried) < 900 { return }
         let age = limitsAt.map { Date().timeIntervalSince($0) } ?? .infinity
-        if age > 900 || (limitsAt != nil && !pill.fromCLI) { refreshLimits() }
+        if age > 900 || (limitsAt != nil && !pill.fromCLI) { limitsTriedAt = Date(); refreshLimits() }
     }
+
+    /// 마지막으로 /usage 읽기를 시작한 시각(실패해도 남는다).
+    private var limitsTriedAt: Date?
 
     func refresh() {
         guard !scanning else { return }
         scanning = true
         let r = roots()
         let started = Date()
+        let cacheURL = model.store.directory.appendingPathComponent("usage-cache.json")
         Task.detached(priority: .utility) {
-            let result = Self.scan(claudeRoots: r.claude, codexRoots: r.codex, days: 365)
+            let result = Self.scan(claudeRoots: r.claude, codexRoots: r.codex, days: 365, cacheURL: cacheURL)
             var grouped: [AgentKind: [UsageRecord]] = [:]
             for rec in result.records { grouped[rec.agent, default: []].append(rec) }
             var stats: [AgentKind: UsageStats] = [:]
             for (k, v) in grouped { stats[k] = UsageStats.compute(v) }
+            let done = stats, byAgent = grouped
             await MainActor.run {
-                self.records = grouped
-                self.stats = stats
+                self.records = byAgent
+                self.stats = done
                 self.note = L("%d log files · %@s", result.files, String(format: "%.1f", Date().timeIntervalSince(started)))
                 self.scannedAt = Date()
                 self.scanning = false
-                if let end = stats.values.compactMap(\.blockEnd).max() {
+                if let end = done.values.compactMap(\.blockEnd).max() {
                     Prefs.shared.set(String(end.timeIntervalSince1970), for: "usage.blockEnd")
                 }
             }
         }
     }
 
-    nonisolated static func scan(claudeRoots: [String], codexRoots: [String], days: Int) -> (records: [UsageRecord], files: Int) {
+    /// 처음 한 번 디스크의 지난 결과를 불러왔는가.
+    nonisolated(unsafe) private static var cacheLoaded = false
+
+    /// cacheURL: 파일별 결과를 남겨 두는 곳. 앱을 켤 때마다 수 GB 로그를 처음부터 다시 읽지 않게 한다.
+    nonisolated static func scan(claudeRoots: [String], codexRoots: [String], days: Int, cacheURL: URL? = nil) -> (records: [UsageRecord], files: Int) {
+        if let cacheURL, !cacheLoaded { fileCache.load(from: cacheURL); cacheLoaded = true }
         let cutoff = Calendar.current.startOfDay(for: Date()).addingTimeInterval(Double(-(days - 1)) * 86400)
         let fm = FileManager.default
-        func files(under root: String) -> [(String, Date)] {
-            guard let e = fm.enumerator(at: URL(fileURLWithPath: root), includingPropertiesForKeys: [.contentModificationDateKey],
+        func files(under root: String) -> [(String, Date, Int)] {
+            guard let e = fm.enumerator(at: URL(fileURLWithPath: root), includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
                                         options: [.skipsHiddenFiles]) else { return [] }
-            var out: [(String, Date)] = []
+            var out: [(String, Date, Int)] = []
             for case let u as URL in e where u.pathExtension == "jsonl" {
-                let m = (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                if m >= cutoff { out.append((u.path, m)) }
+                let v = try? u.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+                let m = v?.contentModificationDate ?? .distantPast
+                if m >= cutoff { out.append((u.path, m, v?.fileSize ?? 0)) }
             }
             return out
         }
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        var perFile: [[UsageRecord]] = []
-        var paths = Set<String>()
-        func stamp(_ path: String, _ m: Date) -> UsageFileCache.Stamp {
-            let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? Int) ?? 0
-            return .init(modified: m, size: size)
-        }
-        for root in claudeRoots {
-            for (path, m) in files(under: root + "/projects") {
-                paths.insert(path)
-                perFile.append(fileCache.records(path: path, stamp: stamp(path, m)) {
-                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .alwaysMapped) else { return [] }
+        // 읽을 파일 목록(순서가 합칠 때 중복을 가르므로 그대로 지킨다).
+        var jobs: [(path: String, modified: Date, size: Int, claude: Bool)] = []
+        for root in claudeRoots { for f in files(under: root + "/projects") { jobs.append((f.0, f.1, f.2, true)) } }
+        for root in codexRoots { for f in files(under: root + "/sessions") { jobs.append((f.0, f.1, f.2, false)) } }
+        let days = jobs.map { fmt.string(from: $0.modified) }
+        // 파일마다 따로라 여러 코어로 나눠 읽는다(한 코어로는 3GB 에 10초 남짓 걸렸다).
+        var perFile = [[UsageRecord]](repeating: [], count: jobs.count)
+        let lock = NSLock()
+        DispatchQueue.concurrentPerform(iterations: jobs.count) { i in
+            let job = jobs[i]
+            let stamp = UsageFileCache.Stamp(modified: job.modified, size: job.size)
+            let recs: [UsageRecord] = fileCache.records(path: job.path, stamp: stamp) { prev in
+                if job.claude {
+                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: job.path), options: .alwaysMapped) else { return [] }
+                    // 덧붙기만 했으면(claude 세션 로그) 지난 끝부터 새 줄만 읽는다.
+                    if let prev, prev.stamp.size < data.count, prev.stamp.size > 0 {
+                        var seen = Set(prev.records.compactMap(\.key))
+                        return prev.records + UsageParser.claude(data: data, fallbackDay: days[i], seen: &seen, from: prev.stamp.size)
+                    }
                     var seen = Set<String>()
-                    return UsageParser.claude(data: data, fallbackDay: fmt.string(from: m), seen: &seen)
-                })
+                    return UsageParser.claude(data: data, fallbackDay: days[i], seen: &seen)
+                }
+                guard let text = try? String(contentsOfFile: job.path, encoding: .utf8) else { return [] }
+                return UsageParser.codex(jsonl: text, fallbackDay: days[i], session: job.path)
             }
+            lock.lock(); perFile[i] = recs; lock.unlock()
         }
-        for root in codexRoots {
-            for (path, m) in files(under: root + "/sessions") {
-                paths.insert(path)
-                perFile.append(fileCache.records(path: path, stamp: stamp(path, m)) {
-                    guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [] }
-                    return UsageParser.codex(jsonl: text, fallbackDay: fmt.string(from: m), session: path)
-                })
-            }
-        }
-        fileCache.prune(keeping: paths)
-        return (UsageFileCache.merge(perFile), paths.count)
+        fileCache.prune(keeping: Set(jobs.map(\.path)))
+        if let cacheURL, fileCache.dirty { try? fileCache.save(to: cacheURL) }
+        return (UsageFileCache.merge(perFile), jobs.count)
     }
 
     /// 로그 파일별로 읽은 결과(바뀌지 않은 파일은 다시 읽지 않는다).

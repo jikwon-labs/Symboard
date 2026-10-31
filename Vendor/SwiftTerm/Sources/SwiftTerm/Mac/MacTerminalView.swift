@@ -549,6 +549,30 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         window?.makeFirstResponder (self)
     }
 
+    // Symboard: 화면에 없는 동안(창에서 떨어진 작업공간, 접힌 그룹) 쌓인 출력은 보일 때 한 번에 다시 그린다.
+    // updateDisplay 가 그동안 그리기·커서 옮기기·접근성 알림을 건너뛴다(PATCHES.md 8번).
+    var offscreenDirty = false
+
+    var isOffscreen: Bool { window == nil || isHiddenOrHasHiddenAncestor }
+
+    open override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        redrawIfShownAgain()
+    }
+
+    open override func viewDidUnhide() {
+        super.viewDidUnhide()
+        redrawIfShownAgain()
+    }
+
+    func redrawIfShownAgain() {
+        guard offscreenDirty, !isOffscreen else { return }
+        offscreenDirty = false
+        terminal.clearUpdateRange()
+        needsDisplay = true
+        updateCursorPosition()
+    }
+
     open override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         updateScrollerFrame()

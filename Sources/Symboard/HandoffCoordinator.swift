@@ -83,35 +83,55 @@ final class HandoffCoordinator {
         jobs = keep
     }
 
-    private func readSummary(_ job: Job) -> String? {
-        guard let node = model.node(job.source), let spec = node.terminal else { return nil }
-        var reply: String?
+    /// 보내는 노드의 기록 파일 자리(메인에서 모델을 읽어 정한다). 읽기·풀기는 메인 밖에서 한다.
+    private enum Transcript: Sendable { case claude(String), codex(root: String, id: String) }
+
+    private func transcript(_ job: Job) -> Transcript? {
+        guard let node = model.node(job.source), let spec = node.terminal, let sid = spec.sessionID else { return nil }
         let profile = spec.profileID.flatMap { id in model.state.profiles.first { $0.id == id } }
         switch spec.agent {
         case .claude:
-            if let sid = spec.sessionID {
-                let base = (profile?.agent == .claude ? profile?.configDir : nil) ?? NSHomeDirectory() + "/.claude"
-                let path = "\(base)/projects/\(LaunchPlanner.claudeProjectDirName(for: LaunchPlanner.resolvedPath(spec.cwd)))/\(sid).jsonl"
-                reply = (try? String(contentsOfFile: path, encoding: .utf8)).flatMap(Handoff.claudeLastReply)
-            }
+            let base = (profile?.agent == .claude ? profile?.configDir : nil) ?? NSHomeDirectory() + "/.claude"
+            return .claude("\(base)/projects/\(LaunchPlanner.claudeProjectDirName(for: LaunchPlanner.resolvedPath(spec.cwd)))/\(sid).jsonl")
         case .codex:
-            if let sid = spec.sessionID {
-                let root = CodexSessions.sessionsRoot(configDir: profile?.agent == .codex ? profile?.configDir : nil)
-                reply = CodexSessions.file(root: root, id: sid)
-                    .flatMap { try? String(contentsOfFile: $0, encoding: .utf8) }.flatMap(Handoff.codexLastReply)
-            }
+            return .codex(root: CodexSessions.sessionsRoot(configDir: profile?.agent == .codex ? profile?.configDir : nil), id: sid)
         default:
-            break
+            return nil
         }
+    }
+
+    /// 큰 세션 기록(수백 MB)을 읽고 푸는 일. 메인에서 하면 넘겨주기 때 화면이 1초 넘게 멈췄다.
+    nonisolated private static func readReply(_ t: Transcript?) -> String? {
+        switch t {
+        case .claude(let path):
+            return (try? String(contentsOfFile: path, encoding: .utf8)).flatMap(Handoff.claudeLastReply)
+        case .codex(let root, let id):
+            return CodexSessions.file(root: root, id: id)
+                .flatMap { try? String(contentsOfFile: $0, encoding: .utf8) }.flatMap(Handoff.codexLastReply)
+        case nil:
+            return nil
+        }
+    }
+
+    private func readSummary(_ job: Job, done: @escaping @MainActor (String?) -> Void) {
+        let t = transcript(job)
         // 기록이 없으면 화면 출력에서 표시 사이를 찾는다.
         let screen = model.sessions.session(for: job.source)?.recentText ?? ""
-        if let r = reply { return Handoff.extractMarked(r) ?? r }
-        return Handoff.extractMarked(screen)
+        Task.detached(priority: .userInitiated) {
+            let reply = Self.readReply(t)
+            let summary = reply.map { Handoff.extractMarked($0) ?? $0 } ?? Handoff.extractMarked(screen)
+            await MainActor.run { done(summary) }
+        }
     }
 
     private func deliver(_ job: Job) {
+        guard model.node(job.source) != nil else { return }
+        readSummary(job) { [weak self] summary in self?.deliver(job, summary: summary) }
+    }
+
+    private func deliver(_ job: Job, summary: String?) {
         guard let src = model.node(job.source) else { return }
-        guard let summary = readSummary(job) else {
+        guard let summary else {
             lastResult = "no summary found"
             let a = NSAlert()
             a.messageText = "Could not read a summary from \"\(src.title)\"."

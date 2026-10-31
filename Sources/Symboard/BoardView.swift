@@ -228,6 +228,7 @@ final class CanvasView: NSView {
                 addSubview(v, positioned: .above, relativeTo: linksView)
                 groupViews[team.id] = v
             }
+            let before = (v.team, v.memberCount, v.summary, v.frame)
             v.team = team
             v.memberCount = members.count
             if let orch = controller?.chrome.connectingOrchestrator {
@@ -255,7 +256,8 @@ final class CanvasView: NSView {
                 ? NSRect(x: box.minX - pad, y: box.minY - pad - head, width: 320, height: head + 52)
                 : NSRect(x: box.minX - pad, y: box.minY - pad - head, width: box.width + pad * 2, height: box.height + pad * 2 + head)
             if v.frame != target { v.frame = target }
-            v.needsDisplay = true
+            // 바뀐 것이 있을 때만 다시 그린다(예전에는 상태 틱마다 모든 그룹 테두리를 다시 그렸다).
+            if before.0 != v.team || before.1 != v.memberCount || before.2 != v.summary || before.3 != v.frame { v.needsDisplay = true }
         }
         for (id, v) in groupViews where !live.contains(id) {
             v.removeFromSuperview()
@@ -375,15 +377,18 @@ final class CanvasView: NSView {
         if mag > 0.25 {
             let step: CGFloat = 36
             Theme.dot.setFill()
+            // 점을 모아 한 번에 칠한다(축소하면 화면에 점이 만 개 넘게 들어와, 점마다 칠하기를 부르면 다시 그리기가 무거웠다).
+            var dots: [CGRect] = []
             var x = floor(dirtyRect.minX / step) * step
             while x < dirtyRect.maxX {
                 var y = floor(dirtyRect.minY / step) * step
                 while y < dirtyRect.maxY {
-                    NSRect(x: x - 1, y: y - 1, width: 2, height: 2).fill()
+                    dots.append(CGRect(x: x - 1, y: y - 1, width: 2, height: 2))
                     y += step
                 }
                 x += step
             }
+            NSGraphicsContext.current?.cgContext.fill(dots)
         }
 
         if let d = sizingDrag {
@@ -428,9 +433,16 @@ final class CanvasView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        guard case .place = tool else { return }
+        guard case .place(let p) = tool else { return }
+        let old = hoverPoint
         hoverPoint = convert(event.locationInWindow, from: nil)
-        needsDisplay = true
+        // 점선 자리표시가 있던 곳과 새 곳만 다시 그린다(예전에는 마우스가 움직일 때마다 보이는 캔버스 전체).
+        for h in [old, hoverPoint].compactMap({ $0 }) { setNeedsDisplay(Self.placeholderRect(at: h, size: p.size)) }
+    }
+
+    /// 놓기 도구 자리표시가 그려지는 자리(선 두께·글자 여유 포함).
+    static func placeholderRect(at h: NSPoint, size s: CGSize) -> NSRect {
+        NSRect(x: h.x - s.width / 2, y: h.y - 20, width: s.width, height: s.height).insetBy(dx: -24, dy: -24)
     }
 
     /// 지우개: 누른 자리 가까이 지나는 보드 획을 지운다.

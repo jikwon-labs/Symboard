@@ -28,8 +28,12 @@ enum GitRunner {
                     cont.resume(returning: Output(code: -1, out: "", err: error.localizedDescription))
                     return
                 }
+                // stderr 를 따로 읽는다. stdout 을 다 읽은 뒤에 읽으면 stderr 가 64KB 를 넘을 때 git 이 쓰기에서 멈춰 둘 다 끝나지 않았다.
+                var ed = Data()
+                let errDone = DispatchSemaphore(value: 0)
+                DispatchQueue.global().async { ed = e.fileHandleForReading.readDataToEndOfFile(); errDone.signal() }
                 let od = o.fileHandleForReading.readDataToEndOfFile()
-                let ed = e.fileHandleForReading.readDataToEndOfFile()
+                errDone.wait()
                 p.waitUntilExit()
                 cont.resume(returning: Output(code: p.terminationStatus, out: String(decoding: od, as: UTF8.self),
                                               err: String(decoding: ed, as: UTF8.self)))
@@ -71,7 +75,7 @@ final class GitCardModel: ObservableObject {
     var repoName: String { (repo as NSString).lastPathComponent }
 
     func refresh() async {
-        let r = await GitRunner.run(["status", "--porcelain=v2", "--branch", "-uall"], cwd: repo)
+        let r = await GitRunner.run(["--no-optional-locks", "status", "--porcelain=v2", "--branch", "-uall"], cwd: repo)
         guard r.code == 0 else { status = nil; log = r.err.trimmingCharacters(in: .whitespacesAndNewlines); return }
         let s = GitStatus.parse(r.out)
         status = s

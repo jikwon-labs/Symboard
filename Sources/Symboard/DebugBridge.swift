@@ -13,9 +13,24 @@ final class DebugBridge {
     init(controller: MainWindowController, home: URL) {
         self.controller = controller
         self.dir = home.appendingPathComponent("debug", isDirectory: true)
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.poll() }
+        schedule()
+    }
+
+    /// 디버그 폴더가 있을 때만 0.5초마다 본다. 없으면(보통 쓰는 앱) 5초마다 폴더가 생겼는지만 본다.
+    private func schedule() {
+        var isDir: ObjCBool = false
+        let active = FileManager.default.fileExists(atPath: dir.path, isDirectory: &isDir) && isDir.boolValue
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: active ? 0.5 : 5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                var d: ObjCBool = false
+                let now = FileManager.default.fileExists(atPath: self.dir.path, isDirectory: &d) && d.boolValue
+                if now != active { self.schedule(); if now { self.poll() }; return }
+                if now { self.poll() }
+            }
         }
+        timer?.tolerance = active ? 0.05 : 1
     }
 
     private func poll() {
