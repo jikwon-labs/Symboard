@@ -291,7 +291,16 @@ final class CanvasView: NSView {
         }
         if segs.isEmpty && arrows.isEmpty && linksView.layer?.sublayers?.isEmpty ?? true { return }
         linksView.update(segs, faint: Set((ws.links ?? []).filter { $0.style == NodeLink.spawnedStyle }.map(\.id)))
-        arrowsView.updateArrows(arrows)
+        // 화살표가 피할 상자: 보드의 도형. 다른 도형을 품은 도형(다이어그램 그룹 테두리)은 뺀다.
+        var obstacles: [NSRect] = []
+        if !arrows.isEmpty {
+            let shapes = ws.nodes.filter { $0.kind == .shape }.compactMap { n -> NSRect? in
+                guard let v = nodeViews[n.id], !v.isHidden else { return nil }
+                return v.frame
+            }
+            obstacles = shapes.filter { r in !shapes.contains { $0 != r && r.contains($0) } }
+        }
+        arrowsView.updateArrows(arrows, obstacles: obstacles)
     }
 
     func setGroup(_ teamID: UUID, collapsed: Bool) {

@@ -208,40 +208,39 @@ final class LinksView: NSView {
         return p
     }
 
-    /// 다이어그램 화살표: 두 사각형 가운데를 잇는 직선이 각 테두리와 만나는 점 사이.
-    static func arrowPath(from a: NSRect, to b: NSRect) -> (CGPath, CGPoint) {
-        func clip(_ r: NSRect, toward p: CGPoint) -> CGPoint {
-            let c = CGPoint(x: r.midX, y: r.midY)
-            let dx = p.x - c.x, dy = p.y - c.y
-            guard dx != 0 || dy != 0 else { return c }
-            let sx = dx == 0 ? .infinity : (r.width / 2 + 6) / abs(dx)
-            let sy = dy == 0 ? .infinity : (r.height / 2 + 6) / abs(dy)
-            let s = min(sx, sy)
-            return CGPoint(x: c.x + dx * s, y: c.y + dy * s)
-        }
-        let s = clip(a, toward: CGPoint(x: b.midX, y: b.midY))
-        let e = clip(b, toward: CGPoint(x: a.midX, y: a.midY))
+    /// 다이어그램 화살표: 길(ArrowRouter)의 꺾이는 점을 둥근 모서리로 잇고 끝에 화살촉.
+    static func arrowPath(_ pts: [CGPoint]) -> CGPath {
         let p = CGMutablePath()
-        let mid = CGPoint(x: (s.x + e.x) / 2 + (e.y - s.y) * 0.03, y: (s.y + e.y) / 2 - (e.x - s.x) * 0.03)
-        p.move(to: s)
-        p.addQuadCurve(to: e, control: mid)
-        let ang = atan2(e.y - mid.y, e.x - mid.x)
-        for d in [CGFloat.pi * 0.82, -CGFloat.pi * 0.82] {
-            p.move(to: e)
-            p.addLine(to: CGPoint(x: e.x + 14 * cos(ang + d), y: e.y + 14 * sin(ang + d)))
+        guard let first = pts.first, let e = pts.last, pts.count >= 2 else { return p }
+        p.move(to: first)
+        for i in 1..<(pts.count - 1) {
+            let prev = pts[i - 1], cur = pts[i], next = pts[i + 1]
+            let r = min(14, hypot(cur.x - prev.x, cur.y - prev.y) / 2, hypot(next.x - cur.x, next.y - cur.y) / 2)
+            p.addArc(tangent1End: cur, tangent2End: next, radius: r)
         }
-        return (p, mid)
+        p.addLine(to: e)
+        let from = pts[pts.count - 2]
+        let ang = atan2(e.y - from.y, e.x - from.x)
+        for d in [CGFloat.pi * 0.8, -CGFloat.pi * 0.8] {
+            p.move(to: e)
+            p.addLine(to: CGPoint(x: e.x + 12 * cos(ang + d), y: e.y + 12 * sin(ang + d)))
+        }
+        return p
     }
 
     private var arrows: [UUID: (CAShapeLayer, CATextLayer?)] = [:]
 
-    func updateArrows(_ segments: [(UUID, NSRect, NSRect, String?, String)]) {
+    func updateArrows(_ segments: [(UUID, NSRect, NSRect, String?, String)], obstacles: [NSRect] = []) {
         guard let root = layer else { return }
         let ids = Set(segments.map(\.0))
         for (id, l) in arrows where !ids.contains(id) { l.0.removeFromSuperlayer(); l.1?.removeFromSuperlayer(); arrows[id] = nil }
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        for (id, a, b, label, color) in segments {
-            let (path, mid) = Self.arrowPath(from: a, to: b)
+        func rect(_ r: NSRect) -> Rect { Rect(x: r.minX, y: r.minY, w: r.width, h: r.height) }
+        let routes = ArrowRouter.route(segments.map { (id: $0.0, from: rect($0.1), to: rect($0.2)) }, obstacles: obstacles.map(rect))
+        for (id, _, _, label, color) in segments {
+            guard let route = routes[id] else { continue }
+            let path = Self.arrowPath(route.points.map { CGPoint(x: $0.x, y: $0.y) })
+            let mid = CGPoint(x: route.label.x, y: route.label.y)
             let shape = arrows[id]?.0 ?? CAShapeLayer()
             shape.path = path
             shape.fillColor = nil
@@ -256,8 +255,12 @@ final class LinksView: NSView {
                 // 층 글자는 동적 색을 그릴 때 다시 풀지 않으므로 지금 모드의 색으로 고정해 넣는다(모드가 바뀌면 다시 불린다).
                 t.string = NSAttributedString(string: label, attributes: [.font: Theme.handwriting(size: 15), .foregroundColor: Theme.resolved(Theme.text)])
                 t.contentsScale = 2
+                t.alignmentMode = .center
+                // 이름표는 선 가운데에 바탕을 깔고 얹는다(선과 글자가 겹쳐 안 읽히던 것).
+                t.backgroundColor = Theme.resolved(Theme.canvas).cgColor
+                t.cornerRadius = 5
                 let size = (label as NSString).size(withAttributes: [.font: Theme.handwriting(size: 15)])
-                t.frame = CGRect(x: mid.x + 8, y: mid.y - size.height / 2, width: size.width + 4, height: size.height + 2)
+                t.frame = CGRect(x: mid.x - size.width / 2 - 6, y: mid.y - size.height / 2 - 1, width: size.width + 12, height: size.height + 2)
                 if t.superlayer == nil { root.addSublayer(t) }
                 text = t
             }

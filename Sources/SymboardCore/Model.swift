@@ -1,7 +1,7 @@
 import Foundation
 
 /// 캔버스 좌표계의 사각형. 원점은 캔버스 중앙, y 는 아래로 증가한다.
-public struct Rect: Codable, Equatable, Sendable {
+public struct Rect: Codable, Equatable, Hashable, Sendable {
     public var x: Double
     public var y: Double
     public var w: Double

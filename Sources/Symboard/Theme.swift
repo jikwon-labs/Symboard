@@ -77,13 +77,56 @@ enum Theme {
     /// 설정한 화면 모드를 앱에 적용한다. nil 은 기기 설정을 따른다.
     @MainActor
     static func apply(_ mode: AppearanceMode) {
+        let fades = coverWindowsForFade()
         switch mode {
         case .system: NSApp.appearance = nil
         case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
         case .light: NSApp.appearance = NSAppearance(named: .aqua)
         }
         // NSApp.effectiveAppearance 는 다음 순간에 바뀐다. 바로 보내면 층 색을 옛 모드로 다시 칠했다(다크로 바꿨는데 화살표가 어두운 색).
-        DispatchQueue.main.async { NotificationCenter.default.post(name: didChange, object: nil) }
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: didChange, object: nil)
+            // 새 모드로 다 칠한 뒤 옛 화면 사진을 서서히 걷어 낸다.
+            DispatchQueue.main.async { fadeOut(fades) }
+        }
+    }
+
+    static let fadeDuration: TimeInterval = 0.4
+
+    /// 바꾸기 전, 보이는 창마다 지금 화면을 사진으로 찍어 맨 위에 덮는다(모드 전환을 부드럽게 넘기는 교차 페이드).
+    /// 층 색·SwiftUI·콘솔이 저마다 다른 때에 바뀌어도 사진이 가려 주므로 한 번에 자연스럽게 바뀐 것처럼 보인다.
+    /// 동작 줄이기(손쉬운 사용)가 켜져 있으면 바로 바꾼다.
+    @MainActor
+    private static func coverWindowsForFade() -> [NSView] {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return [] }
+        var covers: [NSView] = []
+        for window in NSApp.windows where window.isVisible && window.occlusionState.contains(.visible) {
+            guard let root = window.contentView?.superview ?? window.contentView, root.bounds.width > 0, root.bounds.height > 0,
+                  let rep = root.bitmapImageRepForCachingDisplay(in: root.bounds) else { continue }
+            root.cacheDisplay(in: root.bounds, to: rep)
+            let image = NSImage(size: root.bounds.size)
+            image.addRepresentation(rep)
+            let cover = FadeCover(frame: root.bounds)
+            cover.image = image
+            cover.imageScaling = .scaleAxesIndependently
+            cover.wantsLayer = true
+            cover.autoresizingMask = [.width, .height]
+            root.addSubview(cover, positioned: .above, relativeTo: nil)
+            covers.append(cover)
+        }
+        return covers
+    }
+
+    @MainActor
+    private static func fadeOut(_ covers: [NSView]) {
+        guard !covers.isEmpty else { return }
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = fadeDuration
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            for c in covers { c.animator().alphaValue = 0 }
+        }, completionHandler: {
+            MainActor.assumeIsolated { for c in covers { c.removeFromSuperview() } }
+        })
     }
 
     /// 손글씨풍 글꼴. 시스템에 있는 것 중 고른다.
@@ -184,4 +227,9 @@ enum WindowFrames {
         observers.append(nc.addObserver(forName: NSWindow.didMoveNotification, object: window, queue: .main, using: save))
         observers.append(nc.addObserver(forName: NSWindow.didEndLiveResizeNotification, object: window, queue: .main, using: save))
     }
+}
+
+/// 모드 전환 때 덮는 옛 화면 사진. 클릭은 아래로 그대로 지나간다.
+private final class FadeCover: NSImageView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

@@ -152,7 +152,7 @@ extension MainWindowController {
             cardID = placeCard(text: "\(title) → \(name)\n\n\(card.prompt)", title: title, colorHex: Self.noteColors["yellow"]!,
                                at: Point(x: pair.x, y: pair.y))
             node = addTerminal(spec: choice.spec(cwd: cwd), at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), title: name, teamID: teamID)
-            glideReveal([pair])
+            glideReveal([pair], zoomIn: true)
         } else {
             node = addTerminal(spec: choice.spec(cwd: cwd), at: nil, title: name, teamID: teamID, near: caller)
         }

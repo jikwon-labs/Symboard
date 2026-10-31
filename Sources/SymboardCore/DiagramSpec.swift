@@ -99,27 +99,46 @@ public struct DiagramSpec: Codable, Equatable, Sendable {
             bandX[g] = cursor
             cursor += Double(bandWidth[g]!) * nodeW + Double(bandWidth[g]! - 1) * gapX + bandGap
         }
-        var xpos: [String: Double] = [:]
-        var result: [String: Rect] = [:]
-        for (r, row) in rows.enumerated() {
-            for g in bands {
-                let members = row.filter { (groupOf[$0] ?? "") == g }.sorted { a, b in
-                    func bary(_ v: String) -> Double {
-                        let ps = (inc[v] ?? []).compactMap { xpos[$0] }
-                        return ps.isEmpty ? Double(ids.firstIndex(of: v) ?? 0) * 1000 : ps.reduce(0, +) / Double(ps.count)
-                    }
-                    return bary(a) < bary(b)
-                }
-                guard !members.isEmpty else { continue }
-                let full = Double(bandWidth[g]!) * nodeW + Double(bandWidth[g]! - 1) * gapX
-                let used = Double(members.count) * nodeW + Double(members.count - 1) * gapX
-                var x = bandX[g]! + (full - used) / 2
-                for v in members {
-                    result[v] = Rect(x: x, y: origin.y + 90 + Double(r) * (nodeH + gapY), w: nodeW, h: nodeH)
-                    xpos[v] = x
-                    x += nodeW + gapX
+        // 층·띠 안의 순서. 처음은 받은 순서, 그다음 위→아래(부모 평균 위치)·아래→위(자식 평균 위치)로 몇 번 다시 정렬해 엇갈리는 선을 줄인다.
+        var order: [[String: [String]]] = rows.map { row in
+            Dictionary(grouping: row, by: { groupOf[$0] ?? "" })
+        }
+        func positions() -> [String: Double] {
+            var x: [String: Double] = [:]
+            for r in order.indices {
+                for g in bands {
+                    guard let members = order[r][g], !members.isEmpty else { continue }
+                    let full = Double(bandWidth[g]!) * nodeW + Double(bandWidth[g]! - 1) * gapX
+                    let used = Double(members.count) * nodeW + Double(members.count - 1) * gapX
+                    var cx = bandX[g]! + (full - used) / 2
+                    for v in members { x[v] = cx; cx += nodeW + gapX }
                 }
             }
+            return x
+        }
+        for pass in 0..<6 {
+            let x = positions()
+            let down = pass % 2 == 0
+            let rowIdx = down ? Array(order.indices) : Array(order.indices.reversed())
+            for r in rowIdx {
+                for g in bands {
+                    guard let members = order[r][g], members.count > 1 else { continue }
+                    order[r][g] = members.enumerated().sorted { a, b in
+                        func bary(_ v: String, _ i: Int) -> Double {
+                            let ns = (down ? inc[v] : out[v]) ?? []
+                            let ps = ns.compactMap { x[$0] }
+                            return ps.isEmpty ? (x[v] ?? Double(i)) : ps.reduce(0, +) / Double(ps.count)
+                        }
+                        let ba = bary(a.element, a.offset), bb = bary(b.element, b.offset)
+                        return ba == bb ? a.offset < b.offset : ba < bb
+                    }.map(\.element)
+                }
+            }
+        }
+        let xpos = positions()
+        var result: [String: Rect] = [:]
+        for (r, row) in rows.enumerated() {
+            for v in row { result[v] = Rect(x: xpos[v]!, y: origin.y + 90 + Double(r) * (nodeH + gapY), w: nodeW, h: nodeH) }
         }
         var groupRects: [String: Rect] = [:]
         for g in groups ?? [] {

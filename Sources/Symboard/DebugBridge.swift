@@ -288,7 +288,15 @@ final class DebugBridge {
                 if let a = b.action { NSApp.sendAction(a, to: b.target, from: b) }
                 log.append("pick \(label) = \(b.titleOfSelectedItem ?? "")")
             } else { log.append("pick: no popup \(label)") }
+        case "spawnQuick":
+            // 막대의 New console 단추와 같은 길(확대해 가기·바로 입력 받기 시험용).
+            controller.spawnQuick(count: cmd["count"] as? Int ?? 1)
+        case "zoomInfo":
+            let fr = controller.window?.firstResponder.map { String(describing: type(of: $0)) } ?? "nil"
+            log.append("mag=\(controller.scrollView.magnification) center=\(controller.scrollView.visibleCenter) firstResponder=\(fr)")
         case "theme":
+            // set: system·dark·light 이면 그 모드로 바꾼다(전환 페이드 시험용, 설정에는 저장하지 않는다).
+            if let m = (cmd["set"] as? String).flatMap(AppearanceMode.init(rawValue:)) { Theme.apply(m) }
             log.append("isLight=\(Theme.isLight) app=\(NSApp.effectiveAppearance.name.rawValue) set=\(NSApp.appearance?.name.rawValue ?? "nil") text=\(Theme.resolved(Theme.text))")
         case "winshot":
             // 창 번호(실제 화면 캡처용, screencapture -l).

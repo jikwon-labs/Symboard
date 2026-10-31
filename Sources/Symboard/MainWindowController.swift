@@ -1355,7 +1355,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let node = BoardNode(kind: .terminal, frame: frame, title: name, terminal: spec, teamID: teamID, role: role)
         model.addNode(node)
         currentCanvas?.select(node.id)
-        if point == nil { glideReveal([frame]) }
+        if point == nil { glideReveal([frame], zoomIn: true) }
         return node
     }
 
@@ -1376,13 +1376,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     }
 
     /// 새로 놓은 노드로 화면을 부드럽게 옮긴다. 배율은 그대로 두되, 화면보다 크면 들어오게 줄인다.
-    func glideReveal(_ frames: [Rect], duration: TimeInterval = 0.35) {
+    /// zoomIn: 새 콘솔처럼 바로 쓸 노드면 실제 크기(1배)까지 확대하며 간다. 이미 그보다 크면 그대로, 화면을 넘지는 않는다.
+    func glideReveal(_ frames: [Rect], zoomIn: Bool = false, duration: TimeInterval = 0.35) {
         guard let first = frames.first else { return }
         var minX = first.x, minY = first.y, maxX = first.x + first.w, maxY = first.y + first.h
         for f in frames.dropFirst() { minX = min(minX, f.x); minY = min(minY, f.y); maxX = max(maxX, f.x + f.w); maxY = max(maxY, f.y + f.h) }
         let safe = safeCanvasRect, mag = Double(scrollView.magnification)
         let fit = min(safe.w / (maxX - minX + 80), safe.h / (maxY - minY + 80))
-        let z = max(Double(scrollView.minMagnification), mag * min(1, fit))
+        let z = max(Double(scrollView.minMagnification), zoomIn ? min(mag * fit, max(mag, 1)) : mag * min(1, fit))
         // 보이는 영역(막대를 뺀 곳)의 가운데는 화면 가운데보다 20pt 위다(reveal 과 같은 보정).
         scrollView.glide(to: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / z), zoom: z, duration: duration)
     }
