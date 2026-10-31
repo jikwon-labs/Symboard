@@ -288,6 +288,18 @@ final class DebugBridge {
                 if let a = b.action { NSApp.sendAction(a, to: b.target, from: b) }
                 log.append("pick \(label) = \(b.titleOfSelectedItem ?? "")")
             } else { log.append("pick: no popup \(label)") }
+        case "benchLinks":
+            // 화살표 다시 그리기 시간: 같은 자리로 n번(기억한 길), 도형 하나를 1씩 옮기며 n번(새로 찾기).
+            let n = cmd["n"] as? Int ?? 60
+            guard let canvas = controller.currentCanvas else { break }
+            var t = Date()
+            for _ in 0..<n { canvas.layoutLinks() }
+            let same = Date().timeIntervalSince(t) * 1000 / Double(n)
+            let shape = canvas.nodeViews.values.first { $0.frame.width > 100 && $0.frame.width < 400 }
+            t = Date()
+            for i in 0..<n { shape?.setFrameOrigin(NSPoint(x: shape!.frame.minX + (i % 2 == 0 ? 1 : -1), y: shape!.frame.minY)); canvas.layoutLinks() }
+            let moving = Date().timeIntervalSince(t) * 1000 / Double(n)
+            log.append(String(format: "layoutLinks same=%.2fms moving=%.2fms", same, moving))
         case "openMemory":
             controller.openMemory()
         case "spawnQuick":

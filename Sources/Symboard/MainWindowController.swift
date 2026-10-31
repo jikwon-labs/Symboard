@@ -46,6 +46,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     lazy var diagrams = DiagramMaker(c: self)
     lazy var docStudio: DocStudioState = { let d = DocStudioState(model: model); d.c = self; return d }()
     lazy var memoryHub: MemoryHub = { let h = MemoryHub(model: model); h.c = self; return h }()
+    /// 새 버전 알림(위쪽 오른쪽 알약).
+    private(set) lazy var updates = UpdateChecker(chrome: chrome)
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
@@ -88,6 +90,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         CursorWatch.start(window: window)
         TextCursor.install()
         DispatchQueue.main.async { [weak self] in self?.model.usage.refresh() }
+        _ = updates
         // 알약이 CLI 와 같은 시각·% 를 보이도록 /usage 도 읽는다(질문 아님). 창이 먼저 뜨게 조금 늦춘다.
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.model.usage.refreshLimitsIfStale() }
         // 5시간 묶음이 끝나고 새로 시작한 것도 알약에 보이게 가끔 다시 훑는다.

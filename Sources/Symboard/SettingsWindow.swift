@@ -16,6 +16,8 @@ final class SettingsWindowController: NSWindowController {
     /// 9차 5번: 에이전트가 이어 띄울 수 있는 단계와 연 콘솔 수. 넘으면 아래 확인 띠로 묻는다.
     /// 10차: 화면 모드·언어.
     private let appearance = NSPopUpButton()
+    /// 새 버전 알림(하루 한 번 GitHub 최신 릴리스 확인).
+    private let updates = NSButton(checkboxWithTitle: L("Check for updates"), target: nil, action: nil)
     private let language = NSPopUpButton()
     private let maxDepth = NSPopUpButton()
     private let maxOpened = NSPopUpButton()
@@ -23,7 +25,7 @@ final class SettingsWindowController: NSWindowController {
     private static let systemHangul = "System default (Apple SD Gothic Neo)"
 
     init() {
-        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 540), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 600), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = L("Settings")
         w.backgroundColor = Theme.surface
         w.isReleasedWhenClosed = false
@@ -78,6 +80,14 @@ final class SettingsWindowController: NSWindowController {
         general.column(at: 0).xPlacement = .trailing
         general.rowAlignment = .firstBaseline
         appearance.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        updates.title = L("Check for updates")
+        updates.target = self
+        updates.action = #selector(updatesChanged)
+        updates.setAccessibilityLabel(L("Check for updates"))
+        (updates.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: updates.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
+        let updatesNote = NSTextField(wrappingLabelWithString: L("Once a day, asks GitHub for the latest release and shows a pill when a newer version is out. Nothing is downloaded."))
+        updatesNote.font = .systemFont(ofSize: 11)
+        updatesNote.textColor = Theme.textDim
         language.widthAnchor.constraint(equalToConstant: 200).isActive = true
 
         let header = NSTextField(labelWithString: L("TERMINAL"))
@@ -166,8 +176,9 @@ final class SettingsWindowController: NSWindowController {
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [generalHeader, general, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
-        stack.setCustomSpacing(22, after: general)
+        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
+        stack.setCustomSpacing(22, after: updatesNote)
+        stack.setCustomSpacing(4, after: updates)
         stack.setCustomSpacing(22, after: note)
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -180,6 +191,7 @@ final class SettingsWindowController: NSWindowController {
             stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
             previewBox.widthAnchor.constraint(equalTo: stack.widthAnchor),
             agentsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            updatesNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             limitsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             previewBox.heightAnchor.constraint(equalToConstant: 44),
             preview.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 12),
@@ -201,6 +213,7 @@ final class SettingsWindowController: NSWindowController {
         size.selectItem(withTag: Int(s.size))
         preview.font = TerminalFont.make(s)
         boardTools.state = BoardTools.enabled(Prefs.shared) ? .on : .off
+        updates.state = UpdateCheck.enabled(Prefs.shared) ? .on : .off
         appearance.selectItem(at: AppearanceMode.allCases.firstIndex(of: UIPrefs.appearance(Prefs.shared)) ?? 0)
         language.selectItem(at: LanguageMode.allCases.firstIndex(of: UIPrefs.language(Prefs.shared)) ?? 0)
         maxDepth.selectItem(withTag: AgentLimits.maxDepth(Prefs.shared))
@@ -224,6 +237,11 @@ final class SettingsWindowController: NSWindowController {
     @objc private func limitsChanged() {
         AgentLimits.setMaxDepth(maxDepth.selectedTag(), Prefs.shared)
         AgentLimits.setMaxOpened(maxOpened.selectedTag(), Prefs.shared)
+    }
+
+    @objc private func updatesChanged() {
+        UpdateCheck.setEnabled(updates.state == .on, Prefs.shared)
+        (NSApp.delegate as? AppDelegate)?.windowController?.updates.settingChanged()
     }
 
     @objc private func boardToolsChanged() {

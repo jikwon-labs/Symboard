@@ -120,6 +120,18 @@ struct TopRightBar: View {
             .floatingCapsule(radius: 10)
             .hint(L("Running consoles"))
 
+            if let u = chrome.update {
+                Button { c.updates.openReleasePage() } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill").foregroundStyle(Color.symAccent)
+                        Text(L("New version %@", u.version))
+                    }
+                }
+                .buttonStyle(PillButtonStyle(active: false))
+                .tip(L("Open the release page"))
+                .axName("Update available")
+            }
+
             Button { chrome.usageOpen.toggle() } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Color.symDim)

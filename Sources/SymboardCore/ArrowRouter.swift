@@ -70,6 +70,7 @@ public enum ArrowRouter {
         // 3. 꺾는 자리 후보 중 가장 깔끔한 길. 긴 선부터 정하면 짧은 선이 비켜 간다.
         let obstacles = Array(Set(edges.flatMap { [$0.from, $0.to] } + extra))
         // 상자 사이 빈 줄(돌아갈 때 지나갈 세로·가로 길).
+        let inflated = obstacles.map { (r: $0, box: $0.inset(-6)) }
         let laneX = obstacles.flatMap { [$0.x - 22, $0.x + $0.w + 22] }
         let laneY = obstacles.flatMap { [$0.y - 22, $0.y + $0.h + 22] }
         var drawn: [(Point, Point)] = []
@@ -92,28 +93,37 @@ public enum ArrowRouter {
                     cands.append(abs(s.y - t.y) < 1 ? [s, t] : [s, Point(x: x, y: s.y), Point(x: x, y: t.y), t])
                 }
             }
-            // 바로 가는 길이 막히면 쓸 돌아가는 길: 나가자마자 꺾어 빈 줄을 따라가다 들어가기 직전에 꺾는다.
-            if p.vertical {
-                let lead = p.sa == .maxY ? 1.0 : -1.0
-                let y1 = s.y + lead * 22, y2 = t.y - lead * 22
-                for x in laneX { cands.append([s, Point(x: s.x, y: y1), Point(x: x, y: y1), Point(x: x, y: y2), Point(x: t.x, y: y2), t]) }
-            } else {
-                let lead = p.sa == .maxX ? 1.0 : -1.0
-                let x1 = s.x + lead * 22, x2 = t.x - lead * 22
-                for y in laneY { cands.append([s, Point(x: x1, y: s.y), Point(x: x1, y: y), Point(x: x2, y: y), Point(x: x2, y: t.y), t]) }
-            }
             if cands.isEmpty { cands = [[s, t]] }
-            let others = obstacles.filter { $0 != p.a && $0 != p.b }
-            func score(_ pts: [Point]) -> Double {
-                var v = 0.0
+            let others = inflated.filter { $0.r != p.a && $0.r != p.b }.map(\.box)
+            // 점수: 길이 + 꺾인 수 + 다른 상자를 지나면 크게, 앞선 선과 겹치면 조금.
+            func score(_ pts: [Point]) -> (value: Double, blocked: Bool) {
+                var v = 0.0, blocked = false
                 for (u, w) in zip(pts, pts.dropFirst()) {
                     v += dist(u, w)
-                    for r in others where hits(u, w, r.inset(-6)) { v += 2000 }
+                    for r in others where hits(u, w, r) { v += 2000; blocked = true }
                     for (x, y) in drawn where overlaps(u, w, x, y) { v += 300 }
                 }
-                return v + Double(pts.count) * 15
+                return (v + Double(pts.count) * 15, blocked)
             }
-            let best = simplify(cands.min { score($0) < score($1) }!)
+            var scored = cands.map { ($0, score($0)) }
+            // 바로 가는 길이 모두 막혔을 때만 돌아가는 길을 본다: 나가자마자 꺾어 빈 줄을 따라가다 들어가기 직전에 꺾는다.
+            // 빈 줄은 두 끝 근처(가로·세로 600 안)만 본다. 멀리 도는 길은 어차피 고르지 않는다.
+            if scored.allSatisfy({ $0.1.blocked }) {
+                var detours: [[Point]] = []
+                if p.vertical {
+                    let lead = p.sa == .maxY ? 1.0 : -1.0
+                    let y1 = s.y + lead * 22, y2 = t.y - lead * 22
+                    let lo = min(s.x, t.x) - 600, hi = max(s.x, t.x) + 600
+                    for x in laneX where x > lo && x < hi { detours.append([s, Point(x: s.x, y: y1), Point(x: x, y: y1), Point(x: x, y: y2), Point(x: t.x, y: y2), t]) }
+                } else {
+                    let lead = p.sa == .maxX ? 1.0 : -1.0
+                    let x1 = s.x + lead * 22, x2 = t.x - lead * 22
+                    let lo = min(s.y, t.y) - 600, hi = max(s.y, t.y) + 600
+                    for y in laneY where y > lo && y < hi { detours.append([s, Point(x: x1, y: s.y), Point(x: x1, y: y), Point(x: x2, y: y), Point(x: x2, y: t.y), t]) }
+                }
+                scored += detours.map { ($0, score($0)) }
+            }
+            let best = simplify(scored.min { $0.1.value < $1.1.value }!.0)
             for (u, w) in zip(best, best.dropFirst()) { drawn.append((u, w)) }
             let longest = zip(best, best.dropFirst()).max { dist($0.0, $0.1) < dist($1.0, $1.1) }!
             out[p.id] = Route(points: best, label: Point(x: (longest.0.x + longest.1.x) / 2, y: (longest.0.y + longest.1.y) / 2))

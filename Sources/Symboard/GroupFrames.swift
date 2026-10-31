@@ -229,6 +229,8 @@ final class LinksView: NSView {
     }
 
     private var arrows: [UUID: (CAShapeLayer, CATextLayer?)] = [:]
+    private struct RouteKey: Equatable { var ids: [UUID]; var rects: [Rect]; var obstacles: [Rect] }
+    private var routeCache: (key: RouteKey, routes: [UUID: ArrowRouter.Route])?
 
     func updateArrows(_ segments: [(UUID, NSRect, NSRect, String?, String)], obstacles: [NSRect] = []) {
         guard let root = layer else { return }
@@ -236,7 +238,14 @@ final class LinksView: NSView {
         for (id, l) in arrows where !ids.contains(id) { l.0.removeFromSuperlayer(); l.1?.removeFromSuperlayer(); arrows[id] = nil }
         CATransaction.begin(); CATransaction.setDisableActions(true)
         func rect(_ r: NSRect) -> Rect { Rect(x: r.minX, y: r.minY, w: r.width, h: r.height) }
-        let routes = ArrowRouter.route(segments.map { (id: $0.0, from: rect($0.1), to: rect($0.2)) }, obstacles: obstacles.map(rect))
+        // 상자 자리가 그대로면 지난 길을 쓴다(보드는 다른 일로도 자주 다시 그려져서, 매번 길을 찾으면 끌기·입력이 버벅였다).
+        let edges = segments.map { (id: $0.0, from: rect($0.1), to: rect($0.2)) }
+        let key = RouteKey(ids: edges.map(\.id), rects: edges.flatMap { [$0.from, $0.to] }, obstacles: obstacles.map(rect))
+        let routes: [UUID: ArrowRouter.Route]
+        if let cached = routeCache, cached.key == key { routes = cached.routes } else {
+            routes = ArrowRouter.route(edges, obstacles: key.obstacles)
+            routeCache = (key, routes)
+        }
         for (id, _, _, label, color) in segments {
             guard let route = routes[id] else { continue }
             let path = Self.arrowPath(route.points.map { CGPoint(x: $0.x, y: $0.y) })
