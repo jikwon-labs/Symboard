@@ -119,7 +119,7 @@ final class UsageStore: ObservableObject {
             await MainActor.run {
                 self.records = grouped
                 self.stats = stats
-                self.note = "\(result.files) log files · \(String(format: "%.1f", Date().timeIntervalSince(started)))s"
+                self.note = L("%d log files · %@s", result.files, String(format: "%.1f", Date().timeIntervalSince(started)))
                 self.scannedAt = Date()
                 self.scanning = false
                 if let end = stats.values.compactMap(\.blockEnd).max() {
@@ -242,11 +242,12 @@ struct UsagePopover: View {
     }
 
     var footerSource: String {
-        if agent == .claude { return store.limits.isEmpty ? "local session logs" : "claude · /usage · local session logs" }
+        let logs = L("local session logs")
+        if agent == .claude { return store.limits.isEmpty ? logs : "claude · /usage · " + logs }
         switch store.codexLimitsSource {
-        case "/status": return "codex · /status · local session logs"
-        case "session log": return "codex · last session log · local session logs"
-        default: return "local session logs"
+        case "/status": return "codex · /status · " + logs
+        case "session log": return "codex · " + L("last session log") + " · " + logs
+        default: return logs
         }
     }
 
@@ -284,8 +285,17 @@ struct UsagePopover: View {
         .padding(30).frame(maxWidth: .infinity, minHeight: 300)
     }
 
+    /// claude /usage 의 한도 이름("Current week (all models)" 등)을 화면 언어로. 괄호 안 모델 이름은 그대로.
+    static func limitName(_ name: String) -> String {
+        for key in ["Current week", "Current session"] where name.hasPrefix(key) {
+            let rest = String(name.dropFirst(key.count))
+            return L(key) + (rest == " (all models)" ? " (" + L("all models") + ")" : rest)
+        }
+        return name
+    }
+
     func label(_ t: String) -> some View {
-        Text(t).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+        Text(L(t)).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
     }
 
     var overview: some View {
@@ -308,7 +318,7 @@ struct UsagePopover: View {
                     .frame(width: 62, height: 62)
                     .hint(session == nil ? "Plan limits are read from \(agent == .claude ? "claude /usage" : "codex /status"). Open this once the project folder is trusted." : (agent == .claude ? "From claude /usage" : "From codex \(store.codexLimitsSource)"))
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(agent == .codex ? (session?.name ?? "Current session") : "Current session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
+                        Text(agent == .codex ? (session?.name ?? L("Current session")) : L("Current session")).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.symText)
                         if let r = session?.resets {
                             Text(L("Resets %@", r)).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                         } else if let end = stats.blockEnd {
@@ -327,7 +337,7 @@ struct UsagePopover: View {
                 ForEach(limits.filter { $0 != session }, id: \.name) { l in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text(l.name).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
+                            Text(Self.limitName(l.name)).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.symText)
                             Spacer()
                             Text("\(l.percent)%").font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.symText)
                         }
@@ -364,11 +374,11 @@ struct UsagePopover: View {
                     GridRow { stat(L("Favorite model"), stats.favoriteModel.map(Self.prettyModel) ?? "-"); stat(L("Total tokens"), UsageStats.short(stats.totalTokens)) }
                     GridRow { stat(L("Sessions"), "\(stats.sessions)"); stat(L("Active days"), "\(stats.activeDays)/365") }
                     GridRow { stat(L("Most active day"), stats.mostActiveDay.map(Self.prettyDay) ?? "-"); stat(L("Longest session"), Self.duration(stats.longestSession)) }
-                    GridRow { stat(L("Longest streak"), "\(stats.longestStreak) days"); stat(L("Current streak"), "\(stats.currentStreak) days") }
+                    GridRow { stat(L("Longest streak"), Ln(stats.longestStreak, "%d day", "%d days")); stat(L("Current streak"), Ln(stats.currentStreak, "%d day", "%d days")) }
                 }
                 label("LAST 30D")
-                shareBar(L("At >150k context"), stats.bigContextShare, "Long sessions cost more per message.")
-                shareBar(L("While 4+ sessions ran in parallel"), stats.parallelShare, "Several busy sessions at once use limits faster.")
+                shareBar(L("At >150k context"), stats.bigContextShare, L("Long sessions cost more per message."))
+                shareBar(L("While 4+ sessions ran in parallel"), stats.parallelShare, L("Several busy sessions at once use limits faster."))
             }
             .padding(14)
         }
@@ -455,7 +465,7 @@ struct UsagePopover: View {
                     label("LAST 30 DAYS")
                     Spacer()
                     ForEach(["All tokens", "In + out", "Output"], id: \.self) { m in
-                        Button(m) { metric = m }.buttonStyle(ChipStyle(on: metric == m))
+                        Button(L(m)) { metric = m }.buttonStyle(ChipStyle(on: metric == m)).axName(m)
                     }
                 }
                 Chart(b) { x in

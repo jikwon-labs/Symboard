@@ -288,6 +288,8 @@ final class DebugBridge {
                 if let a = b.action { NSApp.sendAction(a, to: b.target, from: b) }
                 log.append("pick \(label) = \(b.titleOfSelectedItem ?? "")")
             } else { log.append("pick: no popup \(label)") }
+        case "openMemory":
+            controller.openMemory()
         case "spawnQuick":
             // 막대의 New console 단추와 같은 길(확대해 가기·바로 입력 받기 시험용).
             controller.spawnQuick(count: cmd["count"] as? Int ?? 1)

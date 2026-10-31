@@ -43,4 +43,13 @@ import Testing
             #expect(!(a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h))
         } }
     }
+
+    /// 선이 많이 오가는 그룹끼리 붙는다(받은 순서 A,B,C 에서 A↔C 만 이어지면 A,C 가 이웃).
+    @Test func bandsWithLinksSitTogether() {
+        let order = DiagramSpec.bandOrder(["A", "B", "C"], width: { _ in 100 }, links: [("A", "C"), ("C", "A")])
+        let i = order.firstIndex(of: "A")!, j = order.firstIndex(of: "C")!
+        #expect(abs(i - j) == 1)
+        // 이어진 선이 없으면 받은 순서 그대로.
+        #expect(DiagramSpec.bandOrder(["A", "B", "C"], width: { _ in 100 }, links: []) == ["A", "B", "C"])
+    }
 }

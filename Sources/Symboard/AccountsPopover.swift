@@ -46,7 +46,7 @@ struct AccountsPopover: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(10).background(RoundedRectangle(cornerRadius: 9).fill(Color(hex: "#E9C46A").opacity(0.08)))
-            row(initials: nil, name: "Your sign-in", sub: "Used by new \(cli) consoles", active: activeID == nil,
+            row(initials: nil, name: L("Your sign-in"), sub: L("Used by new %@ consoles", cli), active: activeID == nil,
                 use: { profiles.setActive(nil, for: agent) }, open: { c.openProfileConsole(nil, agent: agent) }, edit: nil, delete: nil)
             ForEach(list) { p in
                 if renaming == p.id {
@@ -55,7 +55,7 @@ struct AccountsPopover: View {
                         Button(L("Save")) { profiles.rename(p.id, to: renameText); renaming = nil }.buttonStyle(PillButtonStyle(prominent: true)).axName("Save")
                     }
                 } else {
-                    row(initials: Self.initials(p.name), name: p.name, sub: activeID == p.id ? "Used by new \(cli) consoles" : "Ready when you need it", active: activeID == p.id,
+                    row(initials: Self.initials(p.name), name: p.name, sub: activeID == p.id ? L("Used by new %@ consoles", cli) : L("Ready when you need it"), active: activeID == p.id,
                         use: { profiles.setActive(p.id, for: agent) }, open: { c.openProfileConsole(p, agent: agent) },
                         edit: { renaming = p.id; renameText = p.name }, delete: { profiles.remove(p.id) })
                 }

@@ -91,8 +91,13 @@ public struct DiagramSpec: Codable, Equatable, Sendable {
             for v in row { counts[groupOf[v] ?? "", default: 0] += 1 }
             for (g, c) in counts { bandWidth[g] = max(bandWidth[g] ?? 0, c) }
         }
-        let bands = groupOrder.filter { (bandWidth[$0] ?? 0) > 0 }
         let bandGap = gapX + 40
+        let bands = Self.bandOrder(groupOrder.filter { (bandWidth[$0] ?? 0) > 0 },
+                                   width: { Double(bandWidth[$0]!) * nodeW + Double(bandWidth[$0]! - 1) * gapX + bandGap },
+                                   links: edges.compactMap { e in
+                                       let a = groupOf[e.from] ?? "", b = groupOf[e.to] ?? ""
+                                       return a == b ? nil : (a, b)
+                                   })
         var bandX: [String: Double] = [:]
         var cursor = origin.x
         for g in bands {
@@ -149,6 +154,40 @@ public struct DiagramSpec: Codable, Equatable, Sendable {
             groupRects[g.id] = Rect(x: minX - 28, y: minY - 52, w: maxX - minX + 56, h: maxY - minY + 80)
         }
         return Layout(nodes: result, groups: groupRects, title: Point(x: origin.x, y: origin.y - 10))
+    }
+
+    /// 그룹 띠의 왼쪽→오른쪽 순서. 그룹을 넘는 선의 길이 합(띠 가운데끼리 거리)이 가장 짧은 순서를 고른다(11차).
+    /// 받은 순서는 에이전트가 적은 순서일 뿐이라, 선이 많이 오가는 그룹이 양 끝에 놓여 긴 선이 화면을 가로질렀다.
+    /// 띠가 7개 이하면 모든 순서를 본다(7! = 5040). 더 많으면 받은 순서. 같으면 받은 순서에 가까운 쪽.
+    static func bandOrder(_ bands: [String], width: (String) -> Double, links: [(String, String)]) -> [String] {
+        guard bands.count > 2, bands.count <= 7, !links.isEmpty else { return bands }
+        let w = bands.map(width)
+        var best = Array(bands.indices), bestCost = Double.infinity
+        var perm = Array(bands.indices)
+        let index = Dictionary(uniqueKeysWithValues: bands.enumerated().map { ($0.element, $0.offset) })
+        let pairs = links.compactMap { l -> (Int, Int)? in
+            guard let a = index[l.0], let b = index[l.1] else { return nil }
+            return (a, b)
+        }
+        func cost(_ p: [Int]) -> Double {
+            var center = Array(repeating: 0.0, count: p.count), x = 0.0
+            for i in p { center[i] = x + w[i] / 2; x += w[i] }
+            // 받은 순서에서 멀어진 만큼 아주 조금 더해, 길이가 같으면 받은 순서를 지킨다.
+            let drift = p.enumerated().reduce(0.0) { $0 + abs(Double($1.offset - $1.element)) }
+            return pairs.reduce(0.0) { $0 + abs(center[$1.0] - center[$1.1]) } + drift
+        }
+        func permute(_ k: Int) {
+            if k == perm.count {
+                let c = cost(perm)
+                if c < bestCost { bestCost = c; best = perm }
+                return
+            }
+            for i in k..<perm.count {
+                perm.swapAt(k, i); permute(k + 1); perm.swapAt(k, i)
+            }
+        }
+        permute(0)
+        return best.map { bands[$0] }
     }
 
     public static let kinds: [(id: String, title: String, icon: String, ask: String)] = [

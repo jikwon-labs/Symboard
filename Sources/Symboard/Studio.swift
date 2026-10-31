@@ -362,7 +362,7 @@ struct StudioView: View {
         VStack(spacing: 0) {
             HStack {
                 Picker("", selection: $model.tab) {
-                    ForEach(["Code", "Markdown", "Docs", "Diagram"], id: \.self) { Text($0) }
+                    ForEach(["Code", "Markdown", "Docs", "Diagram"], id: \.self) { Text(L($0)).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 360)
