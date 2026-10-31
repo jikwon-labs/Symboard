@@ -5,3 +5,5 @@ build/
 *.xcodeproj
 docs/screens/v5/compare/
 docs/screens/v6/compare/
+PLAN*.md
+REPORT*.md

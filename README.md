@@ -95,9 +95,5 @@ open /Applications/Symboard.app
 
 ## 기록
 
-- 1차: `PLAN.md`, `REPORT.md`, 스크린샷 `docs/screens/`.
-- 2차(원본과 같게 보이고 움직이게): `PLAN-2.md`(항목마다 비교한 원본 장면·스크린샷·남은 차이), `REPORT-2.md`, 스크린샷 `docs/screens/v2/`.
-- 3~5차: `PLAN-3.md`~`PLAN-5.md`, `REPORT-3.md`~`REPORT-5.md`.
-- 6차(영상별 작은 차이): `PLAN-6.md`, `REPORT-6.md`. 원본과 나란히 둔 그림은 `docs/screens/v6/compare/`(커밋하지 않음).
-- 7차~10차(실제로 써 보고 요청한 것): `PLAN-7.md`~`PLAN-10.md`, `REPORT-7.md`~`REPORT-10.md`, 스크린샷 `docs/screens/v8/`~`docs/screens/v10/`.
+- 단계별 스크린샷: `docs/screens/`.
 - 결정 기록: `DECISIONS.md`.
