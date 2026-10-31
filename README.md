@@ -29,7 +29,8 @@ ditto build/Symboard.app /Applications/Symboard.app   # 덮어써도 상태는 �
 open /Applications/Symboard.app
 ```
 
-- 서명은 임시(ad-hoc) 서명이다. 다른 맥으로 옮겨 처음 열 때 막히면 Finder 에서 오른쪽 클릭 → 열기.
+- 키체인에 Developer ID 인증서가 있으면 그걸로 서명하고(hardened runtime), 없으면 임시(ad-hoc) 서명이다.
+- 다른 사람에게 줄 때는 `NOTARIZE=1 scripts/bundle.sh` 로 공증까지 받고 `build/Symboard.zip` 을 보낸다. 받은 쪽에서 경고 없이 열린다. 공증 계정은 한 번만 저장해 두면 된다: `xcrun notarytool store-credentials symboard-notary --apple-id <애플ID> --team-id K6599UJ4KM` (앱 암호는 appleid.apple.com 에서 발급).
 - Dock 에 고정하려면 실행 중에 Dock 아이콘 오른쪽 클릭 → 옵션 → Dock 에 유지.
 - 창을 닫아도(Cmd+W) 앱과 콘솔은 계속 돈다. Dock 아이콘을 누르면 같은 창이 다시 열린다. 끝내려면 Cmd+Q. 다시 켜면 콘솔이 모두 복원되고, 이어 갈 대화가 있는 claude·codex 만 "Resume all conversations?" 로 묻는다.
 

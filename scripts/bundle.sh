@@ -39,5 +39,32 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --sign - "$APP" >/dev/null 2>&1 || true
+# 서명: Developer ID 인증서가 키체인에 있으면 그걸로, 없으면 임시(ad-hoc) 서명.
+# 안쪽 실행 파일부터 서명하고 마지막에 앱 전체를 서명한다.
+ID="${SIGN_IDENTITY:-Developer ID Application: jikwon seo (K6599UJ4KM)}"
+if security find-identity -v -p codesigning | grep -qF "$ID"; then
+  codesign --force --options runtime --timestamp --sign "$ID" "$APP/Contents/MacOS/symboard-mcp"
+  codesign --force --options runtime --timestamp --sign "$ID" "$APP"
+  codesign --verify --strict --deep "$APP"
+  SIGNED_WITH_ID=1
+else
+  codesign --force --sign - "$APP" >/dev/null 2>&1 || true
+  SIGNED_WITH_ID=0
+fi
 echo "built $APP"
+
+# 공증: NOTARIZE=1 일 때만 (몇 분 걸림). 다른 맥에서 경고 없이 열리게 하려면 필요하다.
+# 계정 정보는 미리 `xcrun notarytool store-credentials symboard-notary ...` 로 저장해 둔다.
+if [ "${NOTARIZE:-0}" = 1 ]; then
+  if [ "$SIGNED_WITH_ID" != 1 ]; then echo "Developer ID 서명이 없어 공증할 수 없다" >&2; exit 1; fi
+  ZIP=build/Symboard.zip
+  rm -f "$ZIP"
+  ditto -c -k --keepParent "$APP" "$ZIP"
+  xcrun notarytool submit "$ZIP" --keychain-profile "${NOTARY_PROFILE:-symboard-notary}" --wait
+  xcrun stapler staple "$APP"
+  # 배포용 zip 은 공증 결과를 붙인 뒤 다시 만든다.
+  rm -f "$ZIP"
+  ditto -c -k --keepParent "$APP" "$ZIP"
+  spctl -a -vv "$APP"
+  echo "notarized $ZIP"
+fi
