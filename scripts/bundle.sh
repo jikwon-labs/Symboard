@@ -3,6 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# 버전은 Sources/SymboardCore/Version.swift 한 곳에만 둔다. 빌드 번호는 커밋 수(늘기만 한다).
+VERSION="$(sed -nE 's/.*version = "([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' Sources/SymboardCore/Version.swift)"
+if [ -z "$VERSION" ]; then echo "Version.swift 에서 버전을 읽지 못했다" >&2; exit 1; fi
+BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+
 swift build -c release
 BIN_DIR="$(swift build -c release --show-bin-path)"
 
@@ -28,8 +33,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>local.symboard.app</string>
   <key>CFBundleExecutable</key><string>Symboard</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>$VERSION</string>
+  <key>CFBundleVersion</key><string>$BUILD</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>NSHighResolutionCapable</key><true/>
@@ -51,7 +56,7 @@ else
   codesign --force --sign - "$APP" >/dev/null 2>&1 || true
   SIGNED_WITH_ID=0
 fi
-echo "built $APP"
+echo "built $APP ($VERSION, build $BUILD)"
 
 # 공증: NOTARIZE=1 일 때만 (몇 분 걸림). 다른 맥에서 경고 없이 열리게 하려면 필요하다.
 # 계정 정보는 미리 `xcrun notarytool store-credentials symboard-notary ...` 로 저장해 둔다.

@@ -2,7 +2,7 @@
 
 큰 캔버스 위에 Claude Code·Codex 같은 에이전트 콘솔을 여러 개 띄우고, 누가 일하는 중이고 누가 입력을 기다리는지 한눈에 보며, 앱을 껐다 켜도 그대로 이어지는 macOS 앱. Swift(AppKit + SwiftUI), 터미널은 SwiftTerm.
 
-macOS 14 이상, Apple Silicon. 개인용이라 로그인·결제·자동 업데이트·음성 비서는 없다. 문서·다이어그램·메모리 생성은 사용자가 이미 로그인한 CLI(claude, codex)를 백그라운드로 실행해서 만들고, 외부 API 키는 쓰지 않는다.
+macOS 14 이상, Apple Silicon. 개인용이라 로그인·결제·자동 업데이트·음성 비서는 없다(새 버전이 나오면 알려 주기만 한다, 아래 "배포와 업데이트"). 문서·다이어그램·메모리 생성은 사용자가 이미 로그인한 CLI(claude, codex)를 백그라운드로 실행해서 만들고, 외부 API 키는 쓰지 않는다.
 
 ## 빌드와 실행
 
@@ -33,6 +33,14 @@ open /Applications/Symboard.app
 - 다른 사람에게 줄 때는 `NOTARIZE=1 scripts/bundle.sh` 로 공증까지 받고 `build/Symboard.zip` 을 보낸다. 받은 쪽에서 경고 없이 열린다. 공증 계정은 한 번만 저장해 두면 된다: `xcrun notarytool store-credentials symboard-notary --apple-id <애플ID> --team-id K6599UJ4KM` (앱 암호는 appleid.apple.com 에서 발급).
 - Dock 에 고정하려면 실행 중에 Dock 아이콘 오른쪽 클릭 → 옵션 → Dock 에 유지.
 - 창을 닫아도(Cmd+W) 앱과 콘솔은 계속 돈다. Dock 아이콘을 누르면 같은 창이 다시 열린다. 끝내려면 Cmd+Q. 다시 켜면 콘솔이 모두 복원되고, 이어 갈 대화가 있는 claude·codex 만 "Resume all conversations?" 로 묻는다.
+
+### 배포와 업데이트
+
+- 버전은 `Sources/SymboardCore/Version.swift` 한 곳에만 둔다. `bundle.sh` 가 거기서 읽어 Info.plist 에 넣고, 빌드 번호는 커밋 수로 매긴다.
+- 새 버전 배포: `scripts/release.sh 0.2.0`. 버전 올리기 → `swift test` → 서명·공증 빌드 → 릴리스 노트 확인 후 커밋·태그(`v0.2.0`)·push → GitHub 릴리스에 `Symboard.zip` 첨부까지 한 번에 한다. `main` 에서 깨끗한 작업 트리, origin 과 같은 커밋이어야 돈다. `DRY_RUN=1` 이면 공증 빌드까지만 하고 버전 파일을 되돌린다.
+- 새 버전 알림: 앱이 하루 한 번 GitHub 최신 릴리스를 확인하고, 지금보다 높으면 위쪽 오른쪽에 "새 버전 x.y.z" 알약을 띄운다(누르면 릴리스 페이지). 받기·설치는 하지 않는다. 설정 > 일반 "업데이트 확인" 으로 끈다. 시험할 때는 `SYMBOARD_NO_UPDATE_CHECK=1`.
+- CI(`.github/workflows/ci.yml`): `main` push·PR 마다 macOS 러너에서 `swift test` 와 서명 없는 `bundle.sh` 를 돌린다.
+- `swiftterm-watch.yml`: 매주 원본 SwiftTerm 최신 릴리스를 보고, 사본보다 새 버전이 나오면 이슈를 연다(같은 버전으로는 한 번만). Dependabot 은 Actions 버전만 따라간다.
 
 ### 그 밖
 

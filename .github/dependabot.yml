@@ -1,0 +1,11 @@
+# Swift 의존성은 Vendor/ 사본이라 대상이 아니다(SwiftTerm 은 swiftterm-watch 워크플로가 본다).
+# 워크플로에 쓰는 Actions 버전만 따라간다.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

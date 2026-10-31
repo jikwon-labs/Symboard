@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    # swift-tools-version 6.0 이라 Xcode 16 이상이 필요하다. 러너에 깔린 Xcode 중 가장 새것을 쓴다.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # bundle.sh 가 커밋 수로 빌드 번호를 매긴다.
+
+      - name: Toolchain
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          swift --version
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved', 'Vendor/SwiftTerm/Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Test
+        run: swift test
+
+      # 서명 없이(ad-hoc) 앱 번들이 만들어지는지까지 본다. 서명·공증은 scripts/release.sh 로 로컬에서.
+      - name: Bundle
+        run: |
+          scripts/bundle.sh
+          plutil -lint build/Symboard.app/Contents/Info.plist
+          test -x build/Symboard.app/Contents/MacOS/Symboard
+          test -x build/Symboard.app/Contents/MacOS/symboard-mcp
