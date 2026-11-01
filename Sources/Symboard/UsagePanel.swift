@@ -321,7 +321,8 @@ struct UsagePopover: View {
                 let limits = agent == .claude ? store.limits : store.codexLimits
                 // 큰 링: claude 는 세션, codex 는 세션(5h)이 없으면 첫 한도(주간·월간).
                 let session = limits.first { PlanUsageParser.isSession($0.name) } ?? (agent == .codex ? limits.first : nil)
-                let note = agent == .claude ? store.limitsNote : store.codexLimitsNote
+                // 확인 도구가 남긴 상태 글은 영어로 저장하고 보일 때 옮긴다(12차). " · " 로 이어 붙인 조각마다.
+                let note = (agent == .claude ? store.limitsNote : store.codexLimitsNote).components(separatedBy: " · ").map { L($0) }.joined(separator: " · ")
                 HStack(spacing: 14) {
                     ZStack {
                         Circle().stroke(Color.symBorder, lineWidth: 5)

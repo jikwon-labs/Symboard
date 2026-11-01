@@ -46,8 +46,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowController.showWindow(nil)
         debugBridge = DebugBridge(controller: windowController, home: model.store.directory)
         // 언어를 바꾸면 메뉴 글도 다시 만든다(10차).
-        NotificationCenter.default.addObserver(forName: L10n.didChange, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { MainMenu.install() }
+        NotificationCenter.default.addObserver(forName: L10n.didChange, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                MainMenu.install()
+                // 기본 노드 이름(Checklist 등)은 화면에서 지금 언어로 보인다(12차).
+                self?.windowController?.currentCanvas?.nodeViews.values.forEach { $0.syncFromModel() }
+            }
         }
         // 처음 켤 때 화면 모드·언어를 고른다(10차).
         if UIPrefs.needsFirstRunChoice(Prefs.shared) {

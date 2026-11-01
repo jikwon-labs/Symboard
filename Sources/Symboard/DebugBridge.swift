@@ -327,6 +327,15 @@ final class DebugBridge {
             // set: system·dark·light 이면 그 모드로 바꾼다(전환 페이드 시험용, 설정에는 저장하지 않는다).
             if let m = (cmd["set"] as? String).flatMap(AppearanceMode.init(rawValue:)) { Theme.apply(m) }
             log.append("isLight=\(Theme.isLight) app=\(NSApp.effectiveAppearance.name.rawValue) set=\(NSApp.appearance?.name.rawValue ?? "nil") text=\(Theme.resolved(Theme.text))")
+        case "type":
+            // 지금 초점이 있는 입력칸에 글을 넣는다(키 입력 없이, 12차 시험용).
+            let w = NSApp.windows.first { $0.isVisible && $0.firstResponder is NSTextView } ?? controller.window
+            if let tv = w?.firstResponder as? NSTextView { tv.insertText(cmd["text"] as? String ?? "", replacementRange: tv.selectedRange()) }
+            log.append("type responder=\(w?.firstResponder.map { String(describing: type(of: $0)) } ?? "nil")")
+        case "lang":
+            // set: en·ko 이면 그 언어로 바꾼다(설정에는 저장하지 않는다, 12차 시험용).
+            if let m = (cmd["set"] as? String).flatMap(LanguageMode.init(rawValue:)) { L10n.apply(m) }
+            log.append("lang=\(L10n.current.rawValue)")
         case "winshot":
             // 창 번호(실제 화면 캡처용, screencapture -l).
             for w in NSApp.windows where w.isVisible { log.append("win \(w.windowNumber) \(w.title)") }

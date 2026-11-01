@@ -267,6 +267,8 @@ struct ChecklistView: View {
             }
         }
         .background(Color.symSurface)
+        .keepsInput($draft, "checklist.draft.\(box.node.id)")
+        .keepsInput($adding, "checklist.adding.\(box.node.id)")
     }
 }
 
@@ -351,12 +353,12 @@ struct KanbanView: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Circle().fill(color).frame(width: 7, height: 7)
-                Text(col.title.uppercased()).font(.system(size: 11, weight: .bold)).tracking(0.6).foregroundStyle(Color.symText)
+                Text(col.displayTitle.uppercased()).font(.system(size: 11, weight: .bold)).tracking(0.6).foregroundStyle(Color.symText)
                 Text("\(cards.count)").font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.symDim)
                 Spacer()
                 Menu {
                     Button(L("Rename...")) {
-                        if let t = Prompt.text(title: "Rename column", value: col.title), !t.isEmpty { box.update { $0.kanban?[ci].title = t } }
+                        if let t = Prompt.text(title: "Rename column", value: col.displayTitle), !t.isEmpty, t != col.displayTitle { box.update { $0.kanban?[ci].title = t } }
                     }
                     Button(L("Delete column"), role: .destructive) { box.update { $0.kanban?.remove(at: ci) } }
                 } label: { Image(systemName: "ellipsis") }.tip(L("Column actions"))
@@ -440,8 +442,9 @@ struct KanbanView: View {
     }
 
     func addColumn() {
-        if let t = Prompt.text(title: "New column", value: "Review"), !t.isEmpty {
-            box.update { $0.kanban = ($0.kanban ?? []) + [KanbanColumn(title: t, items: [])] }
+        if let t = Prompt.text(title: "New column", value: L("Review")), !t.isEmpty {
+            let title = t == L("Review") ? "Review" : t   // 기본값 그대로면 영어로 저장(12차)
+            box.update { $0.kanban = ($0.kanban ?? []) + [KanbanColumn(title: title, items: [])] }
         }
     }
 

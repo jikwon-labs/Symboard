@@ -55,7 +55,7 @@ final class SidePanelController {
                 let status = model.sessions.status(of: n.id) ?? .starting
                 let idle = model.sessions.session(for: n.id)?.idleSeconds(now: now) ?? 0
                 let team = n.teamID.flatMap { tid in ws.teams.first { $0.id == tid } }
-                rows.append(MissionRow(id: n.id, title: n.role.map { "\($0) - \(n.title)" } ?? n.title,
+                rows.append(MissionRow(id: n.id, title: n.role.map { "\($0) - \(n.displayTitle)" } ?? n.displayTitle,
                                        workspace: ws.name, agent: n.terminal?.agent ?? .shell,
                                        status: status, idleText: Self.format(idle: idle, status: status),
                                        team: team?.name, teamColor: team?.colorHex))

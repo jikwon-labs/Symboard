@@ -72,7 +72,7 @@ extension MainWindowController {
             }
             let shown = AgentLimits.exceeded(callerDepth: depth, opened: opened, maxDepth: AgentLimits.maxDepth(Prefs.shared),
                                              maxOpened: AgentLimits.maxOpened(Prefs.shared), localized: true) ?? why
-            askToExceed(L("%@ wants to open another console: %@.", callerNode?.title ?? L("An agent"), shown), allow: open) {
+            askToExceed(L("%@ wants to open another console: %@.", callerNode?.displayTitle ?? L("An agent"), shown), allow: open) {
                 reply("The user did not allow another console (\(why)). Do not retry; tell the user.", true)
             }
 

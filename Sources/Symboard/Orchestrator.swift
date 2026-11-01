@@ -223,6 +223,7 @@ struct OrchestratorView: View {
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.symRaised))
         .padding(10)
+        .keepsInput($command, "orchestrator.command.\(nodeID)")
     }
 
     func send() {

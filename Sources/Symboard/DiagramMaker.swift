@@ -189,16 +189,16 @@ final class DiagramMaker: ObservableObject {
         let spec: DiagramSpec
         switch kind {
         case "Steps":
-            spec = DiagramSpec(title: "Steps", nodes: (1...4).map { .init(id: "s\($0)", label: "Step \($0)") },
+            spec = DiagramSpec(title: L("Steps"), nodes: (1...4).map { .init(id: "s\($0)", label: L("Step %d", $0)) },
                                edges: (1...3).map { .init(from: "s\($0)", to: "s\($0 + 1)") })
         case "Branch":
-            spec = DiagramSpec(title: "Decision", nodes: [.init(id: "q", label: "Question?"), .init(id: "y", label: "Yes"), .init(id: "n", label: "No")],
-                               edges: [.init(from: "q", to: "y", label: "yes"), .init(from: "q", to: "n", label: "no")])
+            spec = DiagramSpec(title: L("Decision"), nodes: [.init(id: "q", label: L("Question?")), .init(id: "y", label: L("Yes")), .init(id: "n", label: L("No"))],
+                               edges: [.init(from: "q", to: "y", label: L("yes")), .init(from: "q", to: "n", label: L("no"))])
         case "Mind map":
-            spec = DiagramSpec(title: "Mind map", nodes: [.init(id: "c", label: "Idea", shape: "ellipse")] + (1...4).map { .init(id: "b\($0)", label: "Branch \($0)") },
+            spec = DiagramSpec(title: L("Mind map"), nodes: [.init(id: "c", label: L("Idea"), shape: "ellipse")] + (1...4).map { .init(id: "b\($0)", label: L("Branch %d", $0)) },
                                edges: (1...4).map { .init(from: "c", to: "b\($0)") })
         default:
-            spec = DiagramSpec(title: "Flow", nodes: [.init(id: "a", label: "Start"), .init(id: "b", label: "Then"), .init(id: "c", label: "Result")],
+            spec = DiagramSpec(title: L("Flow"), nodes: [.init(id: "a", label: L("Start")), .init(id: "b", label: L("Then")), .init(id: "c", label: L("Result"))],
                                edges: [.init(from: "a", to: "c"), .init(from: "b", to: "c")])
         }
         if !empty { draw(spec, center: center); open = false; return [] }
@@ -243,13 +243,13 @@ struct DiagramPopover: View {
             HStack {
                 label("STYLE")
                 Spacer()
-                ForEach(["Ink", "Colorful"], id: \.self) { s in Button(s) { maker.style = s }.buttonStyle(ChipStyle(on: maker.style == s)) }
+                ForEach(["Ink", "Colorful"], id: \.self) { s in Button(L(s)) { maker.style = s }.buttonStyle(ChipStyle(on: maker.style == s)) }
             }
             label("FROM YOUR PROJECT")
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
                 ForEach(DiagramSpec.kinds, id: \.id) { k in
                     Button { maker.generate(kind: k.id) } label: {
-                        Label(k.title, systemImage: k.icon).font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading)
+                        Label(L(k.title), systemImage: k.icon).font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 10).padding(.vertical, 8)
                             .background(RoundedRectangle(cornerRadius: 9).fill(Color.symRaised))
                             .foregroundStyle(Color.symText)
@@ -270,7 +270,7 @@ struct DiagramPopover: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
                 ForEach([("Flow", "arrow.down"), ("Steps", "list.number"), ("Branch", "arrow.triangle.branch"), ("Mind map", "circle.hexagongrid")], id: \.0) { s in
                     Button { maker.placeStarter(s.0, at: maker.c.scrollView.visibleCenter) } label: {
-                        Label(s.0, systemImage: s.1).font(.system(size: 12)).frame(maxWidth: .infinity)
+                        Label(L(s.0), systemImage: s.1).font(.system(size: 12)).frame(maxWidth: .infinity)
                             .padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 9).stroke(Color.symBorder))
                             .foregroundStyle(Color.symText)
                     }
@@ -284,7 +284,7 @@ struct DiagramPopover: View {
     }
 
     func label(_ t: String) -> some View {
-        Text(t).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
+        Text(L(t)).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(1.2).foregroundStyle(Color.symDim)
     }
 }
 

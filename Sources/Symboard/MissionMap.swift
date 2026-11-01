@@ -42,7 +42,7 @@ struct MissionMapView: View {
     var visible: [BoardNode] {
         consoles.filter { n in
             (filter == "All" || Self.bucket(status(n.id)) == filter)
-            && (query.isEmpty || n.title.localizedCaseInsensitiveContains(query) || (teamName(n)?.localizedCaseInsensitiveContains(query) ?? false))
+            && (query.isEmpty || n.displayTitle.localizedCaseInsensitiveContains(query) || (teamName(n)?.localizedCaseInsensitiveContains(query) ?? false))
         }
         .sorted { (teamName($0) ?? "~", $0.title) < (teamName($1) ?? "~", $1.title) }
     }
@@ -118,6 +118,7 @@ struct MissionMapView: View {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Color.symDim)
                 TextField("", text: $query, prompt: Text(L("Find a console or team")).foregroundColor(Color.symDim))
+                    .keepsInput($query, "mission.query")
                     .textFieldStyle(.plain).foregroundStyle(Color.symText)
             }
             .font(.system(size: 12))
@@ -202,7 +203,7 @@ struct MissionMapView: View {
                     HStack(spacing: 8) {
                         AgentBadge(choice: AgentCatalog.choice(for: n.terminal), size: 20)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(n.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
+                            Text(n.displayTitle).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.symText)
                             Text(L(onHold(n.id) ? "On hold" : (Self.bucket(st) == "Idle" ? "At the prompt" : st.label))).font(.system(size: 10)).foregroundStyle(Color.symDim)
                         }
                         Spacer()
@@ -329,7 +330,7 @@ struct MissionMapView: View {
             HStack(spacing: 10) {
                 AgentBadge(choice: choice, size: 36)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(n.title).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.symText)
+                    Text(n.displayTitle).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.symText)
                     Text(choice.name).font(.system(size: 12)).foregroundStyle(Color.symDim)
                 }
             }

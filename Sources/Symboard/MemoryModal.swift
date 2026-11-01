@@ -449,7 +449,7 @@ struct MemoryCardView: View {
             }
             HStack(spacing: 6) {
                 Menu(target.flatMap { id in consoles.first { $0.id == id }?.title } ?? "Pick a console") {
-                    ForEach(consoles) { n in Button(n.title) { target = n.id } }
+                    ForEach(consoles) { n in Button(n.displayTitle) { target = n.id } }
                 }
                 .menuStyle(.borderlessButton).fixedSize()
                 Toggle(L("Enter"), isOn: $enter).toggleStyle(.checkbox).font(.system(size: 11))

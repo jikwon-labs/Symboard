@@ -324,7 +324,7 @@ struct LoopsModal: View {
                         if !draft.targetAll {
                             FlowRows(items: consoles.map(\.id), perRow: 6) { id in
                                 let n = consoles.first { $0.id == id }!
-                                Button(n.title) { if draft.picked.contains(id) { draft.picked.remove(id) } else { draft.picked.insert(id) } }
+                                Button(n.displayTitle) { if draft.picked.contains(id) { draft.picked.remove(id) } else { draft.picked.insert(id) } }
                                     .buttonStyle(ChipStyle(on: draft.picked.contains(id)))
                             }
                             .padding(.leading, 28)

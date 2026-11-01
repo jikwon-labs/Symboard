@@ -176,6 +176,26 @@ struct LocalizedRoot: ViewModifier {
     func body(content: Content) -> some View { content.id(l10n.revision) }
 }
 
+/// 뷰가 다시 만들어져도(언어를 바꾸면 뿌리 뷰를 새로 만든다) 입력 중인 값이 남게 한다(12차).
+/// 열쇠마다 마지막 값을 앱 메모리에 두고, 다시 나타날 때 비어 있으면 되돌린다. 빈 값·기본값이면 지운다.
+@MainActor enum KeptInput { static var values: [String: Any] = [:] }
+
+struct KeepsInput<Value: Equatable>: ViewModifier {
+    @Binding var value: Value
+    let key: String
+    let empty: Value
+    func body(content: Content) -> some View {
+        content
+            .onAppear { if value == empty, let v = KeptInput.values[key] as? Value { value = v } }
+            .onChange(of: value) { _, v in KeptInput.values[key] = v == empty ? nil : v }
+    }
+}
+
+extension View {
+    func keepsInput(_ text: Binding<String>, _ key: String) -> some View { modifier(KeepsInput(value: text, key: key, empty: "")) }
+    func keepsInput(_ flag: Binding<Bool>, _ key: String) -> some View { modifier(KeepsInput(value: flag, key: key, empty: false)) }
+}
+
 /// 위쪽·아래쪽 막대의 알약 버튼.
 struct PillButtonStyle: ButtonStyle {
     var active = false

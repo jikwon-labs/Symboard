@@ -41,7 +41,7 @@ final class HandoffCoordinator {
         alert.messageText = "Hand off \"\(src.title)\""
         alert.informativeText = "Symboard asks this node's CLI to summarize its work, then types the summary into the node you pick. You can edit it before it is sent."
         let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 26), pullsDown: false)
-        popup.addItems(withTitles: targets.map { n in n.role.map { "\($0) - \(n.title)" } ?? n.title })
+        popup.addItems(withTitles: targets.map { n in n.role.map { "\($0) - \(n.displayTitle)" } ?? n.displayTitle })
         let note = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
         note.placeholderString = "Extra instruction for the summary (optional)"
         let stack = NSStackView(views: [popup, note])

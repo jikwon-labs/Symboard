@@ -58,6 +58,7 @@ struct RoughPen {
 
 struct ShapeNodeView: View {
     @ObservedObject var box: NodeBox
+    @Environment(\.colorScheme) private var scheme
 
     var spec: ShapeSpec { box.node.shape ?? ShapeSpec() }
     var style: NodeStyle { box.node.style ?? NodeStyle(fontSize: 20, font: "hand", align: "center") }
@@ -110,7 +111,8 @@ struct ShapeNodeView: View {
             ZStack {
                 if let fill = spec.fillHex, spec.kind != "arrow" {
                     // 채움은 반듯한 모양으로 깔고 선만 흔든다.
-                    fillShape(geo.size).fill(Color(hex: fill).opacity(0.85))
+                    // Colorful 의 어둡게 만든 채움은 라이트에서 밝은 같은 색으로 바꿔 그린다(12차).
+                    fillShape(geo.size).fill(Color(hex: ShapeFill.forMode(fill, light: scheme == .light)).opacity(0.85))
                 }
                 outline(in: geo.size)
                     .stroke(Color(nsColor: Theme.ink(spec.strokeHex) ?? Theme.text), style: StrokeStyle(lineWidth: CGFloat(spec.strokeWidth), lineCap: .round, lineJoin: .round, dash: dash))

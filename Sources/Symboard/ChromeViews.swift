@@ -136,7 +136,7 @@ struct TopRightBar: View {
                 HStack(spacing: 6) {
                     Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Color.symDim)
                     if let p = chrome.sessionPercent {
-                        SessionRing(percent: p, tintHex: chrome.sessionTint).hint("Session \(p)% used")
+                        SessionRing(percent: p, tintHex: chrome.sessionTint).hint(L("Session %d%% used", p))
                     }
                     Text(chrome.resetText)
                 }
@@ -471,7 +471,7 @@ struct LayersList: View {
                         Button { c.focus(nodeID: n.id) } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: Self.symbol(n.kind)).frame(width: 18).foregroundStyle(Color.symDim)
-                                Text(n.title.isEmpty ? n.kind.rawValue : n.title).lineLimit(1).foregroundStyle(Color.symText)
+                                Text(n.title.isEmpty ? n.kind.rawValue : n.displayTitle).lineLimit(1).foregroundStyle(Color.symText)
                                 Spacer()
                             }
                             .font(.system(size: 12))
@@ -602,7 +602,7 @@ struct BottomBar: View {
 
     var placeholder: String {
         if let id = chrome.selectedNodeID, let n = c.model.node(id), n.kind == .terminal {
-            return L("Message %@ · @ to direct", n.title)
+            return L("Message %@ · @ to direct", n.displayTitle)
         }
         return L("Type a command · @ to direct")
     }
@@ -806,8 +806,8 @@ struct HintBanner: View {
     var body: some View {
         let text: String? = {
             if let t = chrome.toast { return t }
-            if case .place(let p) = chrome.tool { return p.hint }
-            if chrome.tool == .eraser { return "Click a pen stroke to erase it · Esc to stop" }
+            if case .place(let p) = chrome.tool { return L(p.hint) }
+            if chrome.tool == .eraser { return L("Click a pen stroke to erase it · Esc to stop") }
             return nil
         }()
         if let text {

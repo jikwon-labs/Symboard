@@ -137,7 +137,7 @@ final class NodeView: NSView {
         guard let node = model.node(nodeID) else { return }
         let target = CanvasGeometry.viewRect(node.frame)
         if frame != target, (slidingUntil.map { Date() > $0 } ?? true) { frame = target }
-        header.titleLabel.stringValue = node.title
+        if header.titleLabel.stringValue != node.displayTitle { header.titleLabel.stringValue = node.displayTitle; header.needsLayout = true }
         header.roleLabel.stringValue = node.role ?? ""
         if let spec = node.terminal {
             header.glyph.choice = AgentCatalog.choice(for: spec)
@@ -223,7 +223,7 @@ final class NodeView: NSView {
                 lsub.addItem(ClosureMenuItem(title: L("Group: %@", t.name)) { [weak self] in self?.link(to: t.id) })
             }
             for n in ws.nodes where n.id != nodeID {
-                lsub.addItem(ClosureMenuItem(title: n.title) { [weak self] in self?.link(to: n.id) })
+                lsub.addItem(ClosureMenuItem(title: n.displayTitle) { [weak self] in self?.link(to: n.id) })
             }
             if ws.links?.contains(where: { $0.from == nodeID || $0.to == nodeID }) == true {
                 lsub.addItem(.separator())
@@ -258,7 +258,8 @@ final class NodeView: NSView {
 
     func rename() {
         guard let node = model.node(nodeID) else { return }
-        if let name = Prompt.text(title: "Rename node", value: node.title) {
+        // 기본 이름을 그대로 두고 확인하면 저장값(영어)을 바꾸지 않는다. 그래야 언어를 바꿔도 따라간다(12차).
+        if let name = Prompt.text(title: "Rename node", value: node.displayTitle), name != node.displayTitle {
             model.mutateNode(nodeID) { $0.title = name }
             syncFromModel()
         }
