@@ -18,6 +18,9 @@ final class SettingsWindowController: NSWindowController {
     private let appearance = NSPopUpButton()
     /// 새 버전 알림(하루 한 번 GitHub 최신 릴리스 확인).
     private let updates = NSButton(checkboxWithTitle: L("Check for updates"), target: nil, action: nil)
+    /// 자동 확인과 따로 바로 묻는 단추와 그 결과 한 줄.
+    private let checkNow = NSButton(title: L("Check Now"), target: nil, action: nil)
+    private let checkStatus = NSTextField(labelWithString: "")
     /// Cmd+Q 로 끌 때 묻기.
     private let confirmQuit = NSButton(checkboxWithTitle: L("Ask before quitting"), target: nil, action: nil)
     /// 다시 열었을 때 지난 대화를 이어 갈지 묻기(기본 끔: 바로 이어 간다).
@@ -116,6 +119,20 @@ final class SettingsWindowController: NSWindowController {
         let updatesNote = NSTextField(wrappingLabelWithString: L("Once a day, asks GitHub for the latest release and shows a pill when a newer version is out. Nothing is downloaded."))
         updatesNote.font = .systemFont(ofSize: 11)
         updatesNote.textColor = Theme.textDim
+        checkNow.title = L("Check Now")
+        checkNow.bezelStyle = .rounded
+        checkNow.controlSize = .small
+        checkNow.target = self
+        checkNow.action = #selector(checkNowClicked)
+        checkNow.setAccessibilityLabel(L("Check Now"))
+        checkStatus.font = .systemFont(ofSize: 11)
+        checkStatus.textColor = Theme.textDim
+        checkStatus.stringValue = L("You have Symboard %@.", Symboard.version)
+        // 창 높이가 정해져 있어서 줄을 늘리지 않고 체크 상자 옆에 붙인다.
+        let checkRow = NSStackView(views: [updates, checkNow, checkStatus])
+        checkRow.orientation = .horizontal
+        checkRow.alignment = .centerY
+        checkRow.spacing = 10
         language.widthAnchor.constraint(equalToConstant: 200).isActive = true
         keepConsoles.title = L("Keep consoles running after quitting")
         keepConsoles.target = self
@@ -212,9 +229,9 @@ final class SettingsWindowController: NSWindowController {
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, confirmQuit, askResume, autoOpenLinks, keepConsoles, keepNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, reportToLead, reportNote, limits, limitsNote])
+        let stack = NSStackView(views: [generalHeader, general, checkRow, updatesNote, confirmQuit, askResume, autoOpenLinks, keepConsoles, keepNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, reportToLead, reportNote, limits, limitsNote])
         stack.setCustomSpacing(4, after: confirmQuit)
-        stack.setCustomSpacing(4, after: updates)
+        stack.setCustomSpacing(4, after: checkRow)
         stack.setCustomSpacing(4, after: keepConsoles)
         stack.setCustomSpacing(22, after: keepNote)
         stack.setCustomSpacing(22, after: note)
@@ -289,6 +306,21 @@ final class SettingsWindowController: NSWindowController {
     @objc private func updatesChanged() {
         UpdateCheck.setEnabled(updates.state == .on, Prefs.shared)
         (NSApp.delegate as? AppDelegate)?.windowController?.updates.settingChanged()
+    }
+
+    @objc private func checkNowClicked() {
+        guard let updates = (NSApp.delegate as? AppDelegate)?.windowController?.updates else { return }
+        checkNow.isEnabled = false
+        checkStatus.stringValue = L("Checking…")
+        updates.checkNow(sheetOn: window) { [weak self] outcome in
+            guard let self else { return }
+            self.checkNow.isEnabled = true
+            switch outcome {
+            case .newer(let r): self.checkStatus.stringValue = L("Symboard %@ is available", r.version)
+            case .upToDate: self.checkStatus.stringValue = L("Symboard %@ is the latest version.", Symboard.version)
+            case .failed: self.checkStatus.stringValue = L("Couldn't reach GitHub. Try again later.")
+            }
+        }
     }
 
     @objc private func confirmQuitChanged() { UIPrefs.setConfirmQuit(confirmQuit.state == .on, Prefs.shared) }

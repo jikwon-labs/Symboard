@@ -11,6 +11,8 @@ public enum UpdateCheck {
     /// 마지막으로 받은 최신 릴리스(태그 \t 주소). 하루 안에 다시 켜도 알약이 바로 보이게 남긴다.
     public static let latestKey = "updates.latest"
     public static let interval: TimeInterval = 24 * 60 * 60
+    /// 업데이트 안내 창을 이미 띄운 버전. 같은 버전은 한 번만 묻고, 그 뒤로는 알약만 남는다.
+    public static let promptedKey = "updates.prompted"
 
     public struct Release: Equatable, Sendable {
         public var version: String
@@ -85,4 +87,12 @@ public enum UpdateCheck {
         guard enabled(prefs), let r = cached(prefs), isNewer(r.version, than: current) else { return nil }
         return r
     }
+
+    /// 안내 창을 띄울 릴리스: 알약에 보일 버전이면서 아직 그 버전으로 묻지 않았을 때만.
+    public static func pendingPrompt(_ prefs: Prefs, current: String = Symboard.version) -> Release? {
+        guard let r = available(prefs, current: current), prefs.string(promptedKey) != r.version else { return nil }
+        return r
+    }
+
+    public static func markPrompted(_ r: Release, _ prefs: Prefs) { prefs.set(r.version, for: promptedKey) }
 }

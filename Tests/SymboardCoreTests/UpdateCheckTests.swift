@@ -45,6 +45,22 @@ import Testing
         #expect(!UpdateCheck.enabled(p))
     }
 
+    @Test func promptsOncePerVersion() throws {
+        let p = try prefs()
+        #expect(UpdateCheck.pendingPrompt(p, current: "0.1.0") == nil)
+        UpdateCheck.store(.init(version: "0.2.0", url: UpdateCheck.releasesPage), p)
+        let r = try #require(UpdateCheck.pendingPrompt(p, current: "0.1.0"))
+        #expect(r.version == "0.2.0")
+        #expect(UpdateCheck.pendingPrompt(p, current: "0.2.0") == nil)
+        UpdateCheck.markPrompted(r, p)
+        #expect(UpdateCheck.pendingPrompt(p, current: "0.1.0") == nil)
+        #expect(UpdateCheck.available(p, current: "0.1.0") == r)
+        UpdateCheck.store(.init(version: "0.3.0", url: UpdateCheck.releasesPage), p)
+        #expect(UpdateCheck.pendingPrompt(p, current: "0.1.0")?.version == "0.3.0")
+        UpdateCheck.setEnabled(false, p)
+        #expect(UpdateCheck.pendingPrompt(p, current: "0.1.0") == nil)
+    }
+
     /// 앱 번들의 Info.plist 버전은 bundle.sh 가 이 값을 읽어 넣는다. 형식이 깨지면 그 스크립트가 엉뚱한 값을 넣는다.
     @Test func appVersionIsSemver() {
         let parts = Symboard.version.split(separator: ".")

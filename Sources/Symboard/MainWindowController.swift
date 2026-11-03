@@ -47,7 +47,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     lazy var docStudio: DocStudioState = { let d = DocStudioState(model: model); d.c = self; return d }()
     lazy var memoryHub: MemoryHub = { let h = MemoryHub(model: model); h.c = self; return h }()
     /// 새 버전 알림(위쪽 오른쪽 알약).
-    private(set) lazy var updates = UpdateChecker(chrome: chrome)
+    private(set) lazy var updates: UpdateChecker = { let u = UpdateChecker(chrome: chrome); u.window = window; return u }()
     /// 에이전트가 연 콘솔이 끝나면 lead 에 알리고 오른쪽 위에 띄운다.
     private(set) lazy var workerReports = WorkerReporter(model: model, chrome: chrome)
     let scrollView = BoardScrollView(frame: .zero)
