@@ -35,6 +35,8 @@ final class AppModel: ObservableObject {
     lazy var usage = UsageStore(model: self)
     lazy var profiles = ProfilesModel(model: self)
     lazy var memory = MemoryModel(model: self)
+    /// 보기 전용 공유 링크(14차).
+    lazy var share = ShareServer(model: self)
     private var saveWork: DispatchWorkItem?
     /// 작업공간마다 보드 되돌리기 기록(9차). 바뀐 뒤 0.6초 조용하면 한 칸.
     private var histories: [UUID: BoardHistory] = [:]

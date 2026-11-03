@@ -80,6 +80,15 @@ final class ChromeModel: ObservableObject {
     @Published var gitOpen = false
     @Published var usageOpen = false
     @Published var accountsOpen = false
+    /// 보기 전용 공유(14차): 켜져 있는지, 링크(쓸 만한 주소부터), 보는 사람 수, 공유한 작업공간 이름, 팝오버.
+    @Published var shareActive = false
+    @Published var shareLinks: [String] = []
+    @Published var shareViewers = 0
+    @Published var shareWorkspace = ""
+    @Published var shareOpen = false
+    /// 조작 링크와 콘솔별 입력 허용(공유 팝오버).
+    @Published var shareControlLink: String?
+    @Published var shareConsoles: [ShareConsoleRow] = []
     /// 지금보다 높은 GitHub 릴리스(UpdateChecker). 있으면 위쪽 오른쪽에 알약을 띄운다.
     @Published var update: UpdateCheck.Release?
     @Published var penColor = "#F05A38"
@@ -107,6 +116,14 @@ final class ChromeModel: ObservableObject {
         toastWork = w
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.4, execute: w)
     }
+}
+
+/// 공유 팝오버의 콘솔 한 줄(입력 허용 스위치).
+struct ShareConsoleRow: Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var workspace: String
+    var allowed: Bool
 }
 
 struct PendingConfirm: Identifiable {

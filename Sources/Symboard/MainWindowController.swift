@@ -864,6 +864,44 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     }
 
     func openUsage() { chrome.usageOpen.toggle() }
+
+    // MARK: 보기 전용 공유(14차)
+
+    /// 보고 있는 작업공간을 링크로 공유한다(이미 켜져 있으면 팝오버만 연다).
+    func startShare() {
+        model.share.onChange = { [weak self] in self?.publishShare() }
+        model.share.onRemoteInput = { [weak self] name in self?.chrome.flash(L("Remote input to %@", name)) }
+        if !model.share.isActive { model.share.start(workspace: model.selectedWorkspace.id) }
+        publishShare()
+        chrome.shareOpen = true
+    }
+
+    func stopShare() {
+        model.share.stop()
+        chrome.shareOpen = false
+        publishShare()
+        chrome.flash(L("Sharing stopped. The old link no longer works."))
+    }
+
+    func copyShareLink(_ link: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(link, forType: .string)
+        chrome.flash(L("Link copied"))
+    }
+
+    func setShareInput(_ id: UUID, allowed: Bool) {
+        model.share.setInput(id, allowed: allowed)
+    }
+
+    private func publishShare() {
+        let s = model.share
+        chrome.shareControlLink = s.controlLink
+        chrome.shareConsoles = s.sharedConsoles.map { ShareConsoleRow(id: $0.id, name: $0.name, workspace: $0.workspace, allowed: s.inputAllowed.contains($0.id)) }
+        chrome.shareActive = s.isActive
+        chrome.shareLinks = s.links
+        chrome.shareViewers = s.viewerCount
+        chrome.shareWorkspace = s.scopeName ?? ""
+    }
     func openProfiles() { chrome.accountsOpen.toggle() }
 
     /// 프로필(없으면 기본 로그인)로 콘솔을 하나 띄운다.

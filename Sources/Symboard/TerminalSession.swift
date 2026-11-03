@@ -35,6 +35,10 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     private(set) var recentText = ""
     /// 새 출력 텍스트가 들어올 때 불린다.
     var outputListeners: [UUID: (String) -> Void] = [:]
+    /// 받은 그대로의 최근 출력(보기 전용 공유가 새로 들어온 사람에게 다시 보여 준다). 한도는 ShareLink.tailLimit.
+    private(set) var rawTail: [UInt8] = []
+    /// 받은 그대로의 출력이 들어올 때 불린다(보기 전용 공유).
+    var rawListeners: [UUID: (ArraySlice<UInt8>) -> Void] = [:]
     var onTitle: ((String) -> Void)?
     var onExit: ((Int32?) -> Void)?
     private var stripper = ANSIStripper()
@@ -258,6 +262,10 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         view.feed(byteArray: slice)
         // 다시 붙을 때 받은 지난 출력은 "지금 일하는 중" 으로 치지 않는다.
         if !replay { tracker.noteOutput() }
+        // 보기 전용 공유: 지난 출력도 다시 보여 줄 기록에는 넣고, 실시간으로 보내는 것은 새 출력만.
+        rawTail.append(contentsOf: slice)
+        if rawTail.count > ShareLink.tailLimit { rawTail = ShareLink.trimmedTail(rawTail) }
+        if !replay { for l in rawListeners.values { l(slice) } }
         let text = stripper.feed(slice)
         guard !text.isEmpty else { return }
         recentText += text

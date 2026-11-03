@@ -132,6 +132,19 @@ struct TopRightBar: View {
                 .axName("Update available")
             }
 
+            if chrome.shareActive {
+                Button { chrome.shareOpen.toggle() } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "dot.radiowaves.left.and.right").foregroundStyle(Color.symAccent)
+                        Text(chrome.shareViewers > 0 ? L("Sharing · %d watching", chrome.shareViewers) : L("Sharing"))
+                    }
+                }
+                .buttonStyle(PillButtonStyle(active: chrome.shareOpen))
+                .tip(L("View-only link"))
+                .axName("Sharing")
+                .popover(isPresented: $chrome.shareOpen, arrowEdge: .bottom) { SharePopover(chrome: chrome, c: c) }
+            }
+
             Button { chrome.usageOpen.toggle() } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Color.symDim)
@@ -167,6 +180,12 @@ struct TopRightBar: View {
                     Button(L("Memory")) { c.openMemory() }
                     Button(L("Usage")) { c.openUsage() }
                     Button(L("Accounts")) { c.openProfiles() }
+                    Divider()
+                    if chrome.shareActive {
+                        Button(L("Stop Sharing")) { c.stopShare() }
+                    } else {
+                        Button(L("Share View-Only Link...")) { c.startShare() }
+                    }
                     Divider()
                     Button(L("Studio")) { c.openStudio(nil) }
                     Button(L("Zoom to Fit")) { c.zoomToFit(nil) }
@@ -976,5 +995,96 @@ struct SessionRing: View {
             Text("\(percent)").font(.system(size: 7, weight: .bold, design: .rounded)).foregroundStyle(Color.symText)
         }
         .frame(width: 16, height: 16)
+    }
+}
+
+// MARK: 보기 전용 공유 팝오버(14차)
+
+struct SharePopover: View {
+    @ObservedObject var chrome: ChromeModel
+    let c: MainWindowController
+
+    var anyAllowed: Bool { chrome.shareConsoles.contains(where: \.allowed) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "dot.radiowaves.left.and.right").foregroundStyle(Color.symAccent)
+                Text(L("Share links")).font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Text(Ln(chrome.shareViewers, "%d watching", "%d watching"))
+                    .font(.system(size: 11)).foregroundStyle(Color.symDim)
+            }
+
+            section(L("View-only link"), L("Anyone with this link can watch the \"%@\" board from a browser, including workspaces you add later. They cannot type or change anything.", chrome.shareWorkspace))
+            if chrome.shareLinks.isEmpty {
+                Text(L("Starting... If this stays empty, check that this Mac is connected to a network."))
+                    .font(.system(size: 12)).foregroundStyle(Color.symDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(chrome.shareLinks, id: \.self) { linkRow($0) }
+
+            Divider().overlay(Color.symBorder)
+
+            section(L("Control link"), L("Lets the person type into the consoles you turn on below, as if you typed it. Anything they run, runs on this Mac. Send it only to people you trust."))
+            if let link = chrome.shareControlLink { linkRow(link) }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("Allow typing")).font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.symDim)
+                if chrome.shareConsoles.isEmpty {
+                    Text(L("No consoles yet.")).font(.system(size: 12)).foregroundStyle(Color.symDim)
+                }
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(chrome.shareConsoles) { row in
+                            Toggle(isOn: Binding(get: { row.allowed }, set: { c.setShareInput(row.id, allowed: $0) })) {
+                                HStack(spacing: 6) {
+                                    Text(row.name).font(.system(size: 12, weight: .medium))
+                                    Text(row.workspace).font(.system(size: 11)).foregroundStyle(Color.symDim)
+                                }
+                            }
+                            .toggleStyle(.switch)
+                            .controlSize(.mini)
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+                .frame(maxHeight: 180)
+            }
+            if anyAllowed {
+                Label(L("Typing is on for some consoles."), systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11)).foregroundStyle(Color(hex: "#E9C46A"))
+            }
+
+            Text(L("Works on the same Wi-Fi or over Tailscale. macOS may ask once to allow incoming connections."))
+                .font(.system(size: 11)).foregroundStyle(Color.symDim)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Spacer()
+                Button(L("Stop Sharing"), role: .destructive) { c.stopShare() }
+            }
+        }
+        .padding(16)
+        .frame(width: 420)
+        .foregroundStyle(Color.symText)
+    }
+
+    func section(_ title: String, _ note: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.system(size: 12, weight: .semibold))
+            Text(note).font(.system(size: 11)).foregroundStyle(Color.symDim).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    func linkRow(_ link: String) -> some View {
+        HStack(spacing: 8) {
+            Text(link)
+                .font(.system(size: 11, design: .monospaced))
+                .lineLimit(1).truncationMode(.middle)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(L("Copy")) { c.copyShareLink(link) }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 7)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.symText.opacity(0.05)))
     }
 }
