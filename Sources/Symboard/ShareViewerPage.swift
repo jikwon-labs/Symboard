@@ -286,12 +286,30 @@ enum ShareViewerPage {
   document.getElementById('zFit').onclick = fit;
 
   function scrollable(t) { return t && t.closest && t.closest('.chat, .xterm-viewport, .xterm-screen, .compose'); }
+  function consoleAt(t) {
+    var n = t && t.closest && t.closest('.node.term');
+    if (!n) return null;
+    for (var id in consoles) if (consoles[id].node === n) return consoles[id];
+    return null;
+  }
   viewport.addEventListener('wheel', function (e) {
-    if (!e.ctrlKey && scrollable(e.target)) return;   // 대화·터미널 안은 그 안을 스크롤
+    if (!e.ctrlKey && scrollable(e.target)) {
+      // 전체 화면 프로그램(claude)을 터미널 화면으로 볼 때는 지난 줄이 없어 휠이 아무 일도 하지 않았다.
+      // 대화 보기가 있으면 그리로 바꿔 스크롤하고, 없으면 보드를 움직인다. 입력이 허용된 콘솔은 xterm 이 휠을 프로그램에 넘긴다.
+      var c = consoleAt(e.target);
+      if (!c || c.mode !== 'screen' || c.canType || c.term.buffer.active.type !== 'alternate') return;   // 대화·터미널 안은 그 안을 스크롤
+      if (info[c.id] && info[c.id].chat) {
+        e.preventDefault(); e.stopPropagation();
+        setMode(c, 'chat');
+        c.chat.scrollTop += e.deltaY;
+        return;
+      }
+    }
     e.preventDefault();
     if (e.ctrlKey) zoomAt(view.z * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
     else { view.x -= e.deltaX; view.y -= e.deltaY; applyView(); }
-  }, { passive: false });
+    e.stopPropagation();
+  }, { passive: false, capture: true });   // xterm 이 휠을 받아 전파를 끊기 전에 먼저 본다
   // 끌어서 이동, 두 손가락으로 확대(대화 안에서 시작한 끌기는 대화 스크롤).
   var pointers = {}, pinch = null, drag = null;
   viewport.addEventListener('pointerdown', function (e) {
