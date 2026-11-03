@@ -295,7 +295,7 @@ final class LinksView: NSView {
             shape.fillColor = nil
             let light = faint.contains(id)
             shape.strokeColor = Theme.accent.withAlphaComponent(light ? 0.22 : 0.55).cgColor
-            shape.lineWidth = 1.5
+            shape.lineWidth = 2.5
             dot.bounds = CGRect(x: 0, y: 0, width: 7, height: 7)
             dot.cornerRadius = 3.5
             dot.backgroundColor = Theme.accent.withAlphaComponent(light ? 0.45 : 1).cgColor

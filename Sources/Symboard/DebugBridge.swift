@@ -680,6 +680,7 @@ final class DebugBridge {
             }
         case "quit":
             write((log + ["quit"]).joined(separator: "\n"))
+            AppDelegate.skipQuitConfirm = true
             NSApp.terminate(nil)
             return
         default:

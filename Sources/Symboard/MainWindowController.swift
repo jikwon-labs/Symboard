@@ -48,6 +48,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     lazy var memoryHub: MemoryHub = { let h = MemoryHub(model: model); h.c = self; return h }()
     /// 새 버전 알림(위쪽 오른쪽 알약).
     private(set) lazy var updates = UpdateChecker(chrome: chrome)
+    /// 에이전트가 연 콘솔이 끝나면 lead 에 알리고 오른쪽 위에 띄운다.
+    private(set) lazy var workerReports = WorkerReporter(model: model, chrome: chrome)
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
@@ -173,7 +175,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let drawingChip = host(DrawingChip(maker: diagrams))
         content.addSubview(drawingChip)
         let resume = host(ResumeToast(chrome: chrome, c: self))
-        for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume] as [NSView] { content.addSubview(v) }
+        let workerDone = host(WorkerDoneToasts(chrome: chrome, c: self))
+        for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume, workerDone] as [NSView] { content.addSubview(v) }
         let mission = HiddenAwareHostingView(rootView: MissionHost(model: model, chrome: chrome, c: self).localized())
         mission.translatesAutoresizingMaskIntoConstraints = false
         mission.sizingOptions = []
@@ -291,6 +294,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             hint.topAnchor.constraint(equalTo: content.topAnchor, constant: 56),
             resume.topAnchor.constraint(equalTo: topRight.bottomAnchor, constant: 10),
             resume.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
+            workerDone.topAnchor.constraint(equalTo: resume.bottomAnchor, constant: 8),
+            workerDone.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
             drawingChip.topAnchor.constraint(equalTo: content.topAnchor, constant: 96),
             drawingChip.centerXAnchor.constraint(equalTo: content.centerXAnchor),
             pen.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 10),
@@ -541,6 +546,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         // 접혀 있는 패널의 목록은 다시 만들지 않는다(쉬는 시간 글자가 매초 바뀌어 매번 새로 그려졌다). 열 때 채운다.
         if !panelContainer.isHidden { sidePanel.refreshStatuses() }
+        workerReports.tick()
         currentCanvas?.layoutGroups()
         StatusBeat.shared.tick &+= 1
         let pill = model.usage.pill
@@ -1393,6 +1399,17 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         if let slot = CanvasLayout.besideSlot(w: w, h: h, reference: refRect, obstacles: obstacles) { return slot }
         return model.suggestedFrame(size: CGSize(width: w, height: h), near: scrollView.visibleCenter)
+    }
+
+    /// 기준 노드(그룹에 들었으면 그 그룹) 아래 빈 칸. 기준이 없으면 옆 빈 칸과 같다.
+    func belowFrame(w: Double, h: Double, near: UUID?) -> Rect {
+        let ws = model.selectedWorkspace
+        guard var ref = near.flatMap({ id in ws.nodes.first { $0.id == id } })?.frame else { return besideFrame(w: w, h: h, near: near) }
+        let obstacles = CanvasLayout.obstacles(nodes: ws.nodes, teams: ws.teams)
+        if let box = obstacles.first(where: { $0.x <= ref.x && $0.y <= ref.y && $0.x + $0.w >= ref.x + ref.w && $0.y + $0.h >= ref.y + ref.h }) {
+            ref = box
+        }
+        return CanvasLayout.belowSlot(w: w, h: h, reference: ref, obstacles: obstacles)
     }
 
     /// 새로 놓은 노드로 화면을 부드럽게 옮긴다. 배율은 그대로 두되, 화면보다 크면 들어오게 줄인다.

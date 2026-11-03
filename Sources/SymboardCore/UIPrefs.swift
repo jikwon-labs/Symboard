@@ -13,6 +13,17 @@ public enum LanguageMode: String, CaseIterable, Sendable {
 public enum UIPrefs {
     public static let appearanceKey = "ui.appearance"
     public static let languageKey = "ui.language"
+    public static let confirmQuitKey = "ui.confirmQuit"
+
+    /// Cmd+Q 로 끌 때 한 번 묻는지(기본 켬). 확인 창의 "다시 묻지 않기" 나 설정 창에서 끈다.
+    public static func confirmQuit(_ prefs: Prefs) -> Bool { prefs.string(confirmQuitKey) != "off" }
+    public static func setConfirmQuit(_ on: Bool, _ prefs: Prefs) { prefs.set(on ? nil : "off", for: confirmQuitKey) }
+
+    public static let askResumeKey = "ui.askResume"
+
+    /// 다시 열었을 때 지난 대화를 이어 갈지 묻는지(기본 끔: 묻지 않고 바로 이어 간다). 설정 창에서 켠다.
+    public static func askResume(_ prefs: Prefs) -> Bool { prefs.string(askResumeKey) == "on" }
+    public static func setAskResume(_ on: Bool, _ prefs: Prefs) { prefs.set(on ? "on" : nil, for: askResumeKey) }
 
     /// 처음 켤 때 고르는 창을 보여야 하는지(둘 다 아직 고른 적 없음).
     public static func needsFirstRunChoice(_ prefs: Prefs) -> Bool {

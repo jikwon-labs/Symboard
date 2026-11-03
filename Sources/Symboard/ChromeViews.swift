@@ -800,6 +800,52 @@ struct ResumeToast: View {
     }
 }
 
+/// 에이전트가 연 콘솔이 일을 끝냈을 때 오른쪽 위 알림. 누르면 그 콘솔로 간다.
+struct WorkerDoneToasts: View {
+    @ObservedObject var chrome: ChromeModel
+    let c: MainWindowController
+    var body: some View {
+        if !chrome.workerNotices.isEmpty && !chrome.showingHome {
+            VStack(alignment: .trailing, spacing: 8) {
+                ForEach(chrome.workerNotices) { n in
+                    HStack(spacing: 12) {
+                        Button { open(n) } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark.circle.fill").font(.system(size: 16)).foregroundStyle(Color.symAccent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("%@ finished", n.workerName)).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.symText)
+                                    Text(subtitle(n)).font(.system(size: 11)).foregroundStyle(Color.symDim)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plainHit)
+                        .axName(L("%@ finished", n.workerName))
+                        Button { chrome.workerNotices.removeAll { $0.id == n.id } } label: {
+                            Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                        }
+                        .buttonStyle(.plainHit).foregroundStyle(Color.symDim)
+                        .axName(L("Dismiss"))
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    .floatingCapsule(radius: 14)
+                    .fixedSize()
+                }
+            }
+            .fixedSize()
+        }
+    }
+
+    private func subtitle(_ n: WorkerDoneNotice) -> String {
+        guard let lead = n.leadName else { return L("Click to see the report") }
+        return n.delivered ? L("Told %@", lead) : L("Will tell %@ when it is free", lead)
+    }
+
+    private func open(_ n: WorkerDoneNotice) {
+        chrome.workerNotices.removeAll { $0.id == n.id }
+        c.focus(nodeID: n.workerID)
+    }
+}
+
 /// 도구 안내와 짧은 알림.
 struct HintBanner: View {
     @ObservedObject var chrome: ChromeModel

@@ -21,6 +21,8 @@ final class SessionManager {
 
     /// 다시 열었을 때 이어 할지 답을 기다리는 콘솔. 답할 때까지 띄우지 않는다.
     private(set) var pendingResume: Set<UUID> = []
+    /// 묻지 않고 바로 이어 가는 콘솔. 처음 띄울 때 "이어 가는 중" 한 줄을 보여 주고 뺀다.
+    private var autoResume: Set<UUID> = []
 
     /// 콘솔을 앱 밖에서 돌리는 agentd(13차). nil 이면 예전처럼 앱 안에서 돌린다.
     let agentd: AgentdHost?
@@ -45,8 +47,9 @@ final class SessionManager {
                 }
             }
         }
-        // 아직 돌고 있는 콘솔은 이어 하기를 묻지 않는다. 그대로 붙는다.
-        pendingResume = Set(ResumePolicy.candidates(in: model.state)).subtracting(adoptable.keys)
+        // 아직 돌고 있는 콘솔은 이어 하기를 묻지도, 새로 띄우지도 않는다. 그대로 붙는다.
+        let candidates = Set(ResumePolicy.candidates(in: model.state)).subtracting(adoptable.keys)
+        if UIPrefs.askResume(Prefs.shared) { pendingResume = candidates } else { autoResume = candidates }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -83,6 +86,9 @@ final class SessionManager {
             s.attach(info, plan: nil)
             if spec.agent == .claude { watchSessionID(s) }
         } else if !pendingResume.contains(node.id) {
+            if autoResume.remove(node.id) != nil {
+                s.view.feed(text: "\u{1b}[2mRestored - picking up the last conversation...\u{1b}[0m\r\n")
+            }
             launch(s, spec: spec)
         }
         return s
@@ -131,18 +137,24 @@ final class SessionManager {
         let exists = spec.sessionID.map {
             LaunchPlanner.claudeSessionExists(sessionID: $0, cwd: spec.cwd, configDir: configDir)
         } ?? false
+        // 사람이 연 콘솔은 lead(일을 아래 새 콘솔에 나눠 맡김), 다른 콘솔이 연 콘솔은 worker(직접 함).
+        // 플래그가 없던 예전 콘솔은 들어오는 spawned·handoff 선으로 가린다.
+        let links = model.workspaceID(containing: s.nodeID).flatMap { id in model.state.workspaces.first { $0.id == id }?.links } ?? []
+        let openedByAgent = spec.openedByAgent == true
+            || links.contains { $0.to == s.nodeID && AgentLimits.chainStyles.contains($0.style ?? "") }
+        let role = BoardTools.role(openedByAgent: openedByAgent, leadDelegates: BoardTools.leadDelegates(Prefs.shared))
         // 설정이 켜져 있으면 claude 에 보드 도구(MCP)와 짧은 안내를 인자로만 붙인다(8차 3번). 사용자 ~/.claude 는 그대로.
         var claudeArgs: [String] = []
         if spec.agent == .claude, BoardTools.enabled(Prefs.shared), let exe = BoardToolServer.serverExecutable {
             let cfg = model.statusDirectory.appendingPathComponent("\(s.nodeID.uuidString).mcp.json")
             try? FileManager.default.createDirectory(at: model.statusDirectory, withIntermediateDirectories: true)
             let json = BoardTools.mcpConfigJSON(serverPath: exe, socketPath: model.boardTools.socketPath, nodeID: s.nodeID)
-            if (try? json.write(to: cfg, atomically: true, encoding: .utf8)) != nil { claudeArgs = BoardTools.claudeArgs(configPath: cfg.path) }
+            if (try? json.write(to: cfg, atomically: true, encoding: .utf8)) != nil { claudeArgs = BoardTools.claudeArgs(configPath: cfg.path, role: role) }
         }
         // codex 에도 같은 안내와 도구를 -c 인자로만 붙인다. 사용자 ~/.codex 는 그대로.
         var codexArgs: [String] = []
         if spec.agent == .codex, BoardTools.enabled(Prefs.shared), let exe = BoardToolServer.serverExecutable {
-            codexArgs = BoardTools.codexArgs(serverPath: exe, socketPath: model.boardTools.socketPath, nodeID: s.nodeID)
+            codexArgs = BoardTools.codexArgs(serverPath: exe, socketPath: model.boardTools.socketPath, nodeID: s.nodeID, role: role)
         }
         let plan = LaunchPlanner.plan(for: spec, nodeID: s.nodeID, statusFile: s.statusFile.path,
                                       profile: profile, claudeSessionExists: exists, defaultShell: shell,

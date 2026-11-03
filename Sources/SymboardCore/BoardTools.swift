@@ -21,32 +21,104 @@ public enum BoardTools {
         return (temporary as NSString).appendingPathComponent("symboard-\(String(h, radix: 16)).sock")
     }
 
-    /// claude 에 덧붙이는 짧은 안내.
-    public static let systemPrompt = """
+    /// 설정 "The console you talk to hands work to new consoles"(기본 켬).
+    public static let leadKey = "agents.leadDelegates"
+    public static func leadDelegates(_ prefs: Prefs) -> Bool { prefs.string(leadKey) != "off" }
+    public static func setLeadDelegates(_ on: Bool, _ prefs: Prefs) { prefs.set(on ? nil : "off", for: leadKey) }
+
+    /// 콘솔이 보드에서 맡는 역할.
+    /// lead: 사람이 연 콘솔. 사용자와 이야기하고 일을 목적별로 새 콘솔에 나눠 맡긴다.
+    /// worker: 다른 콘솔이 spawn_console·hand_off 로 연 콘솔. 받은 일을 직접 한다.
+    /// plain: 나눠 맡기기 설정을 끈 경우(예전 안내).
+    public enum Role: String, Sendable { case lead, worker, plain }
+
+    public static func role(openedByAgent: Bool, leadDelegates: Bool) -> Role {
+        if openedByAgent { return .worker }
+        return leadDelegates ? .lead : .plain
+    }
+
+    static let boardIntro = """
         You are running in a console on Symboard, a board where the user watches many terminal consoles side by side. \
-        The symboard tools let you work on that board. \
-        When a task splits into parts that can run in parallel, prefer them over your built-in subagents: \
-        open a console per part with spawn_console (agent "claude", "codex" or "shell", with the instructions as prompt), \
-        or send work to an existing console with send_to_console, and collect results with read_console. \
+        The symboard tools let you work on that board.
+        """
+
+    static let boardCommon = """
+        Use add_note for short notes and draw_diagram for boxes and arrows (plans, flows, architecture). \
+        The user can see and steer every console. Leave consoles open; use close_console only when the user asks. \
+        If a tool says a limit was reached or the user declined, stop and tell the user instead of retrying. \
+        A line starting with [symboard] is a notice from the board, not a message from the user: \
+        when it says a console finished, read that console's report with read_console and carry on.
+        """
+
+    static let handOffRule = """
         When the user asks you to pass work on, or the next stage should run in a fresh session, write a complete, self-contained prompt \
         (goal, context, relevant files, what is done, what remains, how to verify) and call hand_off. \
         The prompt is pinned on the board as a card linked to the new console, and that console can hand off again. \
-        After handing off, do not do that stage yourself. \
-        Use add_note for short notes and draw_diagram for boxes and arrows (plans, flows, architecture). \
-        The user can see and steer every console. Leave consoles open; use close_console only when the user asks. \
-        If a tool says a limit was reached or the user declined, stop and tell the user instead of retrying.
+        After handing off, do not do that stage yourself.
         """
 
-    public static func claudeArgs(configPath: String) -> [String] {
-        ["--mcp-config", configPath, "--append-system-prompt", systemPrompt]
+    /// claude 에 덧붙이는 짧은 안내(나눠 맡기기를 끈 경우).
+    public static let systemPrompt = """
+        \(boardIntro) \
+        When a task splits into parts that can run in parallel, prefer them over your built-in subagents: \
+        open a console per part with spawn_console (agent "claude", "codex" or "shell", with the instructions as prompt), \
+        or send work to an existing console with send_to_console, and collect results with read_console. \
+        \(handOffRule) \
+        \(boardCommon)
+        """
+
+    /// 사람이 연 콘솔의 안내. 사용자와 이야기하는 자리로 남고, 일은 목적마다 아래에 새 콘솔을 열어 맡긴다.
+    public static let leadPrompt = """
+        \(boardIntro) \
+        You are the lead console: the user talks to you. Keep this console for talking with the user and managing the work, \
+        and give each piece of work its own console so every goal is tracked separately on the board. \
+        When the user asks for work (changing code, investigating, running builds or tests, writing documents), \
+        split it into goals and open one console per goal with spawn_console; it opens below yours. \
+        Give each console a short name that says its goal, and a complete, self-contained prompt: \
+        goal, context, relevant files, constraints, how to verify, and what to report back. \
+        Use the same agent as you ("claude" or "codex") unless the user asks otherwise. \
+        Use these consoles instead of your built-in subagents, and do not do the work in this console. \
+        Do it here only to answer questions, to read a little so you can write a good prompt, and to check results. \
+        Goals that do not depend on each other can run at once; open a dependent goal after the one it needs is done. \
+        More work on the same goal goes to that goal's console with send_to_console, not to a new one. \
+        After opening consoles, tell the user which console has which goal. \
+        When a console you opened finishes, Symboard types a [symboard] line into this console naming it: \
+        read its report with read_console, tell the user the result, and open any goal that was waiting on it. \
+        So you do not need to poll; check with list_consoles and read_console only when the user asks or a notice is late. \
+        Report results to the user from what the consoles actually show, and say plainly when something failed or is unverified. \
+        \(handOffRule) \
+        \(boardCommon)
+        """
+
+    /// 다른 콘솔이 연 콘솔의 안내. 맡은 일을 직접 하고 끝에 짧게 보고한다.
+    public static let workerPrompt = """
+        \(boardIntro) \
+        Another console (the lead) opened you for one goal; the first prompt you get is that goal. \
+        Do the work yourself in this console. Do not open more consoles or hand off unless your prompt or the user asks for it. \
+        When you finish, end with a short report: what you did, how you checked it and the result, and what remains. \
+        When you stop, Symboard tells the lead, and the lead reads the end of your screen with read_console, \
+        so keep the report last. The user may also talk to you here directly. \
+        \(boardCommon)
+        """
+
+    public static func systemPrompt(for role: Role) -> String {
+        switch role {
+        case .lead: return leadPrompt
+        case .worker: return workerPrompt
+        case .plain: return systemPrompt
+        }
+    }
+
+    public static func claudeArgs(configPath: String, role: Role = .plain) -> [String] {
+        ["--mcp-config", configPath, "--append-system-prompt", systemPrompt(for: role)]
     }
 
     /// codex 는 `-c 키=TOML값` 으로만 붙인다(사용자 ~/.codex/config.toml 은 그대로). 안내는 developer_instructions,
     /// 도구는 claude 와 같은 `symboard-mcp` 를 mcp_servers.symboard 로. `codex resume` 에도 같은 인자가 통한다.
-    public static func codexArgs(serverPath: String, socketPath: String, nodeID: UUID) -> [String] {
+    public static func codexArgs(serverPath: String, socketPath: String, nodeID: UUID, role: Role = .plain) -> [String] {
         let env = "{SYMBOARD_SOCKET=\(tomlString(socketPath)), SYMBOARD_CALLER=\(tomlString(nodeID.uuidString))}"
         return [
-            "-c", "developer_instructions=\(tomlString(systemPrompt))",
+            "-c", "developer_instructions=\(tomlString(systemPrompt(for: role)))",
             "-c", "mcp_servers.\(serverName).command=\(tomlString(serverPath))",
             "-c", "mcp_servers.\(serverName).env=\(env)",
         ]
@@ -92,7 +164,7 @@ public enum BoardTools {
              "description": "List the consoles on the current Symboard board: name, agent, status and group.",
              "inputSchema": schema([:], required: [])],
             ["name": "spawn_console",
-             "description": "Open a new console next to yours on the board and optionally give it a first prompt (sent once it is ready). Returns the new console's name.",
+             "description": "Open a new console below yours on the board and optionally give it a first prompt (sent once it is ready). Returns the new console's name.",
              "inputSchema": schema([
                 "agent": ["type": "string", "enum": ["claude", "codex", "shell"], "description": "What runs in the console"],
                 "name": ["type": "string", "description": "Optional name; a short free name is picked if omitted or taken"],

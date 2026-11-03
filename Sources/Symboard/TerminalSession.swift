@@ -52,7 +52,10 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         view.nativeForegroundColor = Theme.terminalText
         // 콘솔 몸통은 두 모드 모두 어둡다(DECISIONS 10차-1). 스크롤 막대·선택 색도 어두운 모드로.
         view.appearance = NSAppearance(named: .darkAqua)
-        view.onUserInput = { [weak self] in self?.tracker.noteInput() }
+        view.onUserInput = { [weak self] in
+            self?.tracker.noteInput()
+            self?.lastUserKey = Date()
+        }
         link.onData = { [weak self] slice, replay in self?.received(slice, replay: replay) }
         link.onExit = { [weak self] code in self?.processTerminated(exitCode: code) }
     }
@@ -67,6 +70,12 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         if !info.running { tracker.noteExit() }
         endedWhileAway = !info.running
     }
+
+    /// 사용자가 이 콘솔에 마지막으로 직접 친 시각(sendText 로 보낸 글은 빼고). lead 알림이 쓰다 만 글에 붙지 않게 본다.
+    private(set) var lastUserKey: Date?
+
+    /// 받은 일을 끝낸 횟수(StatusTracker.finishedCount).
+    var finishedCount: Int { tracker.finishedCount }
 
     func start(plan: LaunchPlan, shell: String) {
         self.plan = plan
