@@ -39,6 +39,8 @@ public struct StatusTracker: Sendable {
     public private(set) var workConfirmed = false
     /// 일을 끝냈는데 사용자가 아직 보지 않았다.
     public private(set) var finishedUnseen = false
+    /// 받은 일을 끝낸 횟수. 사용자가 보고 있어 Done 이 바로 풀려도 늘어난다(lead 알림이 이것으로 끝남을 잡는다).
+    public private(set) var finishedCount = 0
     /// 훅이 없을 때 출력이 이만큼 이어져야 일로 친다(부팅·화면 다시 그리기를 거르려고).
     public static let minWorkSeconds: TimeInterval = 3
 
@@ -108,7 +110,7 @@ public struct StatusTracker: Sendable {
             break
         case .idle:
             workStartedAt = nil
-            if workConfirmed { workConfirmed = false; finishedUnseen = true }
+            if workConfirmed { workConfirmed = false; finishedUnseen = true; finishedCount += 1 }
             if finishedUnseen { return .done }
         default:
             workStartedAt = nil

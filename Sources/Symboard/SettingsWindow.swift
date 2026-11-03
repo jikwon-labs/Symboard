@@ -24,6 +24,8 @@ final class SettingsWindowController: NSWindowController {
     private let askResume = NSButton(checkboxWithTitle: L("Ask before resuming last conversations"), target: nil, action: nil)
     /// 사람이 연 콘솔은 일을 아래 새 콘솔에 나눠 맡긴다.
     private let leadDelegates = NSButton(checkboxWithTitle: L("The console you talk to hands work to new consoles"), target: nil, action: nil)
+    /// 에이전트가 연 콘솔이 끝나면 연 콘솔에 알리고 오른쪽 위에 띄운다.
+    private let reportToLead = NSButton(checkboxWithTitle: L("Tell the lead when a console it opened finishes"), target: nil, action: nil)
     private let language = NSPopUpButton()
     private let maxDepth = NSPopUpButton()
     private let maxOpened = NSPopUpButton()
@@ -93,7 +95,8 @@ final class SettingsWindowController: NSWindowController {
         (updates.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: updates.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
         for (b, title, sel) in [(confirmQuit, "Ask before quitting", #selector(confirmQuitChanged)),
                                 (askResume, "Ask before resuming last conversations", #selector(askResumeChanged)),
-                                (leadDelegates, "The console you talk to hands work to new consoles", #selector(leadDelegatesChanged))] {
+                                (leadDelegates, "The console you talk to hands work to new consoles", #selector(leadDelegatesChanged)),
+                                (reportToLead, "Tell the lead when a console it opened finishes", #selector(reportToLeadChanged))] {
             b.title = L(title)
             b.target = self
             b.action = sel
@@ -103,6 +106,9 @@ final class SettingsWindowController: NSWindowController {
         let leadNote = NSTextField(wrappingLabelWithString: L("A console you open keeps the conversation and splits work into goals, opening one console per goal below it. Consoles opened by agents do their goal themselves. Applies to consoles started after the change."))
         leadNote.font = .systemFont(ofSize: 11)
         leadNote.textColor = Theme.textDim
+        let reportNote = NSTextField(wrappingLabelWithString: L("When a console opened by an agent finishes, Symboard types a one-line notice into the console that opened it once that console is free, and shows a notice at the top right."))
+        reportNote.font = .systemFont(ofSize: 11)
+        reportNote.textColor = Theme.textDim
         let updatesNote = NSTextField(wrappingLabelWithString: L("Once a day, asks GitHub for the latest release and shows a pill when a newer version is out. Nothing is downloaded."))
         updatesNote.font = .systemFont(ofSize: 11)
         updatesNote.textColor = Theme.textDim
@@ -194,7 +200,7 @@ final class SettingsWindowController: NSWindowController {
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, confirmQuit, askResume, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, limits, limitsNote])
+        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, confirmQuit, askResume, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, reportToLead, reportNote, limits, limitsNote])
         stack.setCustomSpacing(4, after: confirmQuit)
         stack.setCustomSpacing(22, after: askResume)
         stack.setCustomSpacing(4, after: updates)
@@ -213,6 +219,7 @@ final class SettingsWindowController: NSWindowController {
             updatesNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             limitsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             leadNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            reportNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             previewBox.heightAnchor.constraint(equalToConstant: 44),
             preview.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 12),
             preview.trailingAnchor.constraint(lessThanOrEqualTo: previewBox.trailingAnchor, constant: -12),
@@ -237,6 +244,7 @@ final class SettingsWindowController: NSWindowController {
         confirmQuit.state = UIPrefs.confirmQuit(Prefs.shared) ? .on : .off
         askResume.state = UIPrefs.askResume(Prefs.shared) ? .on : .off
         leadDelegates.state = BoardTools.leadDelegates(Prefs.shared) ? .on : .off
+        reportToLead.state = WorkerReport.enabled(Prefs.shared) ? .on : .off
         appearance.selectItem(at: AppearanceMode.allCases.firstIndex(of: UIPrefs.appearance(Prefs.shared)) ?? 0)
         language.selectItem(at: LanguageMode.allCases.firstIndex(of: UIPrefs.language(Prefs.shared)) ?? 0)
         maxDepth.selectItem(withTag: AgentLimits.maxDepth(Prefs.shared))
@@ -272,6 +280,8 @@ final class SettingsWindowController: NSWindowController {
     @objc private func askResumeChanged() { UIPrefs.setAskResume(askResume.state == .on, Prefs.shared) }
 
     @objc private func leadDelegatesChanged() { BoardTools.setLeadDelegates(leadDelegates.state == .on, Prefs.shared) }
+
+    @objc private func reportToLeadChanged() { WorkerReport.setEnabled(reportToLead.state == .on, Prefs.shared) }
 
     @objc private func boardToolsChanged() {
         BoardTools.setEnabled(boardTools.state == .on, Prefs.shared)

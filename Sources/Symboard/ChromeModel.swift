@@ -91,6 +91,8 @@ final class ChromeModel: ObservableObject {
     /// Connect 를 누른 오케스트레이터. 이때 보드의 콘솔을 누르면 연결/해제된다.
     @Published var connectingOrchestrator: UUID?
     @Published var resumeDismissed = false
+    /// 에이전트가 연 콘솔이 일을 끝냈다는 오른쪽 위 알림(WorkerReporter).
+    @Published var workerNotices: [WorkerDoneNotice] = []
     /// 확인을 기다리는 동작(여러 콘솔 닫기 등).
     @Published var confirm: PendingConfirm?
     /// 명령 바 THREAD 패널: 보드 명령과 그 결과(원본 voice 장면의 기록 자리).

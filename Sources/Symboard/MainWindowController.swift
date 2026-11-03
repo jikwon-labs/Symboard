@@ -48,6 +48,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     lazy var memoryHub: MemoryHub = { let h = MemoryHub(model: model); h.c = self; return h }()
     /// 새 버전 알림(위쪽 오른쪽 알약).
     private(set) lazy var updates = UpdateChecker(chrome: chrome)
+    /// 에이전트가 연 콘솔이 끝나면 lead 에 알리고 오른쪽 위에 띄운다.
+    private(set) lazy var workerReports = WorkerReporter(model: model, chrome: chrome)
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
@@ -173,7 +175,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let drawingChip = host(DrawingChip(maker: diagrams))
         content.addSubview(drawingChip)
         let resume = host(ResumeToast(chrome: chrome, c: self))
-        for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume] as [NSView] { content.addSubview(v) }
+        let workerDone = host(WorkerDoneToasts(chrome: chrome, c: self))
+        for v in [topLeft, topRight, left, right, bottom, branch, zoom, hint, selection, resume, workerDone] as [NSView] { content.addSubview(v) }
         let mission = HiddenAwareHostingView(rootView: MissionHost(model: model, chrome: chrome, c: self).localized())
         mission.translatesAutoresizingMaskIntoConstraints = false
         mission.sizingOptions = []
@@ -291,6 +294,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             hint.topAnchor.constraint(equalTo: content.topAnchor, constant: 56),
             resume.topAnchor.constraint(equalTo: topRight.bottomAnchor, constant: 10),
             resume.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
+            workerDone.topAnchor.constraint(equalTo: resume.bottomAnchor, constant: 8),
+            workerDone.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
             drawingChip.topAnchor.constraint(equalTo: content.topAnchor, constant: 96),
             drawingChip.centerXAnchor.constraint(equalTo: content.centerXAnchor),
             pen.leadingAnchor.constraint(equalTo: left.trailingAnchor, constant: 10),
@@ -541,6 +546,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         // 접혀 있는 패널의 목록은 다시 만들지 않는다(쉬는 시간 글자가 매초 바뀌어 매번 새로 그려졌다). 열 때 채운다.
         if !panelContainer.isHidden { sidePanel.refreshStatuses() }
+        workerReports.tick()
         currentCanvas?.layoutGroups()
         StatusBeat.shared.tick &+= 1
         let pill = model.usage.pill

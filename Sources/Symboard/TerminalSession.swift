@@ -70,9 +70,18 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
             MainActor.assumeIsolated { self?.handleOutput(slice) }
         }
         view.onUserInput = { [weak self] in
-            MainActor.assumeIsolated { self?.tracker.noteInput() }
+            MainActor.assumeIsolated {
+                self?.tracker.noteInput()
+                self?.lastUserKey = Date()
+            }
         }
     }
+
+    /// 사용자가 이 콘솔에 마지막으로 직접 친 시각(sendText 로 보낸 글은 빼고). lead 알림이 쓰다 만 글에 붙지 않게 본다.
+    private(set) var lastUserKey: Date?
+
+    /// 받은 일을 끝낸 횟수(StatusTracker.finishedCount).
+    var finishedCount: Int { tracker.finishedCount }
 
     func start(plan: LaunchPlan, shell: String) {
         self.plan = plan

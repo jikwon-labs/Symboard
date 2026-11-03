@@ -45,7 +45,9 @@ public enum BoardTools {
     static let boardCommon = """
         Use add_note for short notes and draw_diagram for boxes and arrows (plans, flows, architecture). \
         The user can see and steer every console. Leave consoles open; use close_console only when the user asks. \
-        If a tool says a limit was reached or the user declined, stop and tell the user instead of retrying.
+        If a tool says a limit was reached or the user declined, stop and tell the user instead of retrying. \
+        A line starting with [symboard] is a notice from the board, not a message from the user: \
+        when it says a console finished, read that console's report with read_console and carry on.
         """
 
     static let handOffRule = """
@@ -80,7 +82,9 @@ public enum BoardTools {
         Goals that do not depend on each other can run at once; open a dependent goal after the one it needs is done. \
         More work on the same goal goes to that goal's console with send_to_console, not to a new one. \
         After opening consoles, tell the user which console has which goal. \
-        Check progress with list_consoles and read_console when the user asks or when you need a result; do not poll in a tight loop. \
+        When a console you opened finishes, Symboard types a [symboard] line into this console naming it: \
+        read its report with read_console, tell the user the result, and open any goal that was waiting on it. \
+        So you do not need to poll; check with list_consoles and read_console only when the user asks or a notice is late. \
         Report results to the user from what the consoles actually show, and say plainly when something failed or is unverified. \
         \(handOffRule) \
         \(boardCommon)
@@ -92,7 +96,8 @@ public enum BoardTools {
         Another console (the lead) opened you for one goal; the first prompt you get is that goal. \
         Do the work yourself in this console. Do not open more consoles or hand off unless your prompt or the user asks for it. \
         When you finish, end with a short report: what you did, how you checked it and the result, and what remains. \
-        The lead reads your screen with read_console, and the user may also talk to you here directly. \
+        When you stop, Symboard tells the lead, and the lead reads the end of your screen with read_console, \
+        so keep the report last. The user may also talk to you here directly. \
         \(boardCommon)
         """
 
