@@ -18,6 +18,12 @@ final class SettingsWindowController: NSWindowController {
     private let appearance = NSPopUpButton()
     /// 새 버전 알림(하루 한 번 GitHub 최신 릴리스 확인).
     private let updates = NSButton(checkboxWithTitle: L("Check for updates"), target: nil, action: nil)
+    /// Cmd+Q 로 끌 때 묻기.
+    private let confirmQuit = NSButton(checkboxWithTitle: L("Ask before quitting"), target: nil, action: nil)
+    /// 다시 열었을 때 지난 대화를 이어 갈지 묻기(기본 끔: 바로 이어 간다).
+    private let askResume = NSButton(checkboxWithTitle: L("Ask before resuming last conversations"), target: nil, action: nil)
+    /// 사람이 연 콘솔은 일을 아래 새 콘솔에 나눠 맡긴다.
+    private let leadDelegates = NSButton(checkboxWithTitle: L("The console you talk to hands work to new consoles"), target: nil, action: nil)
     private let language = NSPopUpButton()
     private let maxDepth = NSPopUpButton()
     private let maxOpened = NSPopUpButton()
@@ -85,6 +91,18 @@ final class SettingsWindowController: NSWindowController {
         updates.action = #selector(updatesChanged)
         updates.setAccessibilityLabel(L("Check for updates"))
         (updates.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: updates.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
+        for (b, title, sel) in [(confirmQuit, "Ask before quitting", #selector(confirmQuitChanged)),
+                                (askResume, "Ask before resuming last conversations", #selector(askResumeChanged)),
+                                (leadDelegates, "The console you talk to hands work to new consoles", #selector(leadDelegatesChanged))] {
+            b.title = L(title)
+            b.target = self
+            b.action = sel
+            b.setAccessibilityLabel(L(title))
+            (b.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: b.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
+        }
+        let leadNote = NSTextField(wrappingLabelWithString: L("A console you open keeps the conversation and splits work into goals, opening one console per goal below it. Consoles opened by agents do their goal themselves. Applies to consoles started after the change."))
+        leadNote.font = .systemFont(ofSize: 11)
+        leadNote.textColor = Theme.textDim
         let updatesNote = NSTextField(wrappingLabelWithString: L("Once a day, asks GitHub for the latest release and shows a pill when a newer version is out. Nothing is downloaded."))
         updatesNote.font = .systemFont(ofSize: 11)
         updatesNote.textColor = Theme.textDim
@@ -176,8 +194,9 @@ final class SettingsWindowController: NSWindowController {
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
-        stack.setCustomSpacing(22, after: updatesNote)
+        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, confirmQuit, askResume, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, limits, limitsNote])
+        stack.setCustomSpacing(4, after: confirmQuit)
+        stack.setCustomSpacing(22, after: askResume)
         stack.setCustomSpacing(4, after: updates)
         stack.setCustomSpacing(22, after: note)
         stack.orientation = .vertical
@@ -193,6 +212,7 @@ final class SettingsWindowController: NSWindowController {
             agentsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             updatesNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             limitsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            leadNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             previewBox.heightAnchor.constraint(equalToConstant: 44),
             preview.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 12),
             preview.trailingAnchor.constraint(lessThanOrEqualTo: previewBox.trailingAnchor, constant: -12),
@@ -214,6 +234,9 @@ final class SettingsWindowController: NSWindowController {
         preview.font = TerminalFont.make(s)
         boardTools.state = BoardTools.enabled(Prefs.shared) ? .on : .off
         updates.state = UpdateCheck.enabled(Prefs.shared) ? .on : .off
+        confirmQuit.state = UIPrefs.confirmQuit(Prefs.shared) ? .on : .off
+        askResume.state = UIPrefs.askResume(Prefs.shared) ? .on : .off
+        leadDelegates.state = BoardTools.leadDelegates(Prefs.shared) ? .on : .off
         appearance.selectItem(at: AppearanceMode.allCases.firstIndex(of: UIPrefs.appearance(Prefs.shared)) ?? 0)
         language.selectItem(at: LanguageMode.allCases.firstIndex(of: UIPrefs.language(Prefs.shared)) ?? 0)
         maxDepth.selectItem(withTag: AgentLimits.maxDepth(Prefs.shared))
@@ -243,6 +266,12 @@ final class SettingsWindowController: NSWindowController {
         UpdateCheck.setEnabled(updates.state == .on, Prefs.shared)
         (NSApp.delegate as? AppDelegate)?.windowController?.updates.settingChanged()
     }
+
+    @objc private func confirmQuitChanged() { UIPrefs.setConfirmQuit(confirmQuit.state == .on, Prefs.shared) }
+
+    @objc private func askResumeChanged() { UIPrefs.setAskResume(askResume.state == .on, Prefs.shared) }
+
+    @objc private func leadDelegatesChanged() { BoardTools.setLeadDelegates(leadDelegates.state == .on, Prefs.shared) }
 
     @objc private func boardToolsChanged() {
         BoardTools.setEnabled(boardTools.state == .on, Prefs.shared)

@@ -82,9 +82,11 @@ public struct TerminalSpec: Codable, Equatable, Sendable {
     /// 한 번이라도 실행된 적이 있는지. 재실행 시 이어하기 옵션을 쓸지 판단한다.
     public var hasLaunched: Bool
     public var profileID: UUID?
+    /// 다른 콘솔이 보드 도구(spawn_console·hand_off)로 연 콘솔인지. 그러면 일을 직접 하는 작업자 안내를 붙인다.
+    public var openedByAgent: Bool?
 
     public init(agent: AgentKind, executable: String? = nil, extraArgs: [String] = [], cwd: String,
-                sessionID: String? = nil, hasLaunched: Bool = false, profileID: UUID? = nil) {
+                sessionID: String? = nil, hasLaunched: Bool = false, profileID: UUID? = nil, openedByAgent: Bool? = nil) {
         self.agent = agent
         self.executable = executable
         self.extraArgs = extraArgs
@@ -92,6 +94,7 @@ public struct TerminalSpec: Codable, Equatable, Sendable {
         self.sessionID = sessionID
         self.hasLaunched = hasLaunched
         self.profileID = profileID
+        self.openedByAgent = openedByAgent
     }
 }
 

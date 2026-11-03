@@ -75,6 +75,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 창을 닫아도 콘솔은 계속 돈다(Cmd+Q 로 끝낸다). Dock 아이콘을 누르면 창을 다시 연다.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+    /// 시험 도구(DebugBridge "quit")처럼 묻지 않고 끝내야 할 때 켠다.
+    static var skipQuitConfirm = false
+
+    /// Cmd+Q 로 끌 때 한 번 묻는다. 로그아웃·재시동·시스템 종료가 보낸 종료는 막지 않는다.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !Self.skipQuitConfirm, UIPrefs.confirmQuit(Prefs.shared), !Self.isSystemQuit else { return .terminateNow }
+        let a = NSAlert()
+        a.messageText = L("Quit Symboard?")
+        let live = model?.sessions.liveCount ?? 0
+        a.informativeText = live > 0
+            ? String(format: L(live == 1 ? "%d console is running and will be stopped. It comes back when you open Symboard again." : "%d consoles are running and will be stopped. They come back when you open Symboard again."), live)
+            : L("Your boards are saved and come back when you open Symboard again.")
+        a.addButton(withTitle: L("Quit"))
+        a.addButton(withTitle: L("Cancel"))
+        a.showsSuppressionButton = true
+        a.suppressionButton?.title = L("Don't ask again")
+        NSApp.activate(ignoringOtherApps: true)
+        let quit = a.runModal() == .alertFirstButtonReturn
+        if quit, a.suppressionButton?.state == .on { UIPrefs.setConfirmQuit(false, Prefs.shared) }
+        return quit ? .terminateNow : .terminateCancel
+    }
+
+    /// 지금 처리 중인 종료 요청이 로그아웃·재시동·시스템 종료에서 왔는지('why?' 속성이 붙어 온다).
+    private static var isSystemQuit: Bool {
+        guard let e = NSAppleEventManager.shared().currentAppleEvent, e.eventID == kAEQuitApplication else { return false }
+        return e.attributeDescriptor(forKeyword: AEKeyword(0x7768793F /* 'why?' */)) != nil
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { windowController?.showWindow(nil); windowController?.window?.makeKeyAndOrderFront(nil) }
         return true

@@ -146,15 +146,22 @@ extension MainWindowController {
         // 카드와 새 콘솔은 한 덩어리로 같은 줄에 놓는다(카드 왼쪽, 콘솔 오른쪽). 따로 자리를 찾으면 줄이 바뀌어 멀리 떨어졌다.
         var cardID: UUID?
         let node: BoardNode
+        var spec = choice.spec(cwd: cwd)
+        spec.openedByAgent = true
         if let card {
             let pair = besideFrame(w: Self.cardSize.width + 40 + 640, h: 400, near: caller)
             let title = card.title.isEmpty ? "Handoff" : card.title
             cardID = placeCard(text: "\(title) → \(name)\n\n\(card.prompt)", title: title, colorHex: Self.noteColors["yellow"]!,
                                at: Point(x: pair.x, y: pair.y))
-            node = addTerminal(spec: choice.spec(cwd: cwd), at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), title: name, teamID: teamID)
+            node = addTerminal(spec: spec, at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), title: name, teamID: teamID)
             glideReveal([pair], zoomIn: true)
+        } else if caller != nil {
+            // 부른 콘솔(lead) 아래 줄에 왼쪽부터 놓는다. 맡긴 일이 lead 밑에 한 줄로 모인다.
+            let f = belowFrame(w: 640, h: 400, near: caller)
+            node = addTerminal(spec: spec, at: Point(x: f.x, y: f.y), title: name, teamID: teamID)
+            glideReveal([f], zoomIn: true)
         } else {
-            node = addTerminal(spec: choice.spec(cwd: cwd), at: nil, title: name, teamID: teamID, near: caller)
+            node = addTerminal(spec: spec, at: nil, title: name, teamID: teamID, near: caller)
         }
         model.mutateWorkspace(wsID) { w in
             var links = w.links ?? []
@@ -170,7 +177,7 @@ extension MainWindowController {
         if let caller { currentCanvas?.select(caller) }
         currentCanvas?.layoutGroups()
         currentCanvas?.layoutLinks()
-        let opened = "Opened console \(node.title) (\(agent))\(callerNode.map { " next to \($0.title)" } ?? "")\(cardID == nil ? "" : " with a handoff card")."
+        let opened = "Opened console \(node.title) (\(agent))\(callerNode.map { " \(cardID == nil ? "below" : "next to") \($0.title)" } ?? "")\(cardID == nil ? "" : " with a handoff card")."
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { reply(opened, false); return }
         whenReady(node.id, timeout: 45) { [weak self] status in
             guard let self, let s = self.model.sessions.session(for: node.id) else { reply(opened + " It closed before the prompt was sent.", true); return }

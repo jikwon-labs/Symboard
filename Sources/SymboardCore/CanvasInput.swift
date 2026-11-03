@@ -94,6 +94,31 @@ public enum CanvasLayout {
         return nearestFree(Rect(x: rowLeft, y: y, w: w, h: h), avoiding: obstacles)
     }
 
+    /// reference 바로 아래 줄에서 왼쪽(reference 왼쪽 끝)부터 오른쪽으로 빈 칸을 찾는다. 줄이 차면 그 아래 줄로.
+    public static func belowSlot(w: Double, h: Double, reference ref: Rect, obstacles: [Rect],
+                                 gap: Double = 40, maxRowWidth: Double = 2100) -> Rect {
+        let clearance = 24.0
+        func blockers(_ f: Rect) -> [Rect] {
+            obstacles.filter { o in
+                f.x < o.x + o.w + clearance && o.x < f.x + f.w + clearance && f.y < o.y + o.h + clearance && o.y < f.y + f.h + clearance
+            }
+        }
+        var y = ref.y + ref.h + gap
+        for _ in 0..<12 {
+            var x = ref.x, tries = 0
+            while x == ref.x || x + w - ref.x <= maxRowWidth, tries < 30 {
+                let f = Rect(x: x, y: y, w: w, h: h)
+                let b = blockers(f)
+                if b.isEmpty { return f }
+                x = (b.map { $0.x + $0.w }.max() ?? x) + gap
+                tries += 1
+            }
+            let row = obstacles.filter { $0.y < y + h && y < $0.y + $0.h }
+            y = (row.map { $0.y + $0.h }.max() ?? (y + h)) + gap
+        }
+        return nearestFree(Rect(x: ref.x, y: y, w: w, h: h), avoiding: obstacles)
+    }
+
     /// frame 이 obstacles 와 (gap 만큼 띄워서) 겹치지 않는 가장 가까운 자리. 겹치지 않으면 그대로.
     /// 후보는 원래 x·y 와 각 장애물의 네 변에 gap 을 두고 붙인 x·y 의 조합이라, 장애물 사이 틈도 찾는다.
     public static func nearestFree(_ frame: Rect, avoiding obstacles: [Rect], gap: Double = 24) -> Rect {
