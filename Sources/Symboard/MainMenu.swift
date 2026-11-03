@@ -20,7 +20,10 @@ enum MainMenu {
         fileMenu.addItem(withTitle: L("New Terminal..."), action: #selector(MainWindowController.newTerminalMenu(_:)), keyEquivalent: "t")
         fileMenu.addItem(withTitle: L("New Workspace..."), action: #selector(MainWindowController.newWorkspace(_:)), keyEquivalent: "n")
         fileMenu.addItem(.separator())
-        fileMenu.addItem(withTitle: L("Close Window"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        // Cmd+W: 고른 노드가 있으면 그 노드를 닫고, 없으면 창을 닫는다.
+        fileMenu.addItem(withTitle: L("Close"), action: #selector(MainWindowController.closeSelectionOrWindow(_:)), keyEquivalent: "w")
+        let closeWindow = fileMenu.addItem(withTitle: L("Close Window"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        closeWindow.keyEquivalentModifierMask = [.command, .shift]
         fileItem.submenu = fileMenu
         main.addItem(fileItem)
 

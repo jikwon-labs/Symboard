@@ -197,7 +197,10 @@ final class NodeView: NSView {
 
     // MARK: 동작
 
-    @objc private func closeClicked() {
+    @objc private func closeClicked() { requestClose() }
+
+    /// 닫기 단추와 Cmd+W 가 같이 쓴다. 돌고 있는 터미널이면 먼저 묻는다.
+    func requestClose() {
         if model.node(nodeID)?.kind == .terminal, model.sessions.session(for: nodeID)?.running == true {
             let alert = NSAlert()
             alert.messageText = "Close this terminal?"

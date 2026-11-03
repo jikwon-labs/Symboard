@@ -1218,6 +1218,16 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         currentCanvas?.layoutGroups()
     }
 
+    /// Cmd+W. 고른 노드가 있으면 그 노드만 닫고(닫기 단추와 같음), 없으면 창을 닫는다.
+    @objc func closeSelectionOrWindow(_ sender: Any?) {
+        if let id = currentCanvas?.selectedNodeID, let v = currentCanvas?.nodeViews[id] {
+            v.requestClose()
+            if model.node(id) == nil { currentCanvas?.select(nil) }
+            return
+        }
+        window?.performClose(sender)
+    }
+
     func deleteSelection() {
         guard let id = currentCanvas?.selectedNodeID else { return }
         currentCanvas?.nodeViews[id]?.content.teardown()
