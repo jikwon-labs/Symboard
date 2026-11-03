@@ -28,6 +28,7 @@ cd .claude/worktree/<브랜치>
 - `SymboardCore` — 화면과 무관한 로직. 테스트(`Tests/SymboardCoreTests`)는 이 타깃만 본다.
 - `Symboard` — AppKit 중심 앱(Swift 5 언어 모드). 보조 패널만 SwiftUI.
 - `SymboardMCP` — claude 콘솔에 붙는 stdio MCP 서버. 번들의 `Contents/MacOS` 에 함께 들어간다.
+- `SymboardAgentd` — 콘솔(PTY·프로세스)을 앱 밖에서 들고 있는 백그라운드 프로그램 `symboard-agentd`. 앱을 꺼도 콘솔이 계속 돈다. 소켓 약속(`SymboardCore/Agentd.swift`)은 덧붙이기만 한다(DECISIONS 13차).
 
 ## 규칙
 
