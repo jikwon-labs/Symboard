@@ -8,3 +8,5 @@ docs/screens/v6/compare/
 PLAN*.md
 REPORT*.md
 .DS_Store
+.claude/worktree/
+.claude/settings.local.json
