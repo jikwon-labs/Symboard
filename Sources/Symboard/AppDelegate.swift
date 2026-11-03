@@ -83,7 +83,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         windowController?.captureViewports()
         model?.saveNow()
-        model?.sessions.terminateAll()
+        // 설정이 켜져 있으면 콘솔은 agentd 에서 계속 돈다(13차). 다음에 켜면 다시 붙는다.
+        model?.sessions.quit()
         model?.boardTools.stop()
     }
 }

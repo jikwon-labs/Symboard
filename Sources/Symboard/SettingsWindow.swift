@@ -18,6 +18,7 @@ final class SettingsWindowController: NSWindowController {
     private let appearance = NSPopUpButton()
     /// 새 버전 알림(하루 한 번 GitHub 최신 릴리스 확인).
     private let updates = NSButton(checkboxWithTitle: L("Check for updates"), target: nil, action: nil)
+    private let keepConsoles = NSButton(checkboxWithTitle: L("Keep consoles running after quitting"), target: nil, action: nil)
     private let language = NSPopUpButton()
     private let maxDepth = NSPopUpButton()
     private let maxOpened = NSPopUpButton()
@@ -25,7 +26,7 @@ final class SettingsWindowController: NSWindowController {
     private static let systemHangul = "System default (Apple SD Gothic Neo)"
 
     init() {
-        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 600), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 660), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = L("Settings")
         w.backgroundColor = Theme.surface
         w.isReleasedWhenClosed = false
@@ -89,6 +90,14 @@ final class SettingsWindowController: NSWindowController {
         updatesNote.font = .systemFont(ofSize: 11)
         updatesNote.textColor = Theme.textDim
         language.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        keepConsoles.title = L("Keep consoles running after quitting")
+        keepConsoles.target = self
+        keepConsoles.action = #selector(keepConsolesChanged)
+        keepConsoles.setAccessibilityLabel(L("Keep consoles running after quitting"))
+        (keepConsoles.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: keepConsoles.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
+        let keepNote = NSTextField(wrappingLabelWithString: L("Consoles keep working in the background when Symboard quits or updates, and come back when you open it again. Takes effect on next launch."))
+        keepNote.font = .systemFont(ofSize: 11)
+        keepNote.textColor = Theme.textDim
 
         let header = NSTextField(labelWithString: L("TERMINAL"))
         header.font = .systemFont(ofSize: 11, weight: .semibold)
@@ -176,9 +185,11 @@ final class SettingsWindowController: NSWindowController {
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
-        stack.setCustomSpacing(22, after: updatesNote)
+        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, keepConsoles, keepNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, limits, limitsNote])
+        stack.setCustomSpacing(12, after: updatesNote)
         stack.setCustomSpacing(4, after: updates)
+        stack.setCustomSpacing(4, after: keepConsoles)
+        stack.setCustomSpacing(22, after: keepNote)
         stack.setCustomSpacing(22, after: note)
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -192,6 +203,7 @@ final class SettingsWindowController: NSWindowController {
             previewBox.widthAnchor.constraint(equalTo: stack.widthAnchor),
             agentsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             updatesNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            keepNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             limitsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             previewBox.heightAnchor.constraint(equalToConstant: 44),
             preview.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 12),
@@ -214,6 +226,7 @@ final class SettingsWindowController: NSWindowController {
         preview.font = TerminalFont.make(s)
         boardTools.state = BoardTools.enabled(Prefs.shared) ? .on : .off
         updates.state = UpdateCheck.enabled(Prefs.shared) ? .on : .off
+        keepConsoles.state = KeepConsolesPrefs.enabled(Prefs.shared) ? .on : .off
         appearance.selectItem(at: AppearanceMode.allCases.firstIndex(of: UIPrefs.appearance(Prefs.shared)) ?? 0)
         language.selectItem(at: LanguageMode.allCases.firstIndex(of: UIPrefs.language(Prefs.shared)) ?? 0)
         maxDepth.selectItem(withTag: AgentLimits.maxDepth(Prefs.shared))
@@ -242,6 +255,10 @@ final class SettingsWindowController: NSWindowController {
     @objc private func updatesChanged() {
         UpdateCheck.setEnabled(updates.state == .on, Prefs.shared)
         (NSApp.delegate as? AppDelegate)?.windowController?.updates.settingChanged()
+    }
+
+    @objc private func keepConsolesChanged() {
+        KeepConsolesPrefs.setEnabled(keepConsoles.state == .on, Prefs.shared)
     }
 
     @objc private func boardToolsChanged() {

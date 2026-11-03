@@ -17,6 +17,8 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Symboard" "$APP/Contents/MacOS/Symboard"
 # claude 콘솔이 보드에 콘솔을 띄우는 stdio MCP 서버(8차).
 cp "$BIN_DIR/symboard-mcp" "$APP/Contents/MacOS/symboard-mcp"
+# 콘솔을 앱 밖에서 들고 있는 백그라운드 프로그램(13차). 앱이 버전별 폴더에 복사해서 띄운다.
+cp "$BIN_DIR/symboard-agentd" "$APP/Contents/MacOS/symboard-agentd"
 # SwiftPM 리소스 번들(있으면)도 같이 넣는다.
 for b in "$BIN_DIR"/*.bundle; do
   [ -e "$b" ] && cp -R "$b" "$APP/Contents/Resources/"
@@ -49,6 +51,7 @@ PLIST
 ID="${SIGN_IDENTITY:-Developer ID Application: jikwon seo (K6599UJ4KM)}"
 if security find-identity -v -p codesigning | grep -qF "$ID"; then
   codesign --force --options runtime --timestamp --sign "$ID" "$APP/Contents/MacOS/symboard-mcp"
+  codesign --force --options runtime --timestamp --sign "$ID" "$APP/Contents/MacOS/symboard-agentd"
   codesign --force --options runtime --timestamp --sign "$ID" "$APP"
   codesign --verify --strict --deep "$APP"
   SIGNED_WITH_ID=1

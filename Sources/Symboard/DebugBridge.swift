@@ -336,6 +336,10 @@ final class DebugBridge {
             // set: en·ko 이면 그 언어로 바꾼다(설정에는 저장하지 않는다, 12차 시험용).
             if let m = (cmd["set"] as? String).flatMap(LanguageMode.init(rawValue:)) { L10n.apply(m) }
             log.append("lang=\(L10n.current.rawValue)")
+        case "settings":
+            // 설정 창을 연다(13차 설정 줄 확인용).
+            controller.openSettings()
+            log.append("settings")
         case "winshot":
             // 창 번호(실제 화면 캡처용, screencapture -l).
             for w in NSApp.windows where w.isVisible { log.append("win \(w.windowNumber) \(w.title)") }

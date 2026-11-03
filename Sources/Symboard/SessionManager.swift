@@ -22,9 +22,31 @@ final class SessionManager {
     /// 다시 열었을 때 이어 할지 답을 기다리는 콘솔. 답할 때까지 띄우지 않는다.
     private(set) var pendingResume: Set<UUID> = []
 
+    /// 콘솔을 앱 밖에서 돌리는 agentd(13차). nil 이면 예전처럼 앱 안에서 돌린다.
+    let agentd: AgentdHost?
+    /// 켤 때 agentd 에서 아직 돌고 있던(또는 앱이 꺼진 사이 끝난) 콘솔. 노드가 보이면 새로 띄우지 않고 붙는다.
+    private var adoptable: [UUID: AgentdSessionInfo] = [:]
+
     init(model: AppModel) {
         self.model = model
-        pendingResume = Set(ResumePolicy.candidates(in: model.state))
+        if !AgentdHost.disabledByEnv, KeepConsolesPrefs.enabled(Prefs.shared) {
+            let host = AgentdHost(directory: model.store.directory)
+            agentd = host.ensureConnected() ? host : nil
+        } else {
+            agentd = nil
+        }
+        if let agentd {
+            for info in agentd.initialSessions {
+                if model.node(info.id)?.terminal != nil {
+                    adoptable[info.id] = info
+                } else {
+                    // 보드에 없는 콘솔(다른 곳에서 지워진 노드)은 끈다.
+                    agentd.send(AgentdFrame(.kill, id: info.id))
+                }
+            }
+        }
+        // 아직 돌고 있는 콘솔은 이어 하기를 묻지 않는다. 그대로 붙는다.
+        pendingResume = Set(ResumePolicy.candidates(in: model.state)).subtracting(adoptable.keys)
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -52,11 +74,17 @@ final class SessionManager {
     func ensureSession(for node: BoardNode) -> TerminalSession? {
         if let s = sessions[node.id] { return s }
         guard let spec = node.terminal else { return nil }
-        let s = TerminalSession(nodeID: node.id, statusDirectory: model.statusDirectory, usesHooks: spec.agent.supportsHooks)
+        let link: ConsoleLink = agentd.map { RemoteLink(id: node.id, host: $0) } ?? LocalLink()
+        let s = TerminalSession(nodeID: node.id, statusDirectory: model.statusDirectory, usesHooks: spec.agent.supportsHooks, link: link)
         s.isPlainShell = spec.agent == .shell
         s.alwaysBracketedPaste = spec.agent == .claude || spec.agent == .codex
         sessions[node.id] = s
-        if !pendingResume.contains(node.id) { launch(s, spec: spec) }
+        if let info = adoptable.removeValue(forKey: node.id) {
+            s.attach(info, plan: nil)
+            if spec.agent == .claude { watchSessionID(s) }
+        } else if !pendingResume.contains(node.id) {
+            launch(s, spec: spec)
+        }
         return s
     }
 
@@ -119,12 +147,7 @@ final class SessionManager {
         let plan = LaunchPlanner.plan(for: spec, nodeID: s.nodeID, statusFile: s.statusFile.path,
                                       profile: profile, claudeSessionExists: exists, defaultShell: shell,
                                       claudeExtraArgs: claudeArgs, codexExtraArgs: codexArgs)
-        if spec.agent == .claude {
-            s.onSessionID = { [weak self] sid in
-                guard let self, self.model.node(s.nodeID)?.terminal?.sessionID != sid else { return }
-                self.model.mutateNode(s.nodeID) { $0.terminal?.sessionID = sid }
-            }
-        }
+        if spec.agent == .claude { watchSessionID(s) }
         s.start(plan: plan, shell: shell)
         model.mutateNode(s.nodeID) { node in
             node.terminal?.hasLaunched = true
@@ -137,6 +160,14 @@ final class SessionManager {
         }
     }
 
+    /// 훅이 알려 준 claude 세션 id 를 노드에 남긴다(이어 하기가 그 id 를 쓴다).
+    private func watchSessionID(_ s: TerminalSession) {
+        s.onSessionID = { [weak self] sid in
+            guard let self, self.model.node(s.nodeID)?.terminal?.sessionID != sid else { return }
+            self.model.mutateNode(s.nodeID) { $0.terminal?.sessionID = sid }
+        }
+    }
+
     func terminate(_ nodeID: UUID) {
         sessions[nodeID]?.terminate()
         sessions[nodeID] = nil
@@ -145,7 +176,21 @@ final class SessionManager {
 
     func terminateAll() {
         for s in sessions.values { s.terminate() }
+        // 아직 붙지 않은(다른 작업공간에 있는) agentd 콘솔도 끈다.
+        for id in adoptable.keys { agentd?.send(AgentdFrame(.kill, id: id)) }
+        adoptable = [:]
+        agentd?.closeConnection()
     }
+
+    /// 앱을 끌 때. 설정이 켜져 있고 agentd 가 있으면 콘솔은 두고 연결만 닫는다. 아니면 모두 끈다.
+    func quit() {
+        guard let agentd, KeepConsolesPrefs.enabled(Prefs.shared) else { terminateAll(); return }
+        for s in sessions.values { s.detach() }
+        agentd.closeConnection()
+    }
+
+    /// 앱을 꺼도 계속 도는 콘솔인지(설정·agentd 둘 다).
+    var keepsRunningAfterQuit: Bool { agentd != nil && KeepConsolesPrefs.enabled(Prefs.shared) }
 
     private func tick() {
         let now = Date()

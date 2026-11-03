@@ -2,15 +2,9 @@ import AppKit
 import SwiftTerm
 import SymboardCore
 
-/// SwiftTerm 터미널 뷰. 출력이 들어올 때마다 세션에 알린다.
-final class SymTerminalView: LocalProcessTerminalView {
-    var onOutput: ((ArraySlice<UInt8>) -> Void)?
+/// SwiftTerm 터미널 뷰. 프로세스는 들고 있지 않다. 입출력은 TerminalSession 이 ConsoleLink 로 주고받는다(13차).
+final class SymTerminalView: TerminalView {
     var onUserInput: (() -> Void)?
-
-    override func dataReceived(slice: ArraySlice<UInt8>) {
-        super.dataReceived(slice: slice)
-        onOutput?(slice)
-    }
 
     /// Ctrl+글자는 SwiftTerm 이 charactersIgnoringModifiers 의 글자(c)를 제어 문자로 바꿔 보낸다.
     /// 그런데 입력 소스가 한글이면 그 값이 "ㅊ" 처럼 한글 자모로 와서 SwiftTerm 이 아무것도 보내지 않는다(Ctrl+C 가 안 먹음).
@@ -24,23 +18,14 @@ final class SymTerminalView: LocalProcessTerminalView {
 
     /// 지난 줄 보기 위치가 바뀔 때(휠·스크롤 막대·입력으로 맨 아래 복귀).
     var onScrolled: (() -> Void)?
-
-    override func scrolled(source: TerminalView, position: Double) {
-        super.scrolled(source: source, position: position)
-        onScrolled?()
-    }
-
-    override func send(source: TerminalView, data: ArraySlice<UInt8>) {
-        onUserInput?()
-        super.send(source: source, data: data)
-    }
 }
 
-/// 노드 하나에 붙은 PTY 프로세스와 그 상태.
+/// 노드 하나에 붙은 콘솔 프로세스와 그 상태. 프로세스는 앱 안(LocalLink) 또는 agentd(RemoteLink)에 있다.
 @MainActor
-final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
+final class TerminalSession: NSObject, TerminalViewDelegate {
     let nodeID: UUID
     let view: SymTerminalView
+    let link: ConsoleLink
     private(set) var tracker: StatusTracker
     private(set) var plan: LaunchPlan?
     private(set) var running = false
@@ -54,24 +39,33 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
     var onExit: ((Int32?) -> Void)?
     private var stripper = ANSIStripper()
 
-    init(nodeID: UUID, statusDirectory: URL, usesHooks: Bool) {
+    init(nodeID: UUID, statusDirectory: URL, usesHooks: Bool, link: ConsoleLink) {
         self.nodeID = nodeID
+        self.link = link
         self.view = SymTerminalView(frame: NSRect(x: 0, y: 0, width: 600, height: 360))
         self.tracker = StatusTracker(usesHooks: usesHooks)
         self.statusFile = statusDirectory.appendingPathComponent(nodeID.uuidString)
         super.init()
-        view.processDelegate = self
+        view.terminalDelegate = self
         view.font = TerminalFont.current
         view.nativeBackgroundColor = Theme.terminalBackground
         view.nativeForegroundColor = Theme.terminalText
         // 콘솔 몸통은 두 모드 모두 어둡다(DECISIONS 10차-1). 스크롤 막대·선택 색도 어두운 모드로.
         view.appearance = NSAppearance(named: .darkAqua)
-        view.onOutput = { [weak self] slice in
-            MainActor.assumeIsolated { self?.handleOutput(slice) }
-        }
-        view.onUserInput = { [weak self] in
-            MainActor.assumeIsolated { self?.tracker.noteInput() }
-        }
+        view.onUserInput = { [weak self] in self?.tracker.noteInput() }
+        link.onData = { [weak self] slice, replay in self?.received(slice, replay: replay) }
+        link.onExit = { [weak self] code in self?.processTerminated(exitCode: code) }
+    }
+
+    /// 앱 밖(agentd)에서 이미 돌고 있는 콘솔에 붙는다. 지난 출력이 먼저 와서 화면이 되살아난다.
+    func attach(_ info: AgentdSessionInfo, plan: LaunchPlan?) {
+        guard let remote = link as? RemoteLink else { return }
+        self.plan = plan
+        missingFolder = nil
+        running = info.running
+        remote.attach(info)
+        if !info.running { tracker.noteExit() }
+        endedWhileAway = !info.running
     }
 
     func start(plan: LaunchPlan, shell: String) {
@@ -89,16 +83,23 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         let envList = env.map { "\($0.key)=\($0.value)" }
         let wrapped = LaunchPlanner.shellWrapped(plan.command, shell: shell)
         let cwd = FileManager.default.fileExists(atPath: plan.cwd) ? plan.cwd : NSHomeDirectory()
-        view.startProcess(executable: wrapped.executable, args: wrapped.args, environment: envList,
-                          execName: nil, currentDirectory: cwd)
+        let term = view.getTerminal()
         running = true
+        link.start(AgentdSpawn(executable: wrapped.executable, args: wrapped.args, env: envList, cwd: cwd,
+                               cols: term.cols, rows: term.rows))
     }
 
     func terminate() {
         guard running else { return }
         running = false
-        view.terminate()
+        link.terminate()
     }
+
+    /// 앱이 꺼진 사이 agentd 에서 끝난 콘솔에 붙었다(다시 띄우기 띠를 바로 보인다).
+    private(set) var endedWhileAway = false
+
+    /// 프로세스는 그대로 두고 떨어진다(앱을 끌 때 콘솔을 계속 돌리는 경우).
+    func detach() { link.detach() }
 
     /// 다시 띄우기를 기다리는 시작 함수. 옛 프로세스의 종료 알림이 온 뒤에 부른다.
     private var pendingRestart: (() -> Void)?
@@ -146,10 +147,9 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
 
     /// 자식 프로세스 그룹에 신호를 보낸다(일시정지 SIGSTOP, 재개 SIGCONT).
     func signal(_ sig: Int32) -> Bool {
-        let pid = view.process.shellPid
-        guard running, pid > 0 else { return false }
+        guard running else { return false }
         paused = sig == SIGSTOP
-        return killpg(getpgid(pid), sig) == 0 || kill(pid, sig) == 0
+        return link.signal(sig)
     }
 
     private(set) var paused = false
@@ -194,11 +194,8 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
 
     /// 터미널의 앞 프로세스 그룹이 셸 자신이면 프롬프트에서 입력을 기다리는 중이다.
     private func shellAtPrompt() -> Bool? {
-        let fd = view.process.childfd, pid = view.process.shellPid
-        guard running, fd >= 0, pid > 0 else { return nil }
-        let fg = tcgetpgrp(fd)
-        guard fg > 0 else { return nil }
-        return fg == getpgid(pid)
+        guard running else { return nil }
+        return link.atPrompt
     }
 
     func idleSeconds(now: Date = Date()) -> TimeInterval { tracker.idleSeconds(now: now) }
@@ -248,42 +245,76 @@ final class TerminalSession: NSObject, LocalProcessTerminalViewDelegate {
     /// 훅이 알려 준 claude 세션 id.
     var onSessionID: ((String) -> Void)?
 
-    private func handleOutput(_ slice: ArraySlice<UInt8>) {
-        tracker.noteOutput()
+    private func received(_ slice: ArraySlice<UInt8>, replay: Bool) {
+        view.feed(byteArray: slice)
+        // 다시 붙을 때 받은 지난 출력은 "지금 일하는 중" 으로 치지 않는다.
+        if !replay { tracker.noteOutput() }
         let text = stripper.feed(slice)
         guard !text.isEmpty else { return }
         recentText += text
         // 길이는 utf8.count(바로 나옴)로 본다. 글자 수(count)는 조각마다 처음부터 세어, 대량 출력 때 메인 스레드 시간의 대부분이었다.
         // 한글은 글자당 3바이트라 바이트 기준을 넉넉히 둔다(글자 기준 이전 64,000 / 48,000 과 비슷한 양).
         if recentText.utf8.count > 192_000 { recentText = String(recentText.suffix(48_000)) }
+        guard !replay else { return }
         for l in outputListeners.values { l(text) }
     }
 
     func clearRecentText() { recentText = "" }
 
-    // MARK: LocalProcessTerminalViewDelegate
+    private func processTerminated(exitCode: Int32?) {
+        if let p = pendingRestart {
+            // 다시 띄우려고 끈 옛 프로세스. 끝남으로 기록하지 않고 새로 띄운다.
+            pendingRestart = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { p() }
+            return
+        }
+        // 우리가 끈 프로세스(노드 지우기 등)의 늦은 알림은 버린다.
+        guard running else { return }
+        running = false
+        tracker.noteExit()
+        onExit?(exitCode)
+    }
 
-    nonisolated func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
+    // MARK: TerminalViewDelegate
 
-    nonisolated func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
+    nonisolated func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
+        MainActor.assumeIsolated { link.resize(cols: newCols, rows: newRows) }
+    }
+
+    nonisolated func setTerminalTitle(source: TerminalView, title: String) {
         MainActor.assumeIsolated { onTitle?(title) }
     }
 
     nonisolated func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
 
-    nonisolated func processTerminated(source: TerminalView, exitCode: Int32?) {
+    nonisolated func send(source: TerminalView, data: ArraySlice<UInt8>) {
         MainActor.assumeIsolated {
-            if let p = pendingRestart {
-                // 다시 띄우려고 끈 옛 프로세스. 끝남으로 기록하지 않고 새로 띄운다.
-                pendingRestart = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { p() }
-                return
-            }
-            running = false
-            tracker.noteExit()
-            onExit?(exitCode)
+            view.onUserInput?()
+            link.send(data)
         }
     }
+
+    nonisolated func scrolled(source: TerminalView, position: Double) {
+        MainActor.assumeIsolated { view.onScrolled?() }
+    }
+
+    nonisolated func requestOpenLink(source: TerminalView, link: String, params: [String: String]) {
+        if let url = URL(string: link) { MainActor.assumeIsolated { _ = NSWorkspace.shared.open(url) } }
+    }
+
+    nonisolated func bell(source: TerminalView) {}
+
+    nonisolated func clipboardCopy(source: TerminalView, content: Data) {
+        guard let str = String(bytes: content, encoding: .utf8) else { return }
+        MainActor.assumeIsolated {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.writeObjects([str as NSString])
+        }
+    }
+
+    nonisolated func iTermContent(source: TerminalView, content: ArraySlice<UInt8>) {}
+
+    nonisolated func rangeChanged(source: TerminalView, startY: Int, endY: Int) {}
 }
 
 /// 자식 프로세스 환경 변수. 앱을 Finder 에서 띄우면 환경이 빈약하므로 최소한을 채운다.

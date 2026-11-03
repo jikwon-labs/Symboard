@@ -25,6 +25,7 @@ final class TerminalNodeContent: NSObject, NodeContent {
                 self?.container.bottomButton.isHidden = !(v?.isScrolledBack ?? false)
             }
             s.onExit = { [weak self] _ in self?.exitBanner.isHidden = false }
+            if s.endedWhileAway && !s.running { exitBanner.isHidden = false }
         }
         container.addSubview(exitBanner)
         container.banner = exitBanner
