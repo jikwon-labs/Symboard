@@ -397,12 +397,9 @@ final class ShareServer {
     private func readChats() {
         var live = Set<UUID>()
         for pair in sharedNodes {
-            guard let spec = pair.node.terminal, spec.agent == .claude, let sid = spec.sessionID else { continue }
+            guard let spec = pair.node.terminal, let path = WebLinkOpener.transcriptPath(spec, model: model) else { continue }
             let id = pair.node.id
             live.insert(id)
-            let profile = spec.profileID.flatMap { pid in model.state.profiles.first { $0.id == pid } }
-            let base = (profile?.agent == .claude ? profile?.configDir : nil) ?? (NSHomeDirectory() + "/.claude")
-            let path = "\(base)/projects/\(LaunchPlanner.claudeProjectDirName(for: LaunchPlanner.resolvedPath(spec.cwd)))/\(sid).jsonl"
             var tail = chats[id] ?? ChatTail(path: path)
             var reset = false
             if tail.path != path { tail = ChatTail(path: path); reset = true }
@@ -499,7 +496,7 @@ private final class Viewer {
 }
 
 /// claude 세션 기록 파일 하나를 끝에서부터 따라 읽는다. 읽은 자리를 기억하고, 덜 쓴 마지막 줄은 다음에 잇는다.
-private struct ChatTail {
+struct ChatTail {
     let path: String
     var offset: UInt64 = 0
     var carry = Data()

@@ -22,6 +22,8 @@ final class SettingsWindowController: NSWindowController {
     private let confirmQuit = NSButton(checkboxWithTitle: L("Ask before quitting"), target: nil, action: nil)
     /// 다시 열었을 때 지난 대화를 이어 갈지 묻기(기본 끔: 바로 이어 간다).
     private let askResume = NSButton(checkboxWithTitle: L("Ask before resuming last conversations"), target: nil, action: nil)
+    /// claude 가 보여 준 링크를 이은 웹 타일에 자동으로 열기(15차, 기본 켬).
+    private let autoOpenLinks = NSButton(checkboxWithTitle: L("Open links claude shows in a linked web tile"), target: nil, action: nil)
     /// 사람이 연 콘솔은 일을 아래 새 콘솔에 나눠 맡긴다.
     private let leadDelegates = NSButton(checkboxWithTitle: L("The console you talk to hands work to new consoles"), target: nil, action: nil)
     /// 에이전트가 연 콘솔이 끝나면 연 콘솔에 알리고 오른쪽 위에 띄운다.
@@ -96,6 +98,7 @@ final class SettingsWindowController: NSWindowController {
         (updates.cell as? NSButtonCell)?.attributedTitle = NSAttributedString(string: updates.title, attributes: [.foregroundColor: Theme.text, .font: NSFont.systemFont(ofSize: 13)])
         for (b, title, sel) in [(confirmQuit, "Ask before quitting", #selector(confirmQuitChanged)),
                                 (askResume, "Ask before resuming last conversations", #selector(askResumeChanged)),
+                                (autoOpenLinks, "Open links claude shows in a linked web tile", #selector(autoOpenLinksChanged)),
                                 (leadDelegates, "The console you talk to hands work to new consoles", #selector(leadDelegatesChanged)),
                                 (reportToLead, "Tell the lead when a console it opened finishes", #selector(reportToLeadChanged))] {
             b.title = L(title)
@@ -209,7 +212,7 @@ final class SettingsWindowController: NSWindowController {
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, confirmQuit, askResume, keepConsoles, keepNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, reportToLead, reportNote, limits, limitsNote])
+        let stack = NSStackView(views: [generalHeader, general, updates, updatesNote, confirmQuit, askResume, autoOpenLinks, keepConsoles, keepNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, reportToLead, reportNote, limits, limitsNote])
         stack.setCustomSpacing(4, after: confirmQuit)
         stack.setCustomSpacing(4, after: updates)
         stack.setCustomSpacing(4, after: keepConsoles)
@@ -254,6 +257,7 @@ final class SettingsWindowController: NSWindowController {
         updates.state = UpdateCheck.enabled(Prefs.shared) ? .on : .off
         confirmQuit.state = UIPrefs.confirmQuit(Prefs.shared) ? .on : .off
         askResume.state = UIPrefs.askResume(Prefs.shared) ? .on : .off
+        autoOpenLinks.state = ConsoleWebLinks.autoOpen(Prefs.shared) ? .on : .off
         leadDelegates.state = BoardTools.leadDelegates(Prefs.shared) ? .on : .off
         reportToLead.state = WorkerReport.enabled(Prefs.shared) ? .on : .off
         keepConsoles.state = KeepConsolesPrefs.enabled(Prefs.shared) ? .on : .off
@@ -290,6 +294,7 @@ final class SettingsWindowController: NSWindowController {
     @objc private func confirmQuitChanged() { UIPrefs.setConfirmQuit(confirmQuit.state == .on, Prefs.shared) }
 
     @objc private func askResumeChanged() { UIPrefs.setAskResume(askResume.state == .on, Prefs.shared) }
+    @objc private func autoOpenLinksChanged() { ConsoleWebLinks.setAutoOpen(autoOpenLinks.state == .on, Prefs.shared) }
 
     @objc private func leadDelegatesChanged() { BoardTools.setLeadDelegates(leadDelegates.state == .on, Prefs.shared) }
 

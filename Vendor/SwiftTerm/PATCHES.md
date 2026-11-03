@@ -42,3 +42,9 @@
    접근성 알림 두 개를 건너뛰고 `offscreenDirty` 만 켠다. 출력 해석(`Terminal.feed`)은 그대로 해서 버퍼는 늘 최신이다.
    다시 창에 붙거나 보이면(`viewDidMoveToWindow`·`viewDidUnhide`, MacTerminalView) 쌓인 갱신 범위를 비우고 전체를 다시 그린다.
    원래는 보이지 않는 콘솔도 출력이 오면 초당 최대 60번 갱신과 접근성 알림을 했다.
+9. 일반 글자 Cmd+클릭(Symboard 15차). `MacTerminalView.mouseUp` 은 OSC 8 링크가 걸린 칸을 Cmd+클릭할 때만 `requestOpenLink` 를 불렀다.
+   claude 화면의 주소는 대부분 OSC 8 없이 그냥 글자라 Cmd+클릭해도 아무 일이 없었다.
+   OSC 8 링크가 아니면 공개 속성 `onCommandClickText` 에 클릭한 줄 글(자동 줄바꿈으로 이어진 앞뒤 줄 포함, 빈 칸은 공백)과
+   그 안의 글자 위치, Shift 여부를 넘긴다. 주소를 찾는 일은 앱(`ConsoleWebLinks`)이 한다.
+   `onCommandClickText` 가 붙어 있으면 Cmd+클릭의 누름·뗌(`mouseDown`·`mouseUp`)을 마우스 보고로 넘기지 않는다(`isAppCommandClick`).
+   claude 는 마우스 보고를 켜고 있어서, 넘기면 claude 도 같은 링크를 기본 브라우저로 열어 두 곳에서 열렸다.

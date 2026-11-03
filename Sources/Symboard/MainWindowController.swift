@@ -108,6 +108,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         // 열 프로젝트가 없으면(새 상태 폴더) 홈 화면의 폴더 열기로 시작한다.
         if model.selectedWorkspace.projectPath == nil, model.state.workspaces.allSatisfy({ $0.nodes.isEmpty }) { setHome(true) }
         refreshGit()
+        webLinks.start()
         gitTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 // 앱을 쓰지 않는 동안(다른 앱이 앞, 창이 가려짐·닫힘)은 건너뛰고, 다시 앞으로 오면 바로 한 번 본다.
@@ -512,6 +513,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     }
 
     var currentCanvas: CanvasView? { shownWorkspaceID.flatMap { canvases[$0] } }
+    /// 작업공간의 캔버스(한 번도 보지 않은 작업공간이면 nil).
+    func existingCanvas(for wsID: UUID) -> CanvasView? { canvases[wsID] }
+    /// 콘솔 링크를 웹 타일로 여는 일(15차).
+    private(set) lazy var webLinks = WebLinkOpener(controller: self)
 
     func showWorkspace(_ id: UUID) {
         captureViewports()

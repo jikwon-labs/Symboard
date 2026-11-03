@@ -150,6 +150,13 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
         show(tab: state.active)
     }
 
+    /// 콘솔 링크로 연다(15차): 이미 연 탭이면 그 탭, 지금 탭이 시작 화면이면 거기, 아니면 새 탭.
+    func open(_ url: String) {
+        if let i = state.tabs.firstIndex(of: url) { show(tab: i); return }
+        if !state.tabs[state.active].isEmpty { newTab() }
+        navigate(url)
+    }
+
     func newTab() {
         state.tabs.append("")
         state.titles.append("")

@@ -61,6 +61,10 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             self?.lastUserKey = Date()
         }
         link.onData = { [weak self] slice, replay in self?.received(slice, replay: replay) }
+        // 그냥 글자로 찍힌 주소의 Cmd+클릭(15차, SwiftTerm 패치 9).
+        view.onCommandClickText = { [nodeID] text, index, shift in
+            MainWindowController.current?.webLinks.commandClick(text: text, index: index, in: nodeID, external: shift)
+        }
         link.onExit = { [weak self] code in self?.processTerminated(exitCode: code) }
     }
 
@@ -315,8 +319,16 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         MainActor.assumeIsolated { view.onScrolled?() }
     }
 
+    /// OSC 8 링크 Cmd+클릭(15차): 앱 안 웹 타일로, Shift 를 같이 누르면 기본 브라우저로.
     nonisolated func requestOpenLink(source: TerminalView, link: String, params: [String: String]) {
-        if let url = URL(string: link) { MainActor.assumeIsolated { _ = NSWorkspace.shared.open(url) } }
+        MainActor.assumeIsolated {
+            let external = NSApp.currentEvent?.modifierFlags.contains(.shift) ?? false
+            guard let opener = MainWindowController.current?.webLinks else {
+                if let url = URL(string: link) { NSWorkspace.shared.open(url) }
+                return
+            }
+            opener.open(link, from: nodeID, external: external)
+        }
     }
 
     nonisolated func bell(source: TerminalView) {}

@@ -1352,8 +1352,14 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         }
     }
     
+    /// Symboard 패치 9: Cmd+클릭은 앱이 링크로 처리하므로 프로그램(claude 등)에 마우스 보고로 넘기지 않는다.
+    /// 넘기면 claude 가 링크를 기본 브라우저로 따로 열어 두 곳에서 열렸다.
+    func isAppCommandClick (_ event: NSEvent) -> Bool {
+        onCommandClickText != nil && event.modifierFlags.contains(.command)
+    }
+
     public override func mouseDown(with event: NSEvent) {
-        if allowMouseReporting && terminal.mouseMode.sendButtonPress() {
+        if allowMouseReporting && terminal.mouseMode.sendButtonPress() && !isAppCommandClick(event) {
             sharedMouseEvent(with: event)
             return
         }
@@ -1390,16 +1396,45 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     }
     
     var didSelectionDrag: Bool = false
-    
+
+    /// Symboard 패치 9: OSC 8 링크가 아닌 자리를 Cmd+클릭했을 때. (줄 글, 그 안의 글자 위치, Shift 를 눌렀는지)
+    public var onCommandClickText: ((String, Int, Bool) -> Void)?
+
+    /// 클릭한 줄의 글(자동 줄바꿈으로 이어진 앞뒤 줄 포함)과 그 안에서 클릭한 글자의 위치.
+    func clickedLineText (for event: NSEvent) -> (String, Int)
+    {
+        let hit = calculateMouseHit(with: event).grid
+        let lines = terminal.displayBuffer.lines
+        guard hit.row >= 0 && hit.row < lines.count else { return ("", -1) }
+        var first = hit.row
+        while first > 0 && lines [first].isWrapped { first -= 1 }
+        var last = hit.row
+        while last + 1 < lines.count && lines [last + 1].isWrapped { last += 1 }
+        // 빈 칸(code 0)은 공백으로 둬서 주소 끝을 알 수 있게.
+        let blank: (CharData) -> Character = { $0.code == 0 ? " " : $0.getCharacter () }
+        var text = ""
+        var index = -1
+        for r in first...last {
+            if r == hit.row {
+                index = text.count + lines [r].translateToString (endCol: hit.col, skipNullCellsFollowingWide: true, characterProvider: blank).count
+            }
+            text += lines [r].translateToString (trimRight: r == last, skipNullCellsFollowingWide: true, characterProvider: blank)
+        }
+        return (text, index)
+    }
+
     public override func mouseUp(with event: NSEvent) {
         if event.modifierFlags.contains(.command){
-            if let payload = getPayload(for: event) as? String {
-                if let (url, params) = urlAndParamsFrom(payload: payload) {
-                    terminalDelegate?.requestOpenLink(source: self, link: url, params: params)
-                }
+            if let payload = getPayload(for: event) as? String,
+               let (url, params) = urlAndParamsFrom(payload: payload) {
+                terminalDelegate?.requestOpenLink(source: self, link: url, params: params)
+            } else if let onCommandClickText {
+                // Symboard 패치 9: OSC 8 링크가 아닌 글자를 Cmd+클릭하면 그 줄 글과 글자 위치를 넘긴다.
+                let (text, index) = clickedLineText(for: event)
+                onCommandClickText(text, index, event.modifierFlags.contains(.shift))
             }
         }
-        if allowMouseReporting && terminal.mouseMode.sendButtonRelease() {
+        if allowMouseReporting && terminal.mouseMode.sendButtonRelease() && !isAppCommandClick(event) {
             sharedMouseEvent(with: event)
             return
         }

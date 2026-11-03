@@ -86,6 +86,8 @@ public enum Strings {
         "Don't ask again": "다시 묻지 않기",
         "Ask before quitting": "종료하기 전에 묻기",
         "Ask before resuming last conversations": "지난 대화를 이어 가기 전에 묻기",
+        "Open links claude shows in a linked web tile": "claude 가 보여 준 링크를 이어진 웹 타일에 자동으로 열기",
+        "Opened %@ in a web tile": "%@ 를 웹 타일에 열었습니다",
         "The console you talk to hands work to new consoles": "직접 연 콘솔은 일을 새 콘솔에 나눠 맡김",
         "A console you open keeps the conversation and splits work into goals, opening one console per goal below it. Consoles opened by agents do their goal themselves. Applies to consoles started after the change.": "직접 연 콘솔은 대화를 맡고, 일을 목적별로 나눠 목적마다 그 아래에 새 콘솔을 엽니다. 에이전트가 연 콘솔은 맡은 일을 직접 합니다. 바꾼 뒤 시작한 콘솔부터 적용됩니다.",
         "Tell the lead when a console it opened finishes": "에이전트가 연 콘솔이 끝나면 연 쪽 콘솔에 알림",
