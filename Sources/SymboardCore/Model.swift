@@ -314,6 +314,8 @@ public struct Workspace: Codable, Equatable, Sendable, Identifiable {
     /// 이 작업공간이 속한 프로젝트 폴더. 1차 상태 파일에는 없다.
     public var projectPath: String?
     public var links: [NodeLink]?
+    /// 마지막으로 이 작업공간에서 일한 때(콘솔이 일하거나 프로젝트를 연 때). 예전 상태 파일에는 없다.
+    public var lastActiveAt: Date?
 
     public init(id: UUID = UUID(), name: String, nodes: [BoardNode] = [], viewport: Viewport = Viewport(),
                 teams: [Team] = [], strokes: [Stroke] = [], loops: [LoopRule] = [], projectPath: String? = nil) {

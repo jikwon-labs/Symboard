@@ -210,6 +210,7 @@ final class SessionManager {
             let st = s.resolveStatus(now: now)
             if statuses[id] != st { statusSince[id] = now }
             statuses[id] = st
+            if st == .working { model.markActive(node: id, now: now) }
         }
         NotificationCenter.default.post(name: .statusTick, object: nil)
     }

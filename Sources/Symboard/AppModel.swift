@@ -172,6 +172,32 @@ final class AppModel: ObservableObject {
         NotificationCenter.default.post(name: .workspacesChanged, object: nil)
     }
 
+    /// 작업공간에 "방금 일함" 을 적는다. 콘솔이 일하는 동안 자주 불려서 1분에 한 번만 저장한다.
+    /// 되돌리기 기록에는 넣지 않는다(보드가 바뀐 게 아니다).
+    func markActive(workspace id: UUID, now: Date = Date()) {
+        guard let i = state.workspaces.firstIndex(where: { $0.id == id }) else { return }
+        if let last = state.workspaces[i].lastActiveAt, now.timeIntervalSince(last) < 60 { return }
+        state.workspaces[i].lastActiveAt = now
+        saveWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.saveInBackground() }
+        saveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
+    }
+
+    /// 콘솔이 든 작업공간에 "방금 일함" 을 적는다.
+    func markActive(node nodeID: UUID, now: Date = Date()) {
+        guard let ws = state.workspaces.first(where: { $0.nodes.contains { $0.id == nodeID } }) else { return }
+        markActive(workspace: ws.id, now: now)
+    }
+
+    /// 프로젝트의 작업공간을 모두 지우고 그 안의 콘솔을 끈다.
+    func removeProject(_ path: String) {
+        let nodeIDs = Projects.remove(path, from: &state)
+        for id in nodeIDs { sessions.terminate(id) }
+        scheduleSave()
+        NotificationCenter.default.post(name: .workspacesChanged, object: nil)
+    }
+
     func mutateState(_ body: (inout AppState) -> Void) {
         body(&state)
         scheduleSave()

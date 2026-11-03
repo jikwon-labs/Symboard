@@ -623,6 +623,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             let ws = model.addWorkspace(name: "Workspace 1")
             model.mutateWorkspace(ws.id) { $0.projectPath = path }
         }
+        model.markActive(workspace: model.selectedWorkspace.id)
         setHome(false)
         refreshGit()
         NotificationCenter.default.post(name: .workspacesChanged, object: nil)
@@ -638,6 +639,23 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     }
 
     func closeProject() { goHome() }
+
+    /// 홈 목록에서 프로젝트를 뺀다. 폴더는 지우지 않는다.
+    func removeProject(_ path: String) {
+        let wss = model.state.workspaces.filter { $0.projectPath == path }
+        let items = wss.reduce(0) { $0 + $1.nodes.count }
+        if items > 0 {
+            let a = NSAlert()
+            a.messageText = L("Remove \"%@\" from the list?", (path as NSString).lastPathComponent)
+            let terms = wss.reduce(0) { $0 + $1.nodes.filter { $0.kind == .terminal }.count }
+            let lost = L("Its workspaces and everything on them will be removed. The folder itself is not touched.")
+            a.informativeText = terms > 0 ? Ln(terms, "%d console will be stopped.", "%d consoles will be stopped.") + " " + lost : lost
+            a.addButton(withTitle: L("Remove"))
+            a.addButton(withTitle: L("Cancel"))
+            guard a.runModal() == .alertFirstButtonReturn else { return }
+        }
+        model.removeProject(path)
+    }
 
     func closeWorkspace(_ id: UUID) {
         guard let ws = model.workspace(id) else { return }

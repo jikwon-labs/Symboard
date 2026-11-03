@@ -894,6 +894,12 @@ struct HomeView: View {
 
     var body: some View {
         let paths = Projects.paths(in: model.state.workspaces)
+        TimelineView(.periodic(from: .now, by: 60)) { tl in
+            grid(paths, now: tl.date)
+        }
+    }
+
+    private func grid(_ paths: [String], now: Date) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(L("Projects")).font(Font(Theme.handwriting(size: 40))).foregroundStyle(Color.symText)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 240, maximum: 300), spacing: 14)], alignment: .leading, spacing: 14) {
@@ -908,8 +914,14 @@ struct HomeView: View {
                             }
                             Text((p as NSString).abbreviatingWithTildeInPath).font(.system(size: 11, design: .monospaced))
                                 .foregroundStyle(Color.symDim).lineLimit(1).truncationMode(.middle)
-                            Text(Ln(wss.count, "%d workspace", "%d workspaces") + " · " + Ln(wss.reduce(0) { $0 + $1.nodes.count }, "%d item", "%d items"))
-                                .font(.system(size: 11)).foregroundStyle(Color.symDim)
+                            HStack(spacing: 0) {
+                                Text(Ln(wss.count, "%d workspace", "%d workspaces") + " · " + Ln(wss.reduce(0) { $0 + $1.nodes.count }, "%d item", "%d items"))
+                                Spacer(minLength: 8)
+                                if let last = Projects.lastActive(p, in: wss) {
+                                    Text(Projects.ago(last, now: now)).help(last.formatted(date: .abbreviated, time: .shortened))
+                                }
+                            }
+                            .font(.system(size: 11)).foregroundStyle(Color.symDim)
                         }
                         .foregroundStyle(Color.symText)
                         .padding(14)
@@ -918,6 +930,12 @@ struct HomeView: View {
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.symBorder))
                     }
                     .buttonStyle(.plainHit)
+                    .contextMenu {
+                        Button(L("Open")) { c.openProject(p) }
+                        Button(L("Reveal in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) }
+                        Divider()
+                        Button(L("Remove from list")) { c.removeProject(p) }
+                    }
                 }
                 Button { c.chooseProjectFolder() } label: {
                     VStack(spacing: 8) {

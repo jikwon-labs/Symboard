@@ -124,6 +124,35 @@ public enum Projects {
         for ws in workspaces { if let p = ws.projectPath, !seen.contains(p) { seen.append(p) } }
         return seen
     }
+
+    /// 프로젝트에서 마지막으로 일한 때(작업공간 중 가장 늦은 것). 기록이 없으면 nil.
+    public static func lastActive(_ path: String, in workspaces: [Workspace]) -> Date? {
+        workspaces.filter { $0.projectPath == path }.compactMap(\.lastActiveAt).max()
+    }
+
+    /// 홈 카드에 쓰는 짧은 "얼마 전" 글. 1분 안이면 "방금".
+    public static func ago(_ date: Date, now: Date = Date()) -> String {
+        let s = max(0, Int(now.timeIntervalSince(date)))
+        if s < 60 { return L("just now") }
+        if s < 3600 { return Ln(s / 60, "%d minute ago", "%d minutes ago") }
+        if s < 86400 { return Ln(s / 3600, "%d hour ago", "%d hours ago") }
+        if s < 86400 * 30 { return Ln(s / 86400, "%d day ago", "%d days ago") }
+        return Ln(s / (86400 * 30), "%d month ago", "%d months ago")
+    }
+
+    /// 프로젝트를 목록에서 뺀다: 그 폴더의 작업공간을 모두 지운다(폴더는 건드리지 않는다).
+    /// 작업공간이 하나도 안 남으면 프로젝트 없는 빈 작업공간을 둔다. 지운 노드 id 를 돌려준다(콘솔 끄기용).
+    @discardableResult
+    public static func remove(_ path: String, from state: inout AppState) -> [UUID] {
+        let removed = state.workspaces.filter { $0.projectPath == path }
+        guard !removed.isEmpty else { return [] }
+        state.workspaces.removeAll { $0.projectPath == path }
+        if state.workspaces.isEmpty { state.workspaces = [Workspace(name: "Main")] }
+        if let id = state.selectedWorkspaceID, !state.workspaces.contains(where: { $0.id == id }) {
+            state.selectedWorkspaceID = state.workspaces.first?.id
+        }
+        return removed.flatMap { $0.nodes.map(\.id) }
+    }
 }
 
 /// 콘솔에 붙이는 짧은 사람 이름.
