@@ -196,7 +196,7 @@ public enum KeyInput {
     }
 }
 
-/// 키보드로 콘솔 사이를 옮겨 다닐 때의 순서(Ctrl+Tab·Cmd+1~9).
+/// 키보드로 콘솔 사이를 옮겨 다닐 때의 순서(Ctrl+Tab·Cmd+1~9·Cmd+Option+1~9).
 public enum ConsoleOrder {
     /// 화면 위치 순: 위 → 아래 줄, 줄 안에서 왼 → 오른쪽. 윗변 차이가 rowTolerance 안이면 같은 줄로 본다.
     public static func order(_ items: [(id: UUID, frame: Rect)], rowTolerance: Double = 120) -> [UUID] {
@@ -214,6 +214,38 @@ public enum ConsoleOrder {
         guard !ids.isEmpty else { return nil }
         guard let c = current, let i = ids.firstIndex(of: c) else { return forward ? ids.first : ids.last }
         return ids[(i + (forward ? 1 : ids.count - 1)) % ids.count]
+    }
+
+    /// 다른 콘솔이 연 콘솔(spawned·handoff 선의 끝)이 아닌 콘솔들, 화면 위치 순. Cmd+1~9 가 고르는 목록.
+    public static func roots(_ items: [(id: UUID, frame: Rect)], links: [NodeLink]) -> [UUID] {
+        let ids = Set(items.map(\.id))
+        return order(items.filter { WorkerReport.parentConsole(of: $0.id, links: links, isConsole: ids.contains) == nil })
+    }
+
+    /// 이 콘솔이 든 트리의 맨 위 콘솔. 부모가 없으면 자기 자신.
+    public static func root(of id: UUID, items: [(id: UUID, frame: Rect)], links: [NodeLink]) -> UUID {
+        let ids = Set(items.map(\.id))
+        var seen: Set<UUID> = [id]
+        var cur = id
+        while let p = WorkerReport.parentConsole(of: cur, links: links, isConsole: ids.contains), !seen.contains(p) {
+            seen.insert(p)
+            cur = p
+        }
+        return cur
+    }
+
+    /// 맨 위 콘솔 아래의 모든 콘솔(자식·손자…), 화면 위치 순. Cmd+Option+1~9 가 고르는 목록.
+    public static func descendants(of root: UUID, items: [(id: UUID, frame: Rect)], links: [NodeLink]) -> [UUID] {
+        let ids = Set(items.map(\.id))
+        var found: Set<UUID> = []
+        var frontier = [root]
+        while let cur = frontier.popLast() {
+            for c in ConsoleArchive.children(of: cur, links: links, isConsole: ids.contains) where c != root && !found.contains(c) {
+                found.insert(c)
+                frontier.append(c)
+            }
+        }
+        return order(items.filter { found.contains($0.id) })
     }
 
     /// Cmd+1~9 의 키 코드(ANSI 자판 숫자 줄) → 1~9.

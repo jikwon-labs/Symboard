@@ -90,6 +90,30 @@ import Testing
         #expect(ConsoleOrder.step(from: a, in: [], forward: true) == nil)
     }
 
+    /// a ─spawned→ b ─spawned→ c, a ─handoff→ 카드 ─handoff→ d, e 는 홀로.
+    @Test func treesSplitRootsFromChildren() {
+        let card = UUID()
+        let items: [(id: UUID, frame: Rect)] = [
+            (a, Rect(x: 0, y: 0, w: 640, h: 400)),
+            (b, Rect(x: 0, y: 500, w: 640, h: 400)),
+            (c, Rect(x: 700, y: 500, w: 640, h: 400)),
+            (d, Rect(x: 0, y: 1000, w: 640, h: 400)),
+            (e, Rect(x: 700, y: 0, w: 640, h: 400)),
+        ]
+        let links = [
+            NodeLink(from: a, to: b, style: NodeLink.spawnedStyle),
+            NodeLink(from: b, to: c, style: NodeLink.spawnedStyle),
+            NodeLink(from: a, to: card, style: NodeLink.handoffStyle),
+            NodeLink(from: card, to: d, style: NodeLink.handoffStyle),
+            NodeLink(from: e, to: a),   // 그냥 선은 트리로 치지 않는다
+        ]
+        #expect(ConsoleOrder.roots(items, links: links) == [a, e])
+        #expect(ConsoleOrder.root(of: c, items: items, links: links) == a)
+        #expect(ConsoleOrder.root(of: e, items: items, links: links) == e)
+        #expect(ConsoleOrder.descendants(of: a, items: items, links: links) == [b, c, d])
+        #expect(ConsoleOrder.descendants(of: e, items: items, links: links) == [])
+    }
+
     @Test func digitKeys() {
         #expect(ConsoleOrder.digit(keyCode: 18) == 1)
         #expect(ConsoleOrder.digit(keyCode: 20) == 3)

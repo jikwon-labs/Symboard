@@ -61,6 +61,14 @@ enum MainMenu {
             it.tag = i
         }
         goItem.submenu = goMenu
+        let treeItem = viewMenu.addItem(withTitle: L("Go to Console in Tree"), action: nil, keyEquivalent: "")
+        let treeMenu = NSMenu(title: L("Go to Console in Tree"))
+        for i in 1...9 {
+            let it = treeMenu.addItem(withTitle: L("Sub-console %d", i), action: #selector(MainWindowController.goToTreeConsoleMenu(_:)), keyEquivalent: "\(i)")
+            it.keyEquivalentModifierMask = [.command, .option]
+            it.tag = i
+        }
+        treeItem.submenu = treeMenu
         viewMenu.addItem(.separator())
         let next = viewMenu.addItem(withTitle: L("Next Workspace"), action: #selector(MainWindowController.nextWorkspace(_:)), keyEquivalent: "]")
         next.keyEquivalentModifierMask = [.command, .shift]
