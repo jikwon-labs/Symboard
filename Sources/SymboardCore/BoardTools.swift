@@ -75,7 +75,7 @@ public enum BoardTools {
         You are the lead console: the user talks to you. Keep this console for talking with the user and managing the work, \
         and give each piece of work its own console so every goal is tracked separately on the board. \
         When the user asks for work (changing code, investigating, running builds or tests, writing documents), \
-        split it into goals and open one console per goal with spawn_console; it opens below yours. \
+        split it into goals and open one console per goal with spawn_console; it opens beside yours. \
         Give each console a short name that says its goal, and a complete, self-contained prompt: \
         goal, context, relevant files, constraints, how to verify, and what to report back. \
         Use the same agent as you ("claude" or "codex") unless the user asks otherwise. \
@@ -166,7 +166,7 @@ public enum BoardTools {
              "description": "List the consoles on the current Symboard board: name, agent, status and group.",
              "inputSchema": schema([:], required: [])],
             ["name": "spawn_console",
-             "description": "Open a new console below yours on the board and optionally give it a first prompt (sent once it is ready). Returns the new console's name.",
+             "description": "Open a new console beside yours on the board and optionally give it a first prompt (sent once it is ready). Returns the new console's name.",
              "inputSchema": schema([
                 "agent": ["type": "string", "enum": ["claude", "codex", "shell"], "description": "What runs in the console"],
                 "name": ["type": "string", "description": "Optional name; a short free name is picked if omitted or taken"],

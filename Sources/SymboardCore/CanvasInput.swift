@@ -100,6 +100,49 @@ public enum CanvasLayout {
         return nearestFree(Rect(x: rowLeft, y: y, w: w, h: h), avoiding: obstacles)
     }
 
+    /// 에이전트가 띄운 하위 콘솔 자리. own 은 reference 가 이미 띄운 하위 콘솔들.
+    /// 첫 줄은 reference 와 같은 줄에서 오른쪽 1·왼쪽 1·오른쪽 2·왼쪽 2… 순으로 칸을 본다.
+    /// 칸에 자기 하위 콘솔이 있으면 건너뛰고, 다른 노드가 막으면 그쪽 방향은 닫는다(다른 세션을 건너뛰지 않는다).
+    /// 한 줄에 perRow 개가 차거나 양쪽이 다 닫히면 그 줄 아래로 내려가 reference 밑 칸부터 같은 순서로 본다.
+    public static func sideSlot(w: Double, h: Double, reference ref: Rect, obstacles: [Rect], own: [Rect] = [],
+                                gap: Double = 40, perRow: Int = 5) -> Rect {
+        let clearance = 24.0
+        func overlaps(_ a: Rect, _ o: Rect) -> Bool {
+            a.x < o.x + o.w + clearance && o.x < a.x + a.w + clearance && a.y < o.y + o.h + clearance && o.y < a.y + a.h + clearance
+        }
+        func contains(_ o: Rect, _ r: Rect) -> Bool { o.x <= r.x && o.y <= r.y && o.x + o.w >= r.x + r.w && o.y + o.h >= r.y + r.h }
+        // 그룹 상자처럼 자기 하위 콘솔을 품은 장애물은 자기 것으로 본다.
+        let foreign = obstacles.filter { o in o != ref && !own.contains { contains(o, $0) } }
+        let step = w + gap
+        var y = ref.y
+        for row in 0..<12 {
+            let inRow = own.filter { $0.y < y + h && y < $0.y + $0.h }
+            if inRow.count < perRow {
+                var openRight = true, openLeft = true
+                // 칸을 보고 놓을 수 있으면 그 칸, 다른 노드에 막히면 nil 과 함께 방향을 닫는다.
+                func probe(_ x: Double, _ open: inout Bool) -> Rect? {
+                    guard open else { return nil }
+                    let f = Rect(x: x, y: y, w: w, h: h)
+                    if foreign.contains(where: { overlaps(f, $0) }) { open = false; return nil }
+                    return own.contains(where: { overlaps(f, $0) }) ? nil : f
+                }
+                if row > 0 {
+                    var center = true
+                    if let f = probe(ref.x, &center) { return f }
+                }
+                for k in 1...perRow {
+                    let rx = row == 0 ? ref.x + ref.w + gap + Double(k - 1) * step : ref.x + Double(k) * step
+                    if let f = probe(rx, &openRight) { return f }
+                    if let f = probe(ref.x - Double(k) * step, &openLeft) { return f }
+                    if !openRight && !openLeft { break }
+                }
+            }
+            let bottoms = inRow.map { $0.y + $0.h } + (row == 0 ? [ref.y + ref.h] : [])
+            y = max(bottoms.max() ?? 0, y + h) + gap
+        }
+        return nearestFree(Rect(x: ref.x, y: y, w: w, h: h), avoiding: obstacles)
+    }
+
     /// reference 바로 아래 줄에서 왼쪽(reference 왼쪽 끝)부터 오른쪽으로 빈 칸을 찾는다. 줄이 차면 그 아래 줄로.
     /// 줄은 reference 의 몫(같은 줄 오른쪽 이웃 앞까지, 이웃이 없으면 maxRowWidth)만 쓴다.
     /// 나란히 선 lead 들이 각자 일을 맡기면, 한쪽 콘솔이 이웃 lead 밑으로 들어가 선이 엇갈렸다.

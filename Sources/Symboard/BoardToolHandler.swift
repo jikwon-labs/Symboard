@@ -174,8 +174,8 @@ extension MainWindowController {
             node = addTerminal(spec: spec, at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), title: name, teamID: teamID)
             glideReveal([pair], zoomIn: true)
         } else if caller != nil {
-            // 부른 콘솔(lead) 아래 줄에 왼쪽부터 놓는다. 맡긴 일이 lead 밑에 한 줄로 모인다.
-            let f = belowFrame(w: 640, h: 400, near: caller)
+            // 부른 콘솔(lead) 좌우 같은 줄에 놓는다. 다른 콘솔이 막으면 그것을 피해 가장 가까운 빈 칸으로.
+            let f = sideFrame(w: 640, h: 400, near: caller)
             node = addTerminal(spec: spec, at: Point(x: f.x, y: f.y), title: name, teamID: teamID)
             glideReveal([f], zoomIn: true)
         } else {
@@ -195,7 +195,7 @@ extension MainWindowController {
         if let caller { currentCanvas?.select(caller) }
         currentCanvas?.layoutGroups()
         currentCanvas?.layoutLinks()
-        let opened = "Opened console \(node.title) (\(agent))\(callerNode.map { " \(cardID == nil ? "below" : "next to") \($0.title)" } ?? "")\(cardID == nil ? "" : " with a handoff card")."
+        let opened = "Opened console \(node.title) (\(agent))\(callerNode.map { " next to \($0.title)" } ?? "")\(cardID == nil ? "" : " with a handoff card")."
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { reply(opened, false); return }
         whenReady(node.id, timeout: 45) { [weak self] status in
             guard let self, let s = self.model.sessions.session(for: node.id) else { reply(opened + " It closed before the prompt was sent.", true); return }

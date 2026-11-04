@@ -1500,15 +1500,17 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         return model.suggestedFrame(size: CGSize(width: w, height: h), near: scrollView.visibleCenter)
     }
 
-    /// 기준 노드(그룹에 들었으면 그 그룹) 아래 빈 칸. 기준이 없으면 옆 빈 칸과 같다.
-    func belowFrame(w: Double, h: Double, near: UUID?) -> Rect {
+    /// 기준 노드(그룹에 들었으면 그 그룹)가 띄운 하위 콘솔 자리(CanvasLayout.sideSlot). 기준이 없으면 besideFrame 과 같다.
+    func sideFrame(w: Double, h: Double, near: UUID?) -> Rect {
         let ws = model.selectedWorkspace
-        guard var ref = near.flatMap({ id in ws.nodes.first { $0.id == id } })?.frame else { return besideFrame(w: w, h: h, near: near) }
+        guard let near, var ref = ws.nodes.first(where: { $0.id == near })?.frame else { return besideFrame(w: w, h: h, near: near) }
+        let childIDs = Set((ws.links ?? []).filter { $0.from == near && $0.style == NodeLink.spawnedStyle }.map(\.to))
+        let own = ws.nodes.filter { childIDs.contains($0.id) }.map(\.frame)
         let obstacles = CanvasLayout.obstacles(nodes: ws.nodes, teams: ws.teams)
         if let box = obstacles.first(where: { $0.x <= ref.x && $0.y <= ref.y && $0.x + $0.w >= ref.x + ref.w && $0.y + $0.h >= ref.y + ref.h }) {
             ref = box
         }
-        return CanvasLayout.belowSlot(w: w, h: h, reference: ref, obstacles: obstacles)
+        return CanvasLayout.sideSlot(w: w, h: h, reference: ref, obstacles: obstacles, own: own)
     }
 
     /// 새로 놓은 노드로 화면을 부드럽게 옮긴다. 배율은 그대로 두되, 화면보다 크면 들어오게 줄인다.
