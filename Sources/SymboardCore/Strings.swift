@@ -3,6 +3,28 @@ import Foundation
 /// 화면 글 한국어 표(10차). 열쇠는 영어 원문 그대로, 없는 글은 영어로 보인다.
 public enum Strings {
     public static let ko: [String: String] = [
+        // 새 터미널 창
+        "New Terminal": "새 터미널",
+        "Opens a new console on the board.": "보드에 새 콘솔을 띄웁니다.",
+        "What to run": "실행할 프로그램",
+        "Shell": "셸",
+        "Other program": "다른 프로그램",
+        "Starts Claude Code. The board shows when it is working or waiting for you.": "Claude Code를 엽니다. 작업 중인지, 답을 기다리는지 보드에 표시됩니다.",
+        "Starts the Codex CLI.": "Codex CLI를 엽니다.",
+        "Opens your usual shell (zsh, bash...).": "평소 쓰는 셸(zsh, bash 등)을 엽니다.",
+        "Runs a program you choose, such as another AI CLI.": "다른 AI CLI처럼 직접 고른 프로그램을 실행합니다.",
+        "Program": "프로그램",
+        "A command name on your PATH, or the full path to a program.": "터미널에서 치는 명령 이름이나, 프로그램의 전체 경로를 적습니다.",
+        "e.g. %@": "예: %@",
+        "Find...": "찾기...",
+        "Working folder": "작업 폴더",
+        "The console starts in this folder.": "콘솔이 이 폴더에서 시작합니다.",
+        "Change...": "바꾸기...",
+        "Extra options": "추가 옵션",
+        "Optional": "선택",
+        "Added to the end of the command as-is. Usually leave this empty.": "명령 끝에 그대로 붙습니다. 보통은 비워 두면 됩니다.",
+        "Create": "만들기",
+        "← → to choose, Enter to create": "← → 로 고르고 Enter 로 만들기",
         // 17차: 콘솔 보관
         "ARCHIVED": "보관됨",
         "%d WORKING": "%d 작업 중",

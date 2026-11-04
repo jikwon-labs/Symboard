@@ -1496,7 +1496,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     func newTerminal(at point: Point?) {
         NewTerminalDialog.lastCwd = projectPath
-        guard let spec = NewTerminalDialog.run(profiles: model.state.profiles) else { return }
+        guard let spec = NewTerminalDialog.run() else { return }
         addTerminal(spec: spec, at: point)
     }
 
