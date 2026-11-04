@@ -10,6 +10,8 @@ final class SettingsWindowController: NSWindowController {
     private let latin = NSPopUpButton()
     private let hangul = NSPopUpButton()
     private let size = NSPopUpButton()
+    /// 줄 간격(글꼴 높이의 배수).
+    private let lineHeight = NSPopUpButton()
     private let preview = NSTextField(labelWithString: TerminalFontSetting.previewText)
     /// 8차 3번: claude 가 보드에 콘솔을 띄우는 도구를 붙일지.
     private let boardTools = NSButton(checkboxWithTitle: L("Let agents open consoles on the board"), target: nil, action: nil)
@@ -56,7 +58,7 @@ final class SettingsWindowController: NSWindowController {
     private func rebuild() {
         window?.title = L("Settings")
         window?.contentView?.subviews.forEach { $0.removeFromSuperview() }
-        for p in [latin, hangul, size, appearance, language, maxDepth, maxOpened] { p.removeAllItems() }
+        for p in [latin, hangul, size, lineHeight, appearance, language, maxDepth, maxOpened] { p.removeAllItems() }
         build()
         load()
     }
@@ -165,7 +167,13 @@ final class SettingsWindowController: NSWindowController {
         }
         size.setAccessibilityLabel(L("Terminal font size"))
 
-        for p in [latin, hangul, size] {
+        for v in TerminalFontSetting.lineHeightChoices {
+            lineHeight.addItem(withTitle: String(format: "%.1f×", v))
+            lineHeight.lastItem?.representedObject = v
+        }
+        lineHeight.setAccessibilityLabel(L("Terminal line spacing"))
+
+        for p in [latin, hangul, size, lineHeight] {
             p.target = self
             p.action = #selector(changed)
         }
@@ -188,6 +196,7 @@ final class SettingsWindowController: NSWindowController {
             [label(L("Font")), latin],
             [label(L("Korean font")), hangul],
             [label(L("Size")), size],
+            [label(L("Line spacing")), lineHeight],
         ])
         grid.rowSpacing = 10
         grid.columnSpacing = 12
@@ -264,11 +273,21 @@ final class SettingsWindowController: NSWindowController {
         return l
     }
 
+    /// 저장된 줄 간격과 가장 가까운 항목을 고른다(목록에 없는 값이 prefs 에 있을 때).
+    private func selectLineHeight(_ v: Double) {
+        let items = lineHeight.itemArray
+        let best = items.enumerated().min { a, b in
+            abs((a.element.representedObject as? Double ?? 0) - v) < abs((b.element.representedObject as? Double ?? 0) - v)
+        }
+        if let best { lineHeight.selectItem(at: best.offset) }
+    }
+
     private func load() {
         let s = TerminalFont.setting
         if s.latinFamily.isEmpty || latin.item(withTitle: s.latinFamily) == nil { latin.selectItem(at: 0) } else { latin.selectItem(withTitle: s.latinFamily) }
         if s.hangulFamily.isEmpty || hangul.item(withTitle: s.hangulFamily) == nil { hangul.selectItem(at: 0) } else { hangul.selectItem(withTitle: s.hangulFamily) }
         size.selectItem(withTag: Int(s.size))
+        selectLineHeight(s.lineHeight)
         preview.font = TerminalFont.make(s)
         boardTools.state = BoardTools.enabled(Prefs.shared) ? .on : .off
         updates.state = UpdateCheck.enabled(Prefs.shared) ? .on : .off
@@ -343,7 +362,8 @@ final class SettingsWindowController: NSWindowController {
     @objc private func changed() {
         let l = latin.indexOfSelectedItem <= 0 ? "" : latin.titleOfSelectedItem ?? ""
         let h = hangul.indexOfSelectedItem <= 0 ? "" : hangul.titleOfSelectedItem ?? ""
-        let s = TerminalFontSetting(latinFamily: l, hangulFamily: h, size: Double(size.selectedTag()))
+        let lh = lineHeight.selectedItem?.representedObject as? Double ?? TerminalFontSetting.standard.lineHeight
+        let s = TerminalFontSetting(latinFamily: l, hangulFamily: h, size: Double(size.selectedTag()), lineHeight: lh)
         TerminalFont.update(s)
         preview.font = TerminalFont.make(s)
     }

@@ -1804,6 +1804,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             cycleConsole(forward: !f.contains(.shift))
             return true
         }
+        // Cmd+Enter: 콘솔 가까이 보기(같은 키로 되돌아감). 입력칸(⌘ Enter 저장 폼)에 초점이 있으면 넘긴다.
+        if [36, 76].contains(event.keyCode), f == .command, !(window?.firstResponder is NSTextView) {
+            toggleCloseUp(nil)
+            return true
+        }
         if let d = ConsoleOrder.digit(keyCode: event.keyCode) {
             if f == .command { goToConsole(number: d); return true }
             if f == [.command, .shift], d == 1 { zoomToFit(nil); return true }
@@ -1818,6 +1823,44 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             let i = ids.firstIndex(of: id)
             v.header.setNumber(show && i != nil && i! < 9 ? i! + 1 : nil)
         }
+    }
+
+    // MARK: 콘솔 가까이 보기
+
+    /// 가까이 보는 중인 콘솔과 들어가기 전 화면(CloseUp).
+    private var closeUp: CloseUp?
+
+    /// 초점이 있는 콘솔(없으면 고른 콘솔).
+    private func closeUpTarget() -> UUID? {
+        if let term = window?.firstResponder as? SymTerminalView,
+           let id = model.sessions.sessions.first(where: { $0.value.view === term })?.key { return id }
+        if let id = currentCanvas?.selectedNodeID, model.node(id)?.kind == .terminal { return id }
+        return nil
+    }
+
+    /// 콘솔 하나를 창에 꽉 차게 키운다. 같은 콘솔에서 다시 부르면 들어가기 전 위치·배율로 돌아간다.
+    @objc func toggleCloseUp(_ sender: Any?) {
+        guard let wsID = shownWorkspaceID else { return }
+        let target = closeUpTarget()
+        if let c = closeUp, c.workspaceID == wsID, target == nil || CloseUp.step(current: c, target: target!, workspaceID: wsID) == .restore {
+            closeUp = nil
+            scrollView.glide(to: c.previous.center, zoom: CGFloat(c.previous.zoom))
+            return
+        }
+        guard let id = target, let n = model.node(id) else { return }
+        // 다른 콘솔로 옮겨 가도 되돌아갈 자리는 처음 들어가기 전 화면이다.
+        let previous = closeUp?.workspaceID == wsID ? closeUp!.previous
+            : Viewport(center: scrollView.visibleCenter, zoom: Double(scrollView.magnification))
+        closeUp = CloseUp(nodeID: id, previous: previous, workspaceID: wsID)
+        // 위 막대(70)·아래 명령 바(110)를 뺀 곳에 맞춘다(safeCanvasRect 와 같은 값).
+        let size = scrollView.frame.size
+        let z = CloseUp.zoom(fitting: n.frame, width: Double(size.width), height: Double(size.height) - 180,
+                             minZoom: Double(scrollView.minMagnification))
+        let c = CloseUp.center(of: n.frame)
+        currentCanvas?.select(id)
+        if let t = model.sessions.session(for: id)?.view { window?.makeFirstResponder(t) }
+        // 보이는 영역의 가운데는 화면 가운데보다 20pt 위다(glideReveal 과 같은 보정).
+        scrollView.glide(to: Point(x: c.x, y: c.y + 20 / z), zoom: CGFloat(z))
     }
 
     @objc func zoomToFit(_ sender: Any?) {

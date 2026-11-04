@@ -32,6 +32,7 @@ public enum ShortcutCatalog {
             Entry("⌃ Tab  /  ⌃⇧ Tab", "Next / previous console (top to bottom, left to right)"),
             Entry("⌘ 1 … ⌘ 9", "Go to console N and type into it"),
             Entry("Hold ⌘", "Show console numbers"),
+            Entry("⌘ Enter", "Close-up: fill the window with this console (again to go back)"),
             Entry("Scroll over a console", "Scroll its history (or the program's own view)"),
             Entry("Type anything · ↓ Bottom", "Jump back to the latest output"),
             Entry("⇧ Enter", "New line without sending (claude, codex, shell)"),

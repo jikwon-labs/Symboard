@@ -164,13 +164,27 @@ extension TerminalView {
         return false
     }
     
+    /// Symboard: 칸 아래에서 글자 기준선까지의 높이. 줄 높이 배율로 늘어난 높이의 절반을 아래에 더해 글자를 칸 가운데에 둔다.
+    var baselineOffset: CGFloat {
+        let ascent = CTFontGetAscent(fontSet.normal)
+        let descent = CTFontGetDescent(fontSet.normal)
+        let leading = CTFontGetLeading(fontSet.normal)
+        let extra = max(0, cellDimension.height - ceil(ascent + descent + leading))
+        return ceil(descent + leading) + floor(extra / 2)
+    }
+
     // Computes the font dimensions once font.normal has been set
     func computeFontDimensions () -> CellDimension
     {
         let lineAscent = CTFontGetAscent (fontSet.normal)
         let lineDescent = CTFontGetDescent (fontSet.normal)
         let lineLeading = CTFontGetLeading (fontSet.normal)
+        #if os(macOS)
+        // Symboard: 줄 높이 배율(lineHeightScale). 늘어난 높이는 baselineOffset 이 위아래로 나눠 글자를 가운데에 둔다.
+        let cellHeight = ceil((lineAscent + lineDescent + lineLeading) * max(1, lineHeightScale))
+        #else
         let cellHeight = ceil(lineAscent + lineDescent + lineLeading)
+        #endif
         #if os(macOS)
         // The following is a more robust way of getting the largest ascii character width, but comes with a performance hit.
         // See: https://github.com/migueldeicaza/SwiftTerm/issues/286
@@ -888,9 +902,7 @@ extension TerminalView {
     // TODO: this should not render any lines outside the dirtyRect
     func drawTerminalContents (dirtyRect: TTRect, context: CGContext, bufferOffset: Int)
     {
-        let lineDescent = CTFontGetDescent(fontSet.normal)
-        let lineLeading = CTFontGetLeading(fontSet.normal)
-        let yOffset = ceil(lineDescent+lineLeading)
+        let yOffset = baselineOffset
         let displayBuffer = terminal.displayBuffer
 
         func calcLineOffset (forRow: Int) -> CGFloat {

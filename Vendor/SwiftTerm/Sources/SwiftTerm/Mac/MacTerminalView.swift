@@ -147,6 +147,11 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     var fontSet: FontSet
 
     /// The font to use to render the terminal
+    /// Symboard: 줄 높이 배율(1 = 글꼴 높이 그대로). 바꾸면 칸 높이와 줄 수를 다시 구한다.
+    public var lineHeightScale: CGFloat = 1 {
+        didSet { if oldValue != lineHeightScale { resetFont() } }
+    }
+
     public var font: NSFont {
         get {
             return fontSet.normal
@@ -955,21 +960,27 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         var scale = slot * 0.84 / widest
         if tallest > 0 { scale = min(scale, CTFontGetAscent(fontSet.normal) / tallest) }
         scale = min(1.25, max(1, scale))
+        // 높이는 영문 ascent 에 묶어 두고(한글이 영문보다 너무 커 보이지 않게), 남은 틈은 가로로만 최대 8% 넓혀 줄인다.
+        // "줍 니 다" 처럼 글자마다 벌어져 보이던 것을 덜어 낸다. 칸 위치는 그대로다.
+        let stretch = min(1.08, max(1, slot * 0.9 / (widest * scale)))
+        let size = (CTFontGetSize(font) * scale * 4).rounded() / 4
+        let sx = (stretch * 100).rounded() / 100
         var drawFont = font
-        if scale > 1.01 {
-            let size = (CTFontGetSize(font) * scale * 4).rounded() / 4
-            let key = "\(CTFontCopyPostScriptName(font) as String)@\(size)"
+        if size > CTFontGetSize(font) + 0.01 || sx > 1.001 {
+            let key = "\(CTFontCopyPostScriptName(font) as String)@\(size)x\(sx)"
             if let cached = wideFontCache[key] {
                 drawFont = cached
             } else {
-                drawFont = CTFontCreateCopyWithAttributes(font, size, nil, nil)
+                var matrix = CGAffineTransform(scaleX: sx, y: 1)
+                drawFont = CTFontCreateCopyWithAttributes(font, size, &matrix, nil)
                 wideFontCache[key] = drawFont
             }
-            scale = CTFontGetSize(drawFont) / CTFontGetSize(font)
         }
+        var drawAdvances = [CGSize](repeating: .zero, count: n)
+        CTFontGetAdvancesForGlyphs(drawFont, .horizontal, glyphs, &drawAdvances, n)
         var out = positions
         for i in 0..<n {
-            out[i].x += max(0, (slot - advances[i].width * scale) / 2)
+            out[i].x += max(0, (slot - drawAdvances[i].width) / 2)
         }
         return (drawFont, out)
     }

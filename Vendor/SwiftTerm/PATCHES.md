@@ -48,3 +48,11 @@
    그 안의 글자 위치, Shift 여부를 넘긴다. 주소를 찾는 일은 앱(`ConsoleWebLinks`)이 한다.
    `onCommandClickText` 가 붙어 있으면 Cmd+클릭의 누름·뗌(`mouseDown`·`mouseUp`)을 마우스 보고로 넘기지 않는다(`isAppCommandClick`).
    claude 는 마우스 보고를 켜고 있어서, 넘기면 claude 도 같은 링크를 기본 브라우저로 열어 두 곳에서 열렸다.
+10. 줄 간격과 두 칸 글자 가로 넓히기(Symboard 콘솔 가독성).
+   - `MacTerminalView.lineHeightScale`(공개, 기본 1)을 더했다. `computeFontDimensions` 가 칸 높이를 글꼴 높이(ascent+descent+leading)의 이 배수로 잡는다.
+     원래는 글꼴 높이 그대로라 claude 화면의 한글 줄끼리 위아래가 거의 붙었다. 앱은 설정의 줄 간격(기본 1.2)을 넣는다.
+   - 늘어난 높이는 `baselineOffset`(AppleTerminalView)이 위아래로 반씩 나눠 글자를 칸 가운데에 둔다. 글자 그리기와 `CaretView` 의 블록 커서 속 글자가 같은 값을 쓴다.
+     원래 두 곳에 따로 있던 `ceil(descent+leading)` 계산을 이것으로 바꿨다. 줄 간격 1 이면 값이 같다.
+   - `fitWideGlyphs`(패치 6): 높이 배율은 그대로(영문 ascent 를 넘지 않게, 최대 1.25배) 두고, 남은 틈은 글꼴 행렬로 가로만 최대 8% 넓혀
+     두 칸의 90% 까지 채운다. 12pt SF Mono + Apple SD 산돌고딕 Neo 에서 한글 높이는 이미 영문 대문자보다 37% 커서 더 키우지 않았다.
+     가운데 맞춤은 넓힌 글꼴의 실제 advance 로 한다.

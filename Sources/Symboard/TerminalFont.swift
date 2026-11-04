@@ -14,6 +14,8 @@ enum TerminalFont {
     private(set) static var setting = TerminalFontSetting(prefs: .shared)
 
     static var current: NSFont { make(setting) }
+    /// 줄 높이 배율(SwiftTerm 패치 10).
+    static var lineHeight: CGFloat { CGFloat(setting.lineHeight) }
 
     static func update(_ s: TerminalFontSetting) {
         guard s != setting else { return }

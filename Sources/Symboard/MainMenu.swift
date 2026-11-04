@@ -47,6 +47,8 @@ enum MainMenu {
         // Cmd+1~9 는 콘솔 이동에 쓰므로 Zoom to Fit 은 Cmd+Shift+1. 실제 키 처리는 창 키 감시(키 코드)가 한다.
         let fit = viewMenu.addItem(withTitle: L("Zoom to Fit"), action: #selector(MainWindowController.zoomToFit(_:)), keyEquivalent: "1")
         fit.keyEquivalentModifierMask = [.command, .shift]
+        // 키(⌘ Enter)는 창 키 감시가 처리한다. 메뉴에 키를 달면 폼의 ⌘ Enter 저장까지 가로챈다.
+        viewMenu.addItem(withTitle: L("Close-up on Console"), action: #selector(MainWindowController.toggleCloseUp(_:)), keyEquivalent: "")
         viewMenu.addItem(.separator())
         let nextConsole = viewMenu.addItem(withTitle: L("Next Console"), action: #selector(MainWindowController.nextConsole(_:)), keyEquivalent: "\t")
         nextConsole.keyEquivalentModifierMask = [.control]

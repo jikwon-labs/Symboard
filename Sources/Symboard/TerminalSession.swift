@@ -51,6 +51,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         self.statusFile = statusDirectory.appendingPathComponent(nodeID.uuidString)
         super.init()
         view.terminalDelegate = self
+        view.lineHeightScale = TerminalFont.lineHeight
         view.font = TerminalFont.current
         view.nativeBackgroundColor = Theme.terminalBackground
         view.nativeForegroundColor = Theme.terminalText

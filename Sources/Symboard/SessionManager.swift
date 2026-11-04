@@ -58,7 +58,11 @@ final class SessionManager {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 let font = TerminalFont.current
-                for s in self.sessions.values { s.view.font = font }
+                let lh = TerminalFont.lineHeight
+                for s in self.sessions.values {
+                    s.view.lineHeightScale = lh
+                    s.view.font = font
+                }
             }
         }
     }
