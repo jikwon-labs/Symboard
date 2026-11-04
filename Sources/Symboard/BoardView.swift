@@ -668,13 +668,26 @@ final class CanvasView: NSView {
         }
     }
 
-    // MARK: 이미지 끌어다 놓기
+    // MARK: 끌어다 놓기 — 콘솔 위면 그 콘솔에 경로 입력, 빈 보드면 이미지 노드
 
-    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        imageURLs(from: sender).isEmpty ? [] : .copy
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { dropOperation(sender) }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { dropOperation(sender) }
+
+    private func dropOperation(_ sender: NSDraggingInfo) -> NSDragOperation {
+        if consoleSession(at: sender) != nil { return fileURLs(from: sender).isEmpty ? [] : .copy }
+        return imageURLs(from: sender).isEmpty ? [] : .copy
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        // 돌고 있는 콘솔 위에 놓으면 보드에 이미지를 만들지 않고, 터미널처럼 그 콘솔에 파일 경로를 쳐 넣는다.
+        if let session = consoleSession(at: sender) {
+            let urls = fileURLs(from: sender)
+            guard !urls.isEmpty else { return false }
+            session.sendText(DroppedPaths.terminalText(urls.map(\.path)), submit: false)
+            window?.makeFirstResponder(session.view)
+            return true
+        }
         let urls = imageURLs(from: sender)
         guard !urls.isEmpty else { return false }
         var p = CanvasGeometry.modelPoint(convert(sender.draggingLocation, from: nil))
@@ -687,6 +700,19 @@ final class CanvasView: NSView {
             p.x += 30; p.y += 30
         }
         return true
+    }
+
+    /// 놓는 자리에 보이는 노드 중 맨 위의 것이 돌고 있는 콘솔이면 그 세션. 헤더 위에 놓아도 콘솔로 친다.
+    private func consoleSession(at info: NSDraggingInfo) -> TerminalSession? {
+        let p = convert(info.draggingLocation, from: nil)
+        guard let v = subviews.reversed().compactMap({ $0 as? NodeView }).first(where: { !$0.isHidden && $0.frame.contains(p) }),
+              let session = model.sessions.session(for: v.nodeID), session.running else { return nil }
+        return session
+    }
+
+    private func fileURLs(from info: NSDraggingInfo) -> [URL] {
+        let opts: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        return info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: opts) as? [URL] ?? []
     }
 
     /// 보드에 초점이 있을 때 Cmd+V: 클립보드의 그림(파일 또는 그림 자체)을 이미지 노드로 놓는다.
