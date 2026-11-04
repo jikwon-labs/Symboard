@@ -33,6 +33,9 @@ final class SettingsWindowController: NSWindowController {
     private let leadDelegates = NSButton(checkboxWithTitle: L("The console you talk to hands work to new consoles"), target: nil, action: nil)
     /// 에이전트가 연 콘솔이 끝나면 연 콘솔에 알리고 오른쪽 위에 띄운다.
     private let reportToLead = NSButton(checkboxWithTitle: L("Tell the lead when a console it opened finishes"), target: nil, action: nil)
+    /// 일을 끝낸 worker 를 정해 둔 시간 뒤 보관하기(17차, 기본 켬).
+    private let autoArchive = NSButton(checkboxWithTitle: L("Archive finished consoles automatically"), target: nil, action: nil)
+    private let archiveMinutes = NSPopUpButton()
     private let keepConsoles = NSButton(checkboxWithTitle: L("Keep consoles running after quitting"), target: nil, action: nil)
     private let language = NSPopUpButton()
     private let maxDepth = NSPopUpButton()
@@ -41,7 +44,7 @@ final class SettingsWindowController: NSWindowController {
     private static let systemHangul = "System default (Apple SD Gothic Neo)"
 
     init() {
-        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 760), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let w = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 840), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         w.title = L("Settings")
         w.backgroundColor = Theme.surface
         w.isReleasedWhenClosed = false
@@ -58,7 +61,7 @@ final class SettingsWindowController: NSWindowController {
     private func rebuild() {
         window?.title = L("Settings")
         window?.contentView?.subviews.forEach { $0.removeFromSuperview() }
-        for p in [latin, hangul, size, lineHeight, appearance, language, maxDepth, maxOpened] { p.removeAllItems() }
+        for p in [latin, hangul, size, lineHeight, appearance, language, maxDepth, maxOpened, archiveMinutes] { p.removeAllItems() }
         build()
         load()
     }
@@ -105,7 +108,8 @@ final class SettingsWindowController: NSWindowController {
                                 (askResume, "Ask before resuming last conversations", #selector(askResumeChanged)),
                                 (autoOpenLinks, "Open links claude shows in a linked web tile", #selector(autoOpenLinksChanged)),
                                 (leadDelegates, "The console you talk to hands work to new consoles", #selector(leadDelegatesChanged)),
-                                (reportToLead, "Tell the lead when a console it opened finishes", #selector(reportToLeadChanged))] {
+                                (reportToLead, "Tell the lead when a console it opened finishes", #selector(reportToLeadChanged)),
+                                (autoArchive, "Archive finished consoles automatically", #selector(autoArchiveChanged))] {
             b.title = L(title)
             b.target = self
             b.action = sel
@@ -227,6 +231,17 @@ final class SettingsWindowController: NSWindowController {
             p.action = #selector(limitsChanged)
             p.setAccessibilityLabel(name)
         }
+        for n in ConsoleArchive.minuteChoices { archiveMinutes.addItem(withTitle: L("%d min", n)); archiveMinutes.lastItem?.tag = n }
+        archiveMinutes.target = self
+        archiveMinutes.action = #selector(archiveMinutesChanged)
+        archiveMinutes.setAccessibilityLabel(L("Archive after"))
+        let archiveRow = NSStackView(views: [autoArchive, archiveMinutes])
+        archiveRow.orientation = .horizontal
+        archiveRow.spacing = 8
+        archiveRow.alignment = .firstBaseline
+        let archiveNote = NSTextField(wrappingLabelWithString: L("A console opened by an agent that finished its goal and was left alone this long is stopped and shrunk to a card with its last report. Unarchive reopens the same conversation. Consoles you opened are never archived automatically."))
+        archiveNote.font = .systemFont(ofSize: 11)
+        archiveNote.textColor = Theme.textDim
         let limits = NSGridView(views: [
             [label(L("Max chain steps")), maxDepth],
             [label(L("Max consoles opened by agents")), maxOpened],
@@ -238,7 +253,7 @@ final class SettingsWindowController: NSWindowController {
         limitsNote.font = .systemFont(ofSize: 11)
         limitsNote.textColor = Theme.textDim
 
-        let stack = NSStackView(views: [generalHeader, general, checkRow, updatesNote, confirmQuit, askResume, autoOpenLinks, keepConsoles, keepNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, reportToLead, reportNote, limits, limitsNote])
+        let stack = NSStackView(views: [generalHeader, general, checkRow, updatesNote, confirmQuit, askResume, autoOpenLinks, keepConsoles, keepNote, header, grid, previewBox, note, agentsHeader, boardTools, agentsNote, leadDelegates, leadNote, reportToLead, reportNote, archiveRow, archiveNote, limits, limitsNote])
         stack.setCustomSpacing(4, after: confirmQuit)
         stack.setCustomSpacing(4, after: checkRow)
         stack.setCustomSpacing(4, after: keepConsoles)
@@ -260,6 +275,7 @@ final class SettingsWindowController: NSWindowController {
             limitsNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             leadNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             reportNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            archiveNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
             previewBox.heightAnchor.constraint(equalToConstant: 44),
             preview.leadingAnchor.constraint(equalTo: previewBox.leadingAnchor, constant: 12),
             preview.trailingAnchor.constraint(lessThanOrEqualTo: previewBox.trailingAnchor, constant: -12),
@@ -296,6 +312,9 @@ final class SettingsWindowController: NSWindowController {
         autoOpenLinks.state = ConsoleWebLinks.autoOpen(Prefs.shared) ? .on : .off
         leadDelegates.state = BoardTools.leadDelegates(Prefs.shared) ? .on : .off
         reportToLead.state = WorkerReport.enabled(Prefs.shared) ? .on : .off
+        autoArchive.state = ConsoleArchive.autoEnabled(Prefs.shared) ? .on : .off
+        archiveMinutes.selectItem(withTag: ConsoleArchive.minutes(Prefs.shared))
+        archiveMinutes.isEnabled = autoArchive.state == .on
         keepConsoles.state = KeepConsolesPrefs.enabled(Prefs.shared) ? .on : .off
         appearance.selectItem(at: AppearanceMode.allCases.firstIndex(of: UIPrefs.appearance(Prefs.shared)) ?? 0)
         language.selectItem(at: LanguageMode.allCases.firstIndex(of: UIPrefs.language(Prefs.shared)) ?? 0)
@@ -349,6 +368,11 @@ final class SettingsWindowController: NSWindowController {
 
     @objc private func leadDelegatesChanged() { BoardTools.setLeadDelegates(leadDelegates.state == .on, Prefs.shared) }
 
+    @objc private func autoArchiveChanged() {
+        ConsoleArchive.setAutoEnabled(autoArchive.state == .on, Prefs.shared)
+        archiveMinutes.isEnabled = autoArchive.state == .on
+    }
+    @objc private func archiveMinutesChanged() { ConsoleArchive.setMinutes(archiveMinutes.selectedTag(), Prefs.shared) }
     @objc private func reportToLeadChanged() { WorkerReport.setEnabled(reportToLead.state == .on, Prefs.shared) }
 
     @objc private func keepConsolesChanged() {

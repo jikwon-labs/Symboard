@@ -246,7 +246,7 @@ public enum PermissionMode: String, CaseIterable, Sendable {
 /// 다시 열었을 때 "이어 할까요?" 를 물을 콘솔.
 public enum ResumePolicy {
     public static func canResume(_ spec: TerminalSpec?) -> Bool {
-        guard let spec, spec.hasLaunched, spec.sessionID != nil else { return false }
+        guard let spec, spec.hasLaunched, spec.sessionID != nil, spec.archived == nil else { return false }
         return spec.agent == .claude || spec.agent == .codex
     }
 

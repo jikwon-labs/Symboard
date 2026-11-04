@@ -55,6 +55,28 @@ final class WorkerReporter {
         seenFinished = seenFinished.filter { sessions[$0.key] != nil }
         queue.prune { [model] in model.node($0) != nil && model.sessions.session(for: $0) != nil }
         flush()
+        autoArchive(now: now)
+    }
+
+    /// 일을 끝내고 정해 둔 시간 동안 아무도 건드리지 않은 worker 를 보관한다(17차).
+    private func autoArchive(now: Date) {
+        guard ConsoleArchive.autoEnabled(Prefs.shared) else { return }
+        let minutes = ConsoleArchive.minutes(Prefs.shared)
+        let pendingWorkers = Set(queue.pending.values.joined())
+        for (id, s) in model.sessions.sessions {
+            guard let spec = model.node(id)?.terminal, spec.archived == nil else { continue }
+            let ok = ConsoleArchive.shouldAutoArchive(openedByAgent: spec.openedByAgent == true,
+                                                      status: model.sessions.status(of: id),
+                                                      finishedCount: s.finishedCount,
+                                                      restSince: restSince[id],
+                                                      lastUserKey: s.lastUserKey,
+                                                      leadPending: pendingWorkers.contains(id),
+                                                      now: now, minutes: minutes)
+            guard ok else { continue }
+            // 사용자가 지금 그 콘솔에 글자 입력 초점을 두고 있으면 접지 않는다.
+            if let w = NSApp.keyWindow, let fr = w.firstResponder as? NSView, fr === s.view || fr.isDescendant(of: s.view) { continue }
+            model.sessions.archive(id, auto: true, now: now)
+        }
     }
 
     private func finished(worker id: UUID) {

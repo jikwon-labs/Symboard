@@ -26,7 +26,11 @@ struct MissionMapView: View {
 
     /// 이어하기 답을 기다리는(아직 띄우지 않은) 콘솔은 끝난 것이 아니라 대기다. Idle 칸에 세고 "On hold" 로 보인다.
     func onHold(_ id: UUID) -> Bool { model.sessions.pendingResume.contains(id) }
-    func status(_ id: UUID) -> NodeStatus { onHold(id) ? .idle : (model.sessions.status(of: id) ?? .starting) }
+    func status(_ id: UUID) -> NodeStatus {
+        // 보관한 콘솔(17차)은 끝난 것으로 센다.
+        if model.node(id)?.terminal?.archived != nil { return .exited }
+        return onHold(id) ? .idle : (model.sessions.status(of: id) ?? .starting)
+    }
 
     static func bucket(_ s: NodeStatus) -> String {
         switch s {

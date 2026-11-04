@@ -191,6 +191,15 @@ final class CanvasView: NSView {
             stopRipple(id)
             if hasLoaded { NodeMotion.disappear(v) } else { v.removeFromSuperview() }
         }
+        // 보관·펼치기(되돌리기 포함)로 콘솔 본문 종류가 바뀌면 뷰를 새로 만든다(17차).
+        for node in ws.nodes where node.kind == .terminal {
+            guard let v = nodeViews[node.id], v.isArchivedConsole != (node.terminal?.archived != nil) else { continue }
+            nodeViews[node.id] = nil
+            stopRipple(node.id)
+            v.content.teardown()
+            v.removeFromSuperview()
+            if node.terminal?.archived != nil { model.sessions.terminate(node.id) }
+        }
         for node in ws.nodes where nodeViews[node.id] == nil {
             let v = NodeView.make(node: node, model: model)
             v.canvas = self

@@ -51,7 +51,8 @@ final class SidePanelController {
         let now = Date()
         var rows: [MissionRow] = []
         for ws in model.state.workspaces {
-            for n in ws.nodes where n.kind == .terminal {
+            // 보관한 콘솔(17차)은 도는 콘솔 목록에서 뺀다. 보드의 카드로 남아 있다.
+            for n in ws.nodes where n.kind == .terminal && n.terminal?.archived == nil {
                 let status = model.sessions.status(of: n.id) ?? .starting
                 let idle = model.sessions.session(for: n.id)?.idleSeconds(now: now) ?? 0
                 let team = n.teamID.flatMap { tid in ws.teams.first { $0.id == tid } }

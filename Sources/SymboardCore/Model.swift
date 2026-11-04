@@ -84,9 +84,12 @@ public struct TerminalSpec: Codable, Equatable, Sendable {
     public var profileID: UUID?
     /// 다른 콘솔이 보드 도구(spawn_console·hand_off)로 연 콘솔인지. 그러면 일을 직접 하는 작업자 안내를 붙인다.
     public var openedByAgent: Bool?
+    /// 보관한 콘솔이면 그 기록(17차). 있으면 프로세스를 띄우지 않고 작은 카드로 보인다.
+    public var archived: ArchivedConsole?
 
     public init(agent: AgentKind, executable: String? = nil, extraArgs: [String] = [], cwd: String,
-                sessionID: String? = nil, hasLaunched: Bool = false, profileID: UUID? = nil, openedByAgent: Bool? = nil) {
+                sessionID: String? = nil, hasLaunched: Bool = false, profileID: UUID? = nil, openedByAgent: Bool? = nil,
+                archived: ArchivedConsole? = nil) {
         self.agent = agent
         self.executable = executable
         self.extraArgs = extraArgs
@@ -95,6 +98,7 @@ public struct TerminalSpec: Codable, Equatable, Sendable {
         self.hasLaunched = hasLaunched
         self.profileID = profileID
         self.openedByAgent = openedByAgent
+        self.archived = archived
     }
 }
 

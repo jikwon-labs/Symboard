@@ -39,10 +39,10 @@ final class SessionManager {
         }
         if let agentd {
             for info in agentd.initialSessions {
-                if model.node(info.id)?.terminal != nil {
+                if let spec = model.node(info.id)?.terminal, spec.archived == nil {
                     adoptable[info.id] = info
                 } else {
-                    // 보드에 없는 콘솔(다른 곳에서 지워진 노드)은 끈다.
+                    // 보드에 없는 콘솔(다른 곳에서 지워진 노드)과 보관한 콘솔은 끈다.
                     agentd.send(AgentdFrame(.kill, id: info.id))
                 }
             }
@@ -80,7 +80,8 @@ final class SessionManager {
     /// 세션이 없으면 만들고 프로세스를 띄운다.
     func ensureSession(for node: BoardNode) -> TerminalSession? {
         if let s = sessions[node.id] { return s }
-        guard let spec = node.terminal else { return nil }
+        // 보관한 콘솔은 펼칠 때까지 띄우지 않는다(17차).
+        guard let spec = node.terminal, spec.archived == nil else { return nil }
         let link: ConsoleLink = agentd.map { RemoteLink(id: node.id, host: $0) } ?? LocalLink()
         let s = TerminalSession(nodeID: node.id, statusDirectory: model.statusDirectory, usesHooks: spec.agent.supportsHooks, link: link)
         s.isPlainShell = spec.agent == .shell
@@ -182,6 +183,41 @@ final class SessionManager {
             guard let self, self.model.node(s.nodeID)?.terminal?.sessionID != sid else { return }
             self.model.mutateNode(s.nodeID) { $0.terminal?.sessionID = sid }
         }
+    }
+
+    /// 콘솔을 보관한다(17차): 화면 끝을 기록으로 남기고 프로세스를 끈 뒤 노드를 작은 카드로 줄인다.
+    /// 노드 뷰 바꾸기는 nodesChanged 를 받은 캔버스가 한다.
+    @discardableResult
+    func archive(_ nodeID: UUID, auto: Bool = false, now: Date = Date()) -> Bool {
+        guard let node = model.node(nodeID), let spec = node.terminal, spec.archived == nil else { return false }
+        let raw = sessions[nodeID]?.transcript(lastLines: ConsoleArchive.reportLines + 20) ?? ""
+        let record = ArchivedConsole(at: now, report: ConsoleArchive.report(fromTranscript: raw),
+                                     width: node.frame.w, height: node.frame.h, auto: auto ? true : nil)
+        terminate(nodeID)
+        model.mutateNode(nodeID) { n in
+            n.terminal?.archived = record
+            n.frame.w = ConsoleArchive.cardWidth
+            n.frame.h = ConsoleArchive.cardHeight
+        }
+        if let ws = model.workspaceID(containing: nodeID) { NotificationCenter.default.post(name: .nodesChanged, object: ws) }
+        return true
+    }
+
+    /// 보관한 콘솔을 펼친다. 원래 크기로 돌리고 같은 대화로 다시 띄운다(뷰를 다시 만들 때 ensureSession 이 띄운다).
+    @discardableResult
+    func unarchive(_ nodeID: UUID) -> Bool {
+        guard let rec = model.node(nodeID)?.terminal?.archived else { return false }
+        model.mutateNode(nodeID) { n in
+            n.terminal?.archived = nil
+            n.frame.w = max(Double(NodeView.minSize.width), rec.width)
+            n.frame.h = max(Double(NodeView.minSize.height), rec.height)
+        }
+        if let ws = model.workspaceID(containing: nodeID) { NotificationCenter.default.post(name: .nodesChanged, object: ws) }
+        // 다른 작업공간에 있어 뷰가 없어도 바로 띄운다.
+        if let node = model.node(nodeID), let s = ensureSession(for: node), sessions[nodeID] === s {
+            s.view.feed(text: "\u{1b}[2mUnarchived - picking up the conversation...\u{1b}[0m\r\n")
+        }
+        return true
     }
 
     func terminate(_ nodeID: UUID) {

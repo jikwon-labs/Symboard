@@ -45,6 +45,8 @@ public enum BoardTools {
     static let boardCommon = """
         Use add_note for short notes and draw_diagram for boxes and arrows (plans, flows, architecture). \
         The user can see and steer every console. Leave consoles open; use close_console only when the user asks. \
+        A finished console may be archived (status "archived"): read_console still returns its last report, \
+        and send_to_console reopens it with the same conversation and sends the text. \
         If a tool says a limit was reached or the user declined, stop and tell the user instead of retrying. \
         A line starting with [symboard] is a notice from the board, not a message from the user: \
         when it says a console finished, read that console's report with read_console and carry on.

@@ -23,7 +23,8 @@ extension MainWindowController {
     }
 
     private func statusText(_ id: UUID) -> String {
-        model.sessions.status(of: id)?.pillText.lowercased() ?? "stopped"
+        if model.node(id)?.terminal?.archived != nil { return "archived" }
+        return model.sessions.status(of: id)?.pillText.lowercased() ?? "stopped"
     }
 
     func handleBoardTool(caller: UUID?, tool: String, args: [String: Any], reply: @escaping (String, Bool) -> Void) {
@@ -103,6 +104,21 @@ extension MainWindowController {
             guard let n = console(named: str("name"), in: wsID) else { reply("No console named \(str("name"))", true); return }
             guard n.id != caller else { reply("That is your own console", true); return }
             let text = args["text"] as? String ?? ""
+            // 보관한 콘솔이면 같은 대화로 펼친 뒤, 입력을 받을 수 있게 되면 보낸다(17차).
+            if !text.isEmpty, n.terminal?.archived != nil {
+                model.sessions.unarchive(n.id)
+                whenReady(n.id, timeout: 45) { [weak self] status in
+                    guard let self, let s = self.model.sessions.session(for: n.id), status != .exited else {
+                        reply("Unarchived \(n.title), but it did not start, so nothing was sent.", true); return
+                    }
+                    if status == .waiting {
+                        reply("Unarchived \(n.title), but it is waiting for the user, so nothing was sent. Try again later.", false); return
+                    }
+                    s.sendText(text, submit: true)
+                    reply("Unarchived \(n.title) (same conversation) and sent.", false)
+                }
+                return
+            }
             guard !text.isEmpty, let s = model.sessions.session(for: n.id) else { reply("Nothing to send or console not running", true); return }
             s.sendText(text, submit: true)
             reply("Sent to \(n.title).", false)
@@ -110,7 +126,9 @@ extension MainWindowController {
         case "read_console":
             guard let n = console(named: str("name"), in: wsID) else { reply("No console named \(str("name"))", true); return }
             let lines = min(400, max(1, (args["lines"] as? Int) ?? Int(str("lines")) ?? 40))
-            let body = model.sessions.session(for: n.id)?.transcript(lastLines: lines) ?? ""
+            // 보관한 콘솔은 보관할 때 남긴 화면 끝(보고)을 돌려준다.
+            let body = n.terminal?.archived.map { $0.report.components(separatedBy: "\n").suffix(lines).joined(separator: "\n") }
+                ?? model.sessions.session(for: n.id)?.transcript(lastLines: lines) ?? ""
             reply("\(n.title) · status: \(statusText(n.id))\n---\n\(body)", false)
 
         case "close_console":

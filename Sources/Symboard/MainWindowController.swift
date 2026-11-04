@@ -555,6 +555,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         for c in canvases.values {
             for (id, v) in c.nodeViews where model.node(id)?.kind == .terminal {
                 v.setStatus(model.sessions.status(of: id))
+                v.header.setChildren(childSummary(of: id))
             }
         }
         // 접혀 있는 패널의 목록은 다시 만들지 않는다(쉬는 시간 글자가 매초 바뀌어 매번 새로 그려졌다). 열 때 채운다.
@@ -1130,6 +1131,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         if var spec = copy.terminal {
             spec.sessionID = nil
             spec.hasLaunched = false
+            // 보관한 콘솔을 복제하면 새 콘솔로 연다(원래 크기).
+            if let rec = spec.archived { copy.frame.w = rec.width; copy.frame.h = rec.height }
+            spec.archived = nil
             copy.terminal = spec
             copy.title = nextName()
         }

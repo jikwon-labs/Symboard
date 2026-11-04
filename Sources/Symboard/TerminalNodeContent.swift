@@ -57,7 +57,22 @@ final class TerminalNodeContent: NSObject, NodeContent {
          ClosureMenuItem(title: L("Add Loop...")) { [weak self] in
              guard let self else { return }
              (NSApp.delegate as? AppDelegate)?.windowController.newLoop(for: self.nodeID)
-         }] + permissionItems()
+         }] + archiveItems() + permissionItems()
+    }
+
+    /// 보관(17차): 이 콘솔을 보관하고, 이 콘솔이 연 콘솔이 있으면 끝난 것을 한꺼번에 보관한다.
+    private func archiveItems() -> [NSMenuItem] {
+        var items: [NSMenuItem] = [ClosureMenuItem(title: L("Archive")) { [weak self] in
+            guard let self else { return }
+            self.model.sessions.archive(self.nodeID)
+        }]
+        if let wc = (NSApp.delegate as? AppDelegate)?.windowController, wc.childSummary(of: nodeID).total > 0 {
+            items.append(ClosureMenuItem(title: L("Archive Finished Consoles It Opened")) { [weak self, weak wc] in
+                guard let self else { return }
+                wc?.archiveFinishedChildren(of: self.nodeID)
+            })
+        }
+        return items
     }
 
     /// claude·codex 노드의 권한 모드 고르기. 바꾸면 같은 대화로 다시 띄운다.

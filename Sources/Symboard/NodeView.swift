@@ -41,6 +41,8 @@ final class NodeView: NSView {
 
     /// 헤더 없이 본문만 보이는 노드(글자·스티키·이미지). 몸통을 끌어 옮기고 두 번 눌러 편집한다.
     let headerless: Bool
+    /// 보관한 콘솔 카드로 만든 뷰인가(17차). 모델과 달라지면 캔버스가 뷰를 새로 만든다.
+    let isArchivedConsole: Bool
     private let shield = MoveShieldView()
     private(set) var editing = false
 
@@ -49,6 +51,7 @@ final class NodeView: NSView {
     static func make(node: BoardNode, model: AppModel) -> NodeView {
         let content: NodeContent
         switch node.kind {
+        case .terminal where node.terminal?.archived != nil: content = ArchivedConsoleContent(node: node, model: model)
         case .terminal: content = TerminalNodeContent(node: node, model: model)
         default: content = NodeContentFactory.make(node: node, model: model)
         }
@@ -60,6 +63,7 @@ final class NodeView: NSView {
         self.model = model
         self.content = content
         self.headerless = Self.isHeaderless(node.kind)
+        self.isArchivedConsole = node.terminal?.archived != nil
         super.init(frame: CanvasGeometry.viewRect(node.frame))
         wantsLayer = true
         layer?.cornerRadius = 12
@@ -67,7 +71,7 @@ final class NodeView: NSView {
         layer?.masksToBounds = true
         layer?.borderWidth = 1
         // 콘솔 몸통만 두 모드 모두 어두운 바탕, 다른 카드는 화면 모드 바탕(10차).
-        isConsoleBody = node.kind == .terminal
+        isConsoleBody = node.kind == .terminal && !isArchivedConsole
         layer?.backgroundColor = bodyColor.cgColor
 
         addSubview(content.view)
@@ -161,6 +165,7 @@ final class NodeView: NSView {
     private var lastStatus: NodeStatus?
 
     func setStatus(_ status: NodeStatus?) {
+        if isArchivedConsole { header.setArchived(); return }
         header.setStatus(status)
         if status != lastStatus {
             lastStatus = status
@@ -348,6 +353,8 @@ final class NodeHeaderView: NSView {
     /// Cmd 를 누르고 있는 동안 보이는 콘솔 번호(Cmd+1~9).
     let numberBadge = PillLabel()
     let accountBadge = PillLabel()
+    /// lead 콘솔이 연 하위 콘솔 요약(17차): "1 WORKING · 2 DONE · 3 ARCHIVED".
+    let childrenPill = PillLabel()
     let restartButton = NSButton()
     let duplicateButton = NSButton()
     let closeButton = NSButton()
@@ -378,6 +385,7 @@ final class NodeHeaderView: NSView {
         permBadge.isHidden = true
         accountBadge.isHidden = true
         numberBadge.isHidden = true
+        childrenPill.isHidden = true
         permBadge.set(text: "AUTO", color: Theme.accent, filled: true)
         kindIcon.contentTintColor = Theme.textDim
         for (b, sym, tip) in [(closeButton, "xmark", "Close"), (menuButton, "ellipsis", "More"),
@@ -390,7 +398,7 @@ final class NodeHeaderView: NSView {
             b.contentTintColor = Theme.textDim
             b.toolTip = tip
         }
-        [glyph, chevron, accountBadge, statusDot, titleLabel, numberBadge, roleLabel, permBadge, statusPill, restartButton, duplicateButton,
+        [glyph, chevron, accountBadge, statusDot, titleLabel, numberBadge, roleLabel, permBadge, statusPill, childrenPill, restartButton, duplicateButton,
          closeButton, menuButton, kindIcon].forEach(addSubview)
         applyKind()
     }
@@ -438,7 +446,7 @@ final class NodeHeaderView: NSView {
             right -= 23
         }
         right -= 4
-        for pill in [statusPill, permBadge] where !pill.isHidden {
+        for pill in [statusPill, childrenPill, permBadge] where !pill.isHidden {
             let w = pill.fittingWidth
             pill.frame = NSRect(x: right - w, y: mid(16), width: w, height: 16)
             right -= w + 6
@@ -453,6 +461,39 @@ final class NodeHeaderView: NSView {
             rx += w + 6
         }
         roleLabel.frame = NSRect(x: rx, y: mid(15), width: max(0, right - rx), height: 15)
+    }
+
+    /// 보관한 콘솔: 상태 알약을 "ARCHIVED" 로, 다시 시작 단추는 숨긴다.
+    func setArchived() {
+        let text = L("ARCHIVED")
+        if statusPill.text != text || statusPill.isHidden {
+            statusPill.set(text: text, color: Theme.textDim, filled: false)
+            statusPill.isHidden = false
+            statusDot.isHidden = true
+            restartButton.isHidden = true
+            needsLayout = true
+        }
+    }
+
+    /// 하위 콘솔 요약. 하위가 없으면 숨긴다.
+    func setChildren(_ s: ConsoleArchive.ChildSummary) {
+        guard s.total > 0 else {
+            if !childrenPill.isHidden { childrenPill.isHidden = true; needsLayout = true }
+            return
+        }
+        var parts: [String] = []
+        if s.working > 0 { parts.append(L("%d WORKING", s.working)) }
+        if s.needsYou > 0 { parts.append(L("%d NEEDS YOU", s.needsYou)) }
+        if s.finished > 0 { parts.append(L("%d DONE", s.finished)) }
+        if s.archived > 0 { parts.append(L("%d ARCHIVED", s.archived)) }
+        let text = parts.joined(separator: " · ")
+        let color = s.needsYou > 0 ? NodeStatus.waiting.color : (s.working > 0 ? NodeStatus.working.color : Theme.textDim)
+        if childrenPill.text != text || childrenPill.isHidden {
+            childrenPill.set(text: text, color: color, filled: false)
+            childrenPill.toolTip = L("Consoles this console opened")
+            childrenPill.isHidden = false
+            needsLayout = true
+        }
     }
 
     /// 콘솔 번호 배지. nil 이면 숨긴다.

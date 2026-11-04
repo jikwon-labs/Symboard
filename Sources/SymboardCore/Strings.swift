@@ -3,6 +3,27 @@ import Foundation
 /// 화면 글 한국어 표(10차). 열쇠는 영어 원문 그대로, 없는 글은 영어로 보인다.
 public enum Strings {
     public static let ko: [String: String] = [
+        // 17차: 콘솔 보관
+        "ARCHIVED": "보관됨",
+        "%d WORKING": "%d 작업 중",
+        "%d NEEDS YOU": "%d 확인 필요",
+        "%d DONE": "%d 완료",
+        "%d ARCHIVED": "%d 보관됨",
+        "Consoles this console opened": "이 콘솔이 연 콘솔",
+        "Archive": "보관",
+        "Unarchive": "다시 열기",
+        "Copy Report": "보고 복사",
+        "Archive Finished Consoles It Opened": "이 콘솔이 연 콘솔 중 끝난 것 모두 보관",
+        "No report was left on the screen.": "화면에 남은 보고가 없습니다.",
+        "Archived automatically at %@": "%@에 자동 보관됨",
+        "Archived at %@": "%@에 보관됨",
+        "Reopen this console and continue the same conversation": "이 콘솔을 다시 열어 같은 대화를 이어 갑니다",
+        "Archived %d consoles": "콘솔 %d개를 보관했습니다",
+        "No finished consoles to archive": "보관할 끝난 콘솔이 없습니다",
+        "Archive finished consoles automatically": "끝난 콘솔 자동 보관",
+        "%d min": "%d분",
+        "Archive after": "보관까지 기다릴 시간",
+        "A console opened by an agent that finished its goal and was left alone this long is stopped and shrunk to a card with its last report. Unarchive reopens the same conversation. Consoles you opened are never archived automatically.": "에이전트가 연 콘솔이 일을 끝내고 이 시간 동안 아무도 건드리지 않으면, 프로세스를 끄고 마지막 보고만 보이는 카드로 줄입니다. 다시 열기를 누르면 같은 대화를 이어 갑니다. 직접 연 콘솔은 자동으로 보관하지 않습니다.",
         "%@ can keep its sign-in in the macOS Keychain, which a separate settings folder does not fully isolate. After switching, check the account inside the console (for example with /status).": "%@는 로그인 정보를 macOS 키체인에 둘 수 있어, 설정 폴더를 나눠도 완전히 분리되지 않습니다. 바꾼 뒤에는 콘솔 안에서 계정을 확인하세요(예: /status).",
         "%@ is drawing": "%@ 그리는 중",
         "%@ tokens · resets %@ (estimated)": "%@ 토큰 · %@ 초기화(추정)",
