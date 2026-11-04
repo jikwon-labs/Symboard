@@ -336,10 +336,21 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
     private func observe() {
         // 노드 안 어디를 눌러도 그 노드를 선택한다. Option/Cmd 스크롤은 노드 안에서도 보드로 보낸다.
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .scrollWheel]) { [weak self] event in
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .scrollWheel, .otherMouseDown, .otherMouseDragged, .otherMouseUp]) { [weak self] event in
             MainActor.assumeIsolated {
-                guard let self, event.window === self.window,
-                      let hit = self.window?.contentView?.hitTest(event.locationInWindow) else { return event }
+                guard let self, event.window === self.window else { return event }
+                // 가운데 단추(휠)를 누른 채 끌면 노드 위에서도 보드를 옮긴다. 끄는 중의 움직임·놓기는 자리와 상관없이 캔버스가 받는다.
+                if event.type == .otherMouseDragged || event.type == .otherMouseUp {
+                    guard let canvas = self.currentCanvas, canvas.isPanning else { return event }
+                    if event.type == .otherMouseUp { canvas.endPan() } else { canvas.continuePan(event) }
+                    return nil
+                }
+                guard let hit = self.window?.contentView?.hitTest(event.locationInWindow) else { return event }
+                if event.type == .otherMouseDown {
+                    guard event.buttonNumber == 2, hit.isDescendant(of: self.scrollView), let canvas = self.currentCanvas else { return event }
+                    canvas.beginPan(event)
+                    return nil
+                }
                 // 보드(캔버스·노드)를 누르면 THREAD 카드를 접어 그 밑을 쓸 수 있게 한다. 꺾쇠나 다음 보드 명령으로 다시 열린다.
                 if event.type == .leftMouseDown, self.chrome.threadOpen, hit.isDescendant(of: self.scrollView) {
                     self.chrome.threadOpen = false
@@ -407,7 +418,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                     self.setTool(.select)
                     return nil
                 }
-                // 캔버스에 초점이 있을 때 Delete 는 고른 글자·스티키·이미지를 지운다.
+                // 캔버스에 초점이 있을 때 Delete 는 끌어서 고른 노드들을 지운다(콘솔이 섞이면 한 번 묻는다).
+                if [51, 117].contains(event.keyCode), self.window?.firstResponder === self.currentCanvas,
+                   let marked = self.currentCanvas?.markedNodeIDs, !marked.isEmpty {
+                    self.deleteMarked(Array(marked))
+                    return nil
+                }
+                // 고른 노드가 하나면 글자·스티키·이미지만 지운다.
                 if [51, 117].contains(event.keyCode), self.window?.firstResponder === self.currentCanvas,
                    let id = self.currentCanvas?.selectedNodeID, let n = self.model.node(id), NodeView.isHeaderless(n.kind) {
                     self.deleteSelection()
@@ -1315,6 +1332,25 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             return
         }
         window?.performClose(sender)
+    }
+
+    /// 끌어서 고른 여러 노드를 지운다. 콘솔이 하나라도 있으면 이름을 보이고 확인을 받는다.
+    func deleteMarked(_ ids: [UUID]) {
+        let order = model.selectedWorkspace.nodes.map(\.id)
+        let sorted = ids.sorted { (order.firstIndex(of: $0) ?? 0) < (order.firstIndex(of: $1) ?? 0) }
+        let nodes = sorted.compactMap { model.node($0) }
+        guard !nodes.isEmpty else { return }
+        let consoles = nodes.filter { $0.kind == .terminal }
+        let run = { [weak self] in
+            guard let self else { return }
+            self.currentCanvas?.select(nil)
+            self.removeNodes(nodes.map(\.id))
+        }
+        guard !consoles.isEmpty else { run(); return }
+        let names = consoles.map(\.title)
+        let shown = names.prefix(5).joined(separator: ", ") + (names.count > 5 ? " +\(names.count - 5)" : "")
+        chrome.confirm = PendingConfirm(message: L("%@: delete %d items (%d consoles)", shown, nodes.count, consoles.count),
+                                        button: L("Delete %d", nodes.count), action: run, inThread: false, onCancel: nil)
     }
 
     func deleteSelection() {

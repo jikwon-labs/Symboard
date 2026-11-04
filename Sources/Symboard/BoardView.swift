@@ -146,6 +146,10 @@ final class CanvasView: NSView {
     /// 빈 곳을 끌어 이동할 때 직전 마우스 위치(창 좌표). 누른 순간의 원점에 기대면, 끄는 중에
     /// 배율이 바뀔 때(에이전트가 띄운 콘솔로 glide) 옛 화면의 왼쪽 위 모서리로 튀었다. 그래서 직전과의 차이만큼만 옮긴다.
     private var panLast: NSPoint?
+    /// 선택 도구로 빈 곳을 왼쪽 단추로 끄는 중이면 시작점과 지금 점(뷰 좌표). 놓으면 걸친 노드를 모두 고른다.
+    private var marquee: (start: NSPoint, current: NSPoint)?
+    /// 끌어서 고른 노드들(둘 이상일 때). 하나만 걸리면 보통 선택(selectedNodeID)으로 돌린다.
+    private(set) var markedNodeIDs: Set<UUID> = []
     private var currentStroke: [Point]?
     var penColor: String { controller?.chrome.penColor ?? "#F05A38" }
     var penWidth: Double { controller?.chrome.penWidth ?? 3 }
@@ -391,12 +395,27 @@ final class CanvasView: NSView {
             return
         }
         selectedNodeID = id
+        markedNodeIDs = []
         for (nid, v) in nodeViews { v.isSelected = nid == id }
         // 골라서 봤으면 Done 표시를 푼다.
         if let id { model.sessions.session(for: id)?.acknowledge() }
         // 글자·스티키·이미지는 레이어 순서를 지킨다. 콘솔 같은 창형 노드만 누르면 앞으로 온다.
         if let id, let v = nodeViews[id], !v.headerless { bringToFront(v) }
         onSelect?(id)
+    }
+
+    /// 끌어 고르기 결과를 적용한다. 하나면 보통 선택, 둘 이상이면 테두리만 켜고 selectedNodeID 는 비운다.
+    func mark(_ ids: Set<UUID>) {
+        if ids.count <= 1 { select(ids.first); return }
+        select(nil)
+        markedNodeIDs = ids
+        for (nid, v) in nodeViews { v.isSelected = ids.contains(nid) }
+    }
+
+    /// Delete 로 지울 대상: 끌어 고른 노드들, 없으면 고른 노드 하나.
+    var deletionTargets: [UUID] {
+        if !markedNodeIDs.isEmpty { return Array(markedNodeIDs) }
+        return selectedNodeID.map { [$0] } ?? []
     }
 
     // MARK: 그리기
@@ -423,7 +442,14 @@ final class CanvasView: NSView {
             NSGraphicsContext.current?.cgContext.fill(dots)
         }
 
-        if let d = sizingDrag {
+        if let m = marquee {
+            let path = NSBezierPath(rect: Self.rect(m.start, m.current))
+            path.lineWidth = 1 / max(mag, 0.2)
+            Theme.accent.withAlphaComponent(0.08).setFill()
+            path.fill()
+            Theme.accent.withAlphaComponent(0.9).setStroke()
+            path.stroke()
+        } else if let d = sizingDrag {
             let r = Self.rect(d.start, d.current)
             let path = NSBezierPath(rect: r)
             path.lineWidth = 1.5 / max(mag, 0.2)
@@ -499,7 +525,51 @@ final class CanvasView: NSView {
         path.stroke()
     }
 
-    // MARK: 마우스: 빈 곳을 끌면 이동, 펜 도구면 그리기
+    // MARK: 마우스: 빈 곳을 왼쪽 단추로 끌면 범위 선택, 가운데 단추(휠)로 끌면 이동, 펜 도구면 그리기
+
+    /// 가운데 단추 이동 시작. 노드 위에서 눌러도 창의 이벤트 감시가 여기로 보낸다.
+    func beginPan(_ event: NSEvent) {
+        guard let sv = enclosingScrollView as? BoardScrollView else { return }
+        sv.stopGlide()
+        if panLast == nil { NSCursor.closedHand.push() }
+        panLast = event.locationInWindow
+    }
+
+    var isPanning: Bool { panLast != nil }
+
+    func continuePan(_ event: NSEvent) {
+        guard let last = panLast, let sv = enclosingScrollView as? BoardScrollView else { return }
+        sv.stopGlide()
+        let now = event.locationInWindow
+        panLast = now
+        let mag = sv.magnification
+        let dx = (now.x - last.x) / mag
+        let dy = (now.y - last.y) / mag
+        let origin = sv.contentView.bounds.origin
+        sv.contentView.scroll(to: NSPoint(x: origin.x - dx, y: origin.y + dy))
+        sv.reflectScrolledClipView(sv.contentView)
+    }
+
+    func endPan() {
+        guard panLast != nil else { return }
+        panLast = nil
+        NSCursor.pop()
+    }
+
+    override func otherMouseDown(with event: NSEvent) {
+        if event.buttonNumber == 2 { beginPan(event) } else { super.otherMouseDown(with: event) }
+    }
+    override func otherMouseDragged(with event: NSEvent) {
+        if isPanning { continuePan(event) } else { super.otherMouseDragged(with: event) }
+    }
+    override func otherMouseUp(with event: NSEvent) {
+        if isPanning { endPan() } else { super.otherMouseUp(with: event) }
+    }
+
+    /// 끌기 사각형이 바뀐 자리만 다시 그린다(캔버스가 60000 이라 통째로 다시 그리지 않는다).
+    private func invalidateMarquee(_ a: (start: NSPoint, current: NSPoint)?, _ b: (start: NSPoint, current: NSPoint)?) {
+        for m in [a, b].compactMap({ $0 }) { setNeedsDisplay(Self.rect(m.start, m.current).insetBy(dx: -4, dy: -4)) }
+    }
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
@@ -525,10 +595,8 @@ final class CanvasView: NSView {
             NotificationCenter.default.post(name: .canvasDoubleClick, object: self, userInfo: ["point": CanvasGeometry.modelPoint(p)])
             return
         }
-        guard let sv = enclosingScrollView as? BoardScrollView else { return }
-        sv.stopGlide()
-        panLast = event.locationInWindow
-        NSCursor.closedHand.push()
+        (enclosingScrollView as? BoardScrollView)?.stopGlide()
+        marquee = (p, p)
     }
 
     static func rect(_ a: NSPoint, _ b: NSPoint) -> NSRect {
@@ -550,16 +618,12 @@ final class CanvasView: NSView {
             inkView.showLive(currentStroke, color: penColor, width: penWidth)
             return
         }
-        guard let last = panLast, let sv = enclosingScrollView as? BoardScrollView else { return }
-        sv.stopGlide()
-        let now = event.locationInWindow
-        panLast = now
-        let mag = sv.magnification
-        let dx = (now.x - last.x) / mag
-        let dy = (now.y - last.y) / mag
-        let origin = sv.contentView.bounds.origin
-        sv.contentView.scroll(to: NSPoint(x: origin.x - dx, y: origin.y + dy))
-        sv.reflectScrolledClipView(sv.contentView)
+        if let m = marquee {
+            let next = (start: m.start, current: convert(event.locationInWindow, from: nil))
+            marquee = next
+            invalidateMarquee(m, next)
+            autoscroll(with: event)
+        }
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -586,9 +650,14 @@ final class CanvasView: NSView {
             syncInk()
             return
         }
-        if panLast != nil {
-            panLast = nil
-            NSCursor.pop()
+        if let m = marquee {
+            marquee = nil
+            invalidateMarquee(m, nil)
+            let r = Self.rect(m.start, convert(event.locationInWindow, from: nil))
+            // 거의 끌지 않았으면 빈 곳 클릭(선택 해제는 mouseDown 에서 이미 했다).
+            guard r.width >= 4 || r.height >= 4 else { return }
+            let ids = nodeViews.filter { !$0.value.isHidden && $0.value.frame.intersects(r) }.map(\.key)
+            mark(Set(ids))
         }
     }
 

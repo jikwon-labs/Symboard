@@ -19,6 +19,8 @@ public enum ShortcutCatalog {
     public static let sections: [Section] = [
         Section(title: "Canvas", entries: [
             Entry("Scroll · two-finger swipe", "Pan the board (outside consoles)"),
+            Entry("Hold the wheel (middle button) and drag", "Pan the board, also over nodes"),
+            Entry("Drag empty board", "Select every node the box touches"),
             Entry("⌘ + scroll", "Zoom in or out"),
             Entry("⌥ or ⌘ + scroll over a node", "Pan or zoom the board instead of the node"),
             Entry("⌘ =  /  ⌘ −", "Zoom in / out"),
@@ -59,6 +61,7 @@ public enum ShortcutCatalog {
             Entry("⌘ T", "New terminal"),
             Entry("⌘ N", "New workspace"),
             Entry("⌫  /  Delete", "Delete the selected text, sticky or image"),
+            Entry("⌫ after drag-selecting", "Delete everything selected (asks if consoles are included)"),
             Entry("⌘ Z  /  ⇧⌘ Z", "Undo / redo (the text you are typing, else the board)"),
             Entry("⌘ S", "Save (studio)"),
             Entry("⌘ Enter", "Save (loop and memory forms)"),
