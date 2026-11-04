@@ -27,7 +27,7 @@ final class WebTileState: ObservableObject {
 }
 
 /// 브라우저 탭·주소줄·표시 크기를 가진 웹 타일. 탭마다 WKWebView 하나.
-final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMessageHandler {
+final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     let nodeID: UUID
     unowned let model: AppModel
     let state: WebTileState
@@ -77,6 +77,7 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
         let w = WKWebView(frame: .zero, configuration: config)
         w.isInspectable = true
         w.navigationDelegate = self
+        w.uiDelegate = self
         if let u = URL(string: url), !url.isEmpty { w.load(URLRequest(url: u)) }
         return w
     }
@@ -89,7 +90,11 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
     }
 
     func teardown() {
-        for v in views { v.configuration.userContentController.removeScriptMessageHandler(forName: "symConsole") }
+        // 새 창 요청으로 만든 탭은 연 탭과 userContentController 를 함께 쓴다. 한 번씩만 뗀다.
+        var seen = Set<ObjectIdentifier>()
+        for v in views where seen.insert(ObjectIdentifier(v.configuration.userContentController)).inserted {
+            v.configuration.userContentController.removeScriptMessageHandler(forName: "symConsole")
+        }
     }
 
     // MARK: 배치
@@ -212,7 +217,56 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKScriptMes
         }
     }
 
+    // MARK: WKUIDelegate
+
+    /// 페이지가 새 창을 열려 할 때(`target="_blank"` 링크, `window.open`). 이 타일의 새 탭으로 연다.
+    /// WebKit 이 준 설정으로 만든 웹뷰를 돌려줘야 요청(POST 포함)과 opener 가 그대로 이어진다.
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        let w = WKWebView(frame: .zero, configuration: configuration)
+        w.isInspectable = true
+        w.navigationDelegate = self
+        w.uiDelegate = self
+        let url = navigationAction.request.url?.absoluteString ?? ""
+        // 빈 주소면 시작 화면이 덮지 않게 about:blank 로 둔다(다 읽으면 실제 주소로 바뀐다).
+        state.tabs.append(url.isEmpty ? "about:blank" : url)
+        state.titles.append("")
+        views.append(w)
+        show(tab: views.count - 1)
+        return w
+    }
+
+    /// 페이지가 `window.close()` 로 자기 창을 닫으면 그 탭을 닫는다.
+    func webViewDidClose(_ webView: WKWebView) {
+        if let i = views.firstIndex(of: webView) { closeTab(i) }
+    }
+
     // MARK: WKNavigationDelegate
+
+    /// 웹 주소가 아닌 링크(mailto:, tel:, 앱 주소 등)는 웹뷰가 열지 못하므로 누른 것만 맥 기본 앱에 넘긴다.
+    /// Cmd+클릭한 링크는 이 타일의 새 탭으로 연다.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else { decisionHandler(.allow); return }
+        let scheme = url.scheme?.lowercased() ?? ""
+        if !Self.inPageSchemes.contains(scheme) {
+            // 사람이 누른 링크만 넘긴다. 페이지가 스스로 앱 주소로 보내는 것(자동 이동)은 막기만 한다.
+            if navigationAction.navigationType == .linkActivated { NSWorkspace.shared.open(url) }
+            decisionHandler(.cancel)
+            return
+        }
+        if navigationAction.navigationType == .linkActivated, navigationAction.modifierFlags.contains(.command),
+           scheme == "http" || scheme == "https" {
+            decisionHandler(.cancel)
+            newTab()
+            navigate(url.absoluteString)
+            return
+        }
+        decisionHandler(.allow)
+    }
+
+    /// 웹뷰 안에서 여는 주소 종류. 그 밖은 맥 기본 앱으로 넘긴다.
+    static let inPageSchemes: Set<String> = ["http", "https", "about", "data", "blob", "file", "javascript"]
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { updateNav() }
 

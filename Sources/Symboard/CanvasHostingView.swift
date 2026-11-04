@@ -32,6 +32,14 @@ final class CanvasHostingView<Content: View>: NSHostingView<Content> {
         }
     }
 
+    /// NSHostingView 의 hitTest 는 SwiftUI 쪽 계산이라, 숨겨졌거나(웹 타일의 시작 화면) 자기 영역 밖인 점에도
+    /// 자기를 돌려줄 때가 있다(캔버스 배율에서 특히). 그러면 밑에 깔린 뷰(웹 타일의 WKWebView)가 클릭을 못 받는다.
+    /// AppKit 기본 규칙대로 숨겼거나 영역 밖인 점은 넘긴다. point 는 superview 좌표다.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard !isHidden, frame.contains(point) else { return nil }
+        return super.hitTest(point)
+    }
+
     override func mouseDown(with event: NSEvent) { super.mouseDown(with: corrected(event)) }
     override func mouseUp(with event: NSEvent) { super.mouseUp(with: corrected(event)) }
     override func mouseDragged(with event: NSEvent) { super.mouseDragged(with: corrected(event)) }

@@ -265,7 +265,13 @@ final class DebugBridge {
                 let p = NSPoint(x: x, y: cv.bounds.height - y)
                 var v = cv.hitTest(p)
                 var chain: [String] = []
-                while let cur = v, chain.count < 12 { chain.append(String(describing: type(of: cur)).prefix(60).description); v = cur.superview }
+                // 영역(superview 좌표)과 숨김도 적어, 어느 뷰가 덮고 있는지 알 수 있게 한다.
+                while let cur = v, chain.count < 12 {
+                    let f = cur.frame
+                    chain.append(String(describing: type(of: cur)).prefix(60).description
+                                 + "[\(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))x\(Int(f.height))\(cur.isHidden ? " hidden" : "")]")
+                    v = cur.superview
+                }
                 log.append("hit " + chain.joined(separator: " < "))
             }
         case "windows":
