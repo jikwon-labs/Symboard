@@ -228,6 +228,9 @@ final class CanvasView: NSView {
             if hasLoaded, !quietAppear.contains(node.id) { NodeMotion.appear(v) }
         }
         hasLoaded = true
+        // 화살표가 아닌 선을 내보내는 콘솔은 부모다(쉬어도 접지 않는다).
+        let parents = Set((ws.links ?? []).filter { $0.style != "arrow" }.map(\.from))
+        for node in ws.nodes { nodeViews[node.id]?.isParent = parents.contains(node.id) }
         for node in ws.nodes { nodeViews[node.id]?.syncFromModel() }
         applyOrder(ws)
         layoutGroups()

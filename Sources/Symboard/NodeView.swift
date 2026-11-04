@@ -44,9 +44,13 @@ final class NodeView: NSView {
     /// 몸통(터미널)은 원래 크기로 두고 잘라 보여서, 접고 펴도 콘솔 크기(PTY)가 바뀌지 않는다.
     private(set) var folded = false
     private var fullHeight: CGFloat = 0
+    /// 하위 콘솔을 거느린 부모 콘솔인가. 부모는 쉬어도 접지 않는다(캔버스가 선을 보고 정한다).
+    var isParent = false {
+        didSet { if isParent != oldValue { updateFold() } }
+    }
 
     private func updateFold() {
-        let want = isConsoleBody && lastStatus == .idle && !isSelected
+        let want = isConsoleBody && lastStatus == .idle && !isSelected && !isParent
         guard want != folded else { return }
         folded = want
         resizeHandle.isHidden = folded
