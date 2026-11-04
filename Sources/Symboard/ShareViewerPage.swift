@@ -7,8 +7,11 @@ import Foundation
 /// 같은 주소의 `events` 흐름에서 board(작업공간 배치)·meta(콘솔 상태)·out(출력)·chat(대화)을 받는다.
 /// 조작 링크(`/c/…`)로 열면 맥에서 허용한 콘솔에만 입력할 수 있다: 터미널에 직접 치거나(키 그대로), 대화 보기 아래 입력칸으로 보낸다.
 enum ShareViewerPage {
-    static let csp = "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; "
-        + "style-src 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'"
+    /// 웹 타일 옮겨 그리기(15차)는 페이지의 그림·스타일·글꼴을 원래 사이트에서 받으므로 img·style·font 만 바깥을 연다.
+    /// 다시 그린 페이지는 스크립트가 막힌 iframe(sandbox allow-same-origin) 안에 있다.
+    static let csp = "default-src 'none'; script-src 'unsafe-inline' 'self' https://cdn.jsdelivr.net; "
+        + "style-src 'unsafe-inline' https://cdn.jsdelivr.net https: http:; connect-src 'self'; "
+        + "img-src 'self' data: blob: https: http:; font-src data: https: http:; base-uri 'none'; form-action 'none'"
 
     static let html = #"""
 <!doctype html>
@@ -125,6 +128,11 @@ enum ShareViewerPage {
   .cal-e { font-size:9px; border-radius:3px; padding:0 3px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; }
   /* 웹·기타 */
   .web-bar { margin:8px; height:28px; border-radius:8px; background:var(--raised); display:flex; align-items:center; padding:0 10px; font-size:12px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .webshot { position:absolute; left:0; right:0; top:44px; bottom:0; width:100%; height:calc(100% - 44px); object-fit:contain; object-position:top center; display:block; pointer-events:none; user-select:none; }
+  .webmirror { position:absolute; left:0; right:0; top:44px; bottom:0; overflow:hidden; background:#fff; display:none; }
+  .webmirror .replayer-wrapper { position:absolute; left:0; top:0; transform-origin:0 0; }
+  .webmirror iframe { border:0; display:block; background:#fff; pointer-events:none; }
+  .webmirror .replayer-mouse, .webmirror .replayer-mouse-tail { display:none; }
   .ph { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--dim); font-size:12px; text-align:center; padding:16px; }
   .imgnode img { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; user-select:none; }
 
@@ -186,6 +194,9 @@ enum ShareViewerPage {
   var tabsEl = document.getElementById('tabs');
 
   var boards = {};        // 작업공간 id → board
+  var webVer = {};        // 웹 타일 id → 맥에서 찍은 화면의 판 번호(옮겨 그리지 못하는 페이지만)
+  var mirrors = {};       // 웹 타일 id → { chunks, player, mount, w, h } 옮겨 그리기 기록(마지막 전체 장면부터)
+  var replayWait = null;  // rrweb 재생기를 받는 동안 기다리는 일
   var snap = null;        // 마지막 meta
   var info = {};          // 콘솔 id → meta 의 콘솔 정보
   var consoles = {};      // 콘솔 id → { el, term, box, chat, ... } (작업공간을 오가도 유지)
@@ -644,11 +655,83 @@ enum ShareViewerPage {
     return box;
   }
 
+  // 웹 타일: 맥에서 찍은 화면을 받아 바꿔 끼운다. 앞 장을 받는 중이면 끝난 뒤 최신 판만 받는다.
+  function webSrc(id) { return BASE + '/web/' + id + '?v=' + webVer[id]; }
+  function showWeb(img, ph, id) {
+    if (webVer[id] === undefined) { img.style.display = 'none'; ph.style.display = ''; return; }
+    var want = webSrc(id);
+    if (img._busy) { img._want = want; return; }
+    if (img.getAttribute('src') === want) return;
+    img._busy = true;
+    img.onload = function () {
+      img._busy = false; img.style.display = ''; ph.style.display = 'none';
+      if (img._want && img._want !== img.getAttribute('src')) { var w = img._want; img._want = null; img._busy = true; img.src = w; }
+    };
+    img.onerror = function () { img._busy = false; img._want = null; };
+    img.src = want;
+  }
+
+  // 웹 타일 옮겨 그리기: 맥이 보낸 페이지 기록을 rrweb 재생기로 직접 그린다. 받는 즉시 그리고(맥과 시계가 달라도
+  // 기다리지 않음), 보드를 다시 그리면 iframe 이 새로 생기므로 모아 둔 기록으로 처음부터 다시 그린다.
+  function loadReplay(cb) {
+    if (window.rrwebReplay) return cb();
+    if (!replayWait) {
+      replayWait = [];
+      var sc = document.createElement('script'); sc.src = BASE + '/rrweb.js';
+      sc.onload = function () { var q = replayWait || []; replayWait = null; q.forEach(function (f) { f(); }); };
+      sc.onerror = function () { replayWait = null; };
+      document.head.appendChild(sc);
+    }
+    replayWait.push(cb);
+  }
+  function dropPlayer(x) {
+    if (x && x.player) { try { x.player.destroy(); } catch (e) {} x.player = null; }
+  }
+  function toggleMirror(id) {
+    var live = !!(mirrors[id] && mirrors[id].player);
+    document.querySelectorAll('[data-mirror="' + id + '"]').forEach(function (m) { m.style.display = live ? 'block' : 'none'; });
+  }
+  function fitMirror(x) {
+    if (!x.mount || !x.w) return;
+    var wrap = x.mount.querySelector('.replayer-wrapper'); if (!wrap) return;
+    wrap.style.transform = 'scale(' + (x.mount.clientWidth / x.w) + ')';
+  }
+  function playMirror(id, mount) {
+    var x = mirrors[id]; if (!x) return;
+    dropPlayer(x);
+    x.mount = mount; mount.textContent = '';
+    loadReplay(function () {
+      if (mirrors[id] !== x || x.mount !== mount || !document.contains(mount) || x.player) return;
+      var pl = new rrwebReplay.Replayer([], {
+        root: mount, liveMode: true, mouseTail: false, showWarning: false, showDebug: false, triggerFocus: false,
+        useVirtualDom: false, pauseAnimation: false, insertStyleRules: ['html { scroll-behavior: smooth !important; }']
+      });
+      pl.on('resize', function (d) { x.w = d.width; x.h = d.height; fitMirror(x); });
+      pl.startLive(Number.MAX_SAFE_INTEGER);
+      x.player = pl;
+      x.chunks.forEach(function (c) { c.forEach(function (ev) { pl.addEvent(ev); }); });
+      toggleMirror(id);
+    });
+  }
+  function mountMirrors() {
+    // 화면에서 빠진 칸(다른 작업공간으로 넘어감)의 재생기는 멈춘다. 기록은 남겨 두었다가 다시 보이면 처음부터 그린다.
+    Object.keys(mirrors).forEach(function (id) { var x = mirrors[id]; if (x.mount && !document.contains(x.mount)) { dropPlayer(x); x.mount = null; } });
+    document.querySelectorAll('.webmirror').forEach(function (m) {
+      var id = m.getAttribute('data-mirror'), x = mirrors[id];
+      if (x && x.mount !== m) playMirror(id, m);
+      toggleMirror(id);
+    });
+  }
+
   function otherBody(n) {
     var b = el('div'); b.style.cssText = 'position:absolute;inset:0;background:var(--surface)';
     if (n.kind === 'web') {
       b.appendChild(el('div', 'web-bar', n.url || 'about:blank'));
-      var p = placeholder('Web pages are not shared'); p.style.top = '44px'; b.appendChild(p);
+      var p = placeholder('The page appears here while the tile is open on the Mac'); p.style.top = '44px'; p.setAttribute('data-webph', n.id);
+      var shot = el('img', 'webshot'); shot.alt = ''; shot.setAttribute('data-web', n.id);
+      var mount = el('div', 'webmirror'); mount.setAttribute('data-mirror', n.id);
+      b.appendChild(p); b.appendChild(shot); b.appendChild(mount);
+      showWeb(shot, p, n.id);
     } else if (n.kind === 'image') {
       b.className = 'imgnode'; b.style.background = 'transparent';
       var img = el('img'); img.src = BASE + '/img/' + n.id; img.alt = ''; b.appendChild(img);
@@ -785,6 +868,7 @@ enum ShareViewerPage {
         world.appendChild(t);
       });
     }
+    mountMirrors();
     msg.style.display = b.nodes.length ? 'none' : '';
     msg.textContent = 'This workspace is empty.';
     if (keep && document.contains(keep)) { keep.focus({ preventScroll: true }); if (sel) keep.setSelectionRange(sel[0], sel[1]); }
@@ -868,6 +952,30 @@ enum ShareViewerPage {
     var m = JSON.parse(e.data), c = consoleFor(m.id);
     if (m.reset) c.term.reset();
     c.term.write(decode(m.b64));
+  });
+  es.addEventListener('web', function (e) {
+    var m = JSON.parse(e.data); webVer[m.id] = m.v;
+    document.querySelectorAll('img[data-web="' + m.id + '"]').forEach(function (img) {
+      showWeb(img, img.parentNode.querySelector('[data-webph="' + m.id + '"]'), m.id);
+    });
+  });
+  es.addEventListener('dom', function (e) {
+    var m = JSON.parse(e.data), x = mirrors[m.id];
+    if (m.r) {
+      dropPlayer(x);
+      x = mirrors[m.id] = { chunks: [m.d], player: null, mount: null };
+      var target = document.querySelector('[data-mirror="' + m.id + '"]');
+      if (target) playMirror(m.id, target);
+      return;
+    }
+    if (!x) return;
+    x.chunks.push(m.d);
+    if (x.player) m.d.forEach(function (ev) { x.player.addEvent(ev); });
+  });
+  es.addEventListener('domoff', function (e) {
+    var m = JSON.parse(e.data), x = mirrors[m.id];
+    if (!x) return;
+    dropPlayer(x); delete mirrors[m.id]; toggleMirror(m.id);
   });
   es.addEventListener('chat', function (e) {
     var m = JSON.parse(e.data); addEntries(consoleFor(m.id), m.entries, m.reset);

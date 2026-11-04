@@ -74,6 +74,8 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegat
         """
         config.userContentController.addUserScript(WKUserScript(source: hook, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController.add(WeakScriptHandler(self), name: "symConsole")
+        // 공유 보기 중계(15차). 격리 세계에만 여는 통로라 페이지 스크립트는 보낼 수 없다.
+        config.userContentController.add(WeakScriptHandler(self), contentWorld: WebMirror.world, name: WebMirror.handlerName)
         let w = WKWebView(frame: .zero, configuration: config)
         w.isInspectable = true
         w.navigationDelegate = self
@@ -90,10 +92,12 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegat
     }
 
     func teardown() {
+        onMirror = nil
         // 새 창 요청으로 만든 탭은 연 탭과 userContentController 를 함께 쓴다. 한 번씩만 뗀다.
         var seen = Set<ObjectIdentifier>()
         for v in views where seen.insert(ObjectIdentifier(v.configuration.userContentController)).inserted {
             v.configuration.userContentController.removeScriptMessageHandler(forName: "symConsole")
+            v.configuration.userContentController.removeScriptMessageHandler(forName: WebMirror.handlerName, contentWorld: WebMirror.world)
         }
     }
 
@@ -126,6 +130,7 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegat
         updateNav()
         layoutStage()
         persist()
+        ensureMirror()
     }
 
     private func persist() {
@@ -241,6 +246,68 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegat
         if let i = views.firstIndex(of: webView) { closeTab(i) }
     }
 
+    // MARK: 공유 보기 중계(15차)
+
+    /// 공유 서버가 이 타일의 페이지 기록을 받는 곳. 정해지면 지금 탭을 기록하고, 비우면 기록을 멈춘다.
+    var onMirror: ((WebMirror.Message) -> Void)? {
+        didSet {
+            if onMirror == nil { stopMirror() } else if oldValue == nil { ensureMirror() }
+        }
+    }
+    /// 기록기를 넣은 탭.
+    private weak var mirrored: WKWebView?
+    private var mirrorBusy = false
+
+    /// 지금 탭에 기록기가 돌게 한다. 탭이 바뀌었으면 앞 탭을 멈추고, 페이지가 바뀌어 기록기가 사라졌으면 다시 넣는다.
+    /// 공유 서버가 1초마다, 탭을 바꾸거나 페이지를 다 읽었을 때도 부른다.
+    func ensureMirror() {
+        guard onMirror != nil, !mirrorBusy else { return }
+        let w = webView
+        if let old = mirrored, old !== w {
+            old.evaluateJavaScript(WebMirror.stopScript, in: nil, in: WebMirror.world) { _ in }
+            mirrored = nil
+        }
+        guard w.url != nil, !stage.isHidden, let script = WebMirror.injectScript else {
+            mirrored = nil
+            onMirror?(.off)
+            return
+        }
+        mirrorBusy = true
+        w.evaluateJavaScript(WebMirror.aliveScript, in: nil, in: WebMirror.world) { [weak self, weak w] result in
+            guard let self, let w else { return }
+            guard self.onMirror != nil, w === self.webView else { self.mirrorBusy = false; return }
+            if (try? result.get()) as? String == "on" {
+                // 이미 기록 중인 탭으로 돌아왔으면 전체 장면부터 다시 보낸다.
+                if self.mirrored !== w {
+                    self.mirrored = w
+                    w.evaluateJavaScript(WebMirror.fullScript, in: nil, in: WebMirror.world) { _ in }
+                }
+                self.mirrorBusy = false
+                return
+            }
+            self.mirrored = w
+            w.evaluateJavaScript(script, in: nil, in: WebMirror.world) { [weak self] r in
+                guard let self else { return }
+                self.mirrorBusy = false
+                let out = (try? r.get()) as? String
+                if out != "started" && out != "again" {
+                    self.mirrored = nil
+                    self.onMirror?(.off)
+                }
+            }
+        }
+    }
+
+    /// 새로 온 사람이 받을 기록이 너무 커졌을 때 전체 장면을 새로 찍게 한다.
+    func requestFullMirror() {
+        mirrored?.evaluateJavaScript(WebMirror.fullScript, in: nil, in: WebMirror.world) { _ in }
+    }
+
+    private func stopMirror() {
+        mirrored?.evaluateJavaScript(WebMirror.stopScript, in: nil, in: WebMirror.world) { _ in }
+        mirrored = nil
+    }
+
     // MARK: WKNavigationDelegate
 
     /// 웹 주소가 아닌 링크(mailto:, tel:, 앱 주소 등)는 웹뷰가 열지 못하므로 누른 것만 맥 기본 앱에 넘긴다.
@@ -284,6 +351,7 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegat
         }
         updateNav()
         persist()
+        if webView === self.webView { ensureMirror() }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { showError(error, in: webView) }
@@ -297,6 +365,12 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegat
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let d = message.body as? [String: Any] else { return }
+        if message.name == WebMirror.handlerName {
+            // 지금 기록 중인 탭에서 온 것만 받는다(멈추는 중인 앞 탭의 마지막 묶음은 버린다).
+            guard message.webView === mirrored, let json = d["d"] as? String else { return }
+            onMirror?(.events(reset: d["r"] as? Bool ?? false, json: json))
+            return
+        }
         state.console.append((d["level"] as? String ?? "log", d["text"] as? String ?? ""))
         if state.console.count > 500 { state.console.removeFirst(state.console.count - 500) }
     }

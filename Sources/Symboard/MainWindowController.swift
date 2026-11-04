@@ -894,6 +894,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func startShare() {
         model.share.onChange = { [weak self] in self?.publishShare() }
         model.share.onRemoteInput = { [weak self] name in self?.chrome.flash(L("Remote input to %@", name)) }
+        model.share.webContentFor = { [weak self] id in
+            guard let self, let ws = self.model.workspaceID(containing: id) else { return nil }
+            return self.existingCanvas(for: ws)?.nodeViews[id]?.content as? WebContent
+        }
         if !model.share.isActive { model.share.start(workspace: model.selectedWorkspace.id) }
         publishShare()
         chrome.shareOpen = true

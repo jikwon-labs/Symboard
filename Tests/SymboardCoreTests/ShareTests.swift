@@ -88,6 +88,22 @@ import Testing
         #expect(ShareLink.route(method: "GET", path: "/v/wrong/img/\(id)", token: t) == .notFound)
     }
 
+    @Test func webSnapshotRouteNeedsUUIDAndToken() {
+        let t = "0123456789abcdef0123456789abcdef", c = "fedcba9876543210fedcba9876543210"
+        let id = UUID().uuidString
+        #expect(ShareLink.route(method: "GET", path: "/v/\(t)/web/\(id)", token: t) == .web(id))
+        #expect(ShareLink.route(method: "GET", path: "/v/\(t)/web/\(id)?v=3", token: t) == .web(id))
+        #expect(ShareLink.route(method: "GET", path: "/c/\(c)/web/\(id)", token: t, controlToken: c) == .web(id))
+        #expect(ShareLink.route(method: "GET", path: "/v/\(t)/web/x", token: t) == .notFound)
+        #expect(ShareLink.route(method: "POST", path: "/v/\(t)/web/\(id)", token: t) == .notFound)
+        #expect(ShareLink.route(method: "GET", path: "/v/wrong/web/\(id)", token: t) == .notFound)
+        #expect(ShareLink.route(method: "GET", path: "/v/\(t)/other/\(id)", token: t) == .notFound)
+        #expect(ShareLink.route(method: "GET", path: "/v/\(t)/rrweb.js", token: t) == .replayScript)
+        #expect(ShareLink.route(method: "GET", path: "/c/\(c)/rrweb.js", token: t, controlToken: c) == .replayScript)
+        #expect(ShareLink.route(method: "GET", path: "/v/wrong/rrweb.js", token: t) == .notFound)
+        #expect(ShareLink.route(method: "POST", path: "/v/\(t)/rrweb.js", token: t) == .notFound)
+    }
+
     @Test func boardHidesPrivateFieldsAndMatchesGroupFrame() {
         let team = Team(name: "Builders")
         var a = BoardNode(kind: .terminal, frame: Rect(x: 0, y: 0, w: 600, h: 400), title: "Ada")

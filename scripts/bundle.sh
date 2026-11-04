@@ -24,6 +24,9 @@ for b in "$BIN_DIR"/*.bundle; do
   [ -e "$b" ] && cp -R "$b" "$APP/Contents/Resources/"
 done
 if [ -f Resources/AppIcon.icns ]; then cp Resources/AppIcon.icns "$APP/Contents/Resources/"; fi
+# 공유 보기에서 웹 타일 페이지를 옮겨 그리는 rrweb(15차). 평범한 리소스 파일로 넣는다.
+mkdir -p "$APP/Contents/Resources/rrweb"
+cp Resources/rrweb/record.js Resources/rrweb/replay.js Resources/rrweb/LICENSE "$APP/Contents/Resources/rrweb/"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

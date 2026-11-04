@@ -1,5 +1,6 @@
 import AppKit
 import Network
+import WebKit
 import SymboardCore
 
 /// 보기 전용 공유(14차). 이 맥에 HTTP 서버를 띄우고, 링크를 아는 사람이 브라우저로 공유한 작업공간의 콘솔을 본다.
@@ -38,6 +39,18 @@ final class ShareServer {
     private var flushTimer: Timer?
     private var tickObserver: NSObjectProtocol?
     private var pingTimer: Timer?
+    /// 웹 타일 중계. 노드 id 로 맥 화면의 웹 타일을 찾는다(작업공간 화면을 연 적 없으면 nil).
+    var webContentFor: ((UUID) -> WebContent?)?
+    /// 웹 타일별 옮겨 그리기 기록(rrweb). 마지막 전체 장면부터 모은 묶음이라 새로 온 사람에게 그대로 보낸다.
+    private var mirrors: [UUID: MirrorLog] = [:]
+    /// 기록을 받으려고 onMirror 를 걸어 둔 타일.
+    private var mirrorHooks: [UUID: WeakWeb] = [:]
+    private var mirrorTimer: Timer?
+    /// 옮겨 그리지 못하는 타일(넣기 실패)만 찍은 화면으로 대신한다. 마지막으로 찍은 화면(JPEG)과 판 번호.
+    private var webFrames: [UUID: (data: Data, version: Int)] = [:]
+    /// 찍거나 줄이는 중인 웹 타일. 앞 장이 끝나기 전에는 다음 장을 찍지 않는다.
+    private var webBusy: Set<UUID> = []
+    private var webTimer: Timer?
 
     /// 시작·멈춤·보는 사람 수가 바뀌면 불린다.
     var onChange: (() -> Void)?
@@ -92,6 +105,12 @@ final class ShareServer {
         flushTimer = Timer.scheduledTimer(withTimeInterval: 0.06, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.flush() }
         }
+        webTimer = Timer.scheduledTimer(withTimeInterval: Self.webInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.captureWebTiles() }
+        }
+        mirrorTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.syncMirrors() }
+        }
         // 오래 조용하면 중간 장비가 연결을 끊을 수 있어 가끔 빈 줄을 보낸다.
         pingTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.viewers.values.forEach { $0.send(Data(": ping\n\n".utf8)) } }
@@ -109,6 +128,11 @@ final class ShareServer {
         pending.removeAll()
         flushTimer?.invalidate(); flushTimer = nil
         pingTimer?.invalidate(); pingTimer = nil
+        webTimer?.invalidate(); webTimer = nil
+        mirrorTimer?.invalidate(); mirrorTimer = nil
+        unhookMirrors()
+        webFrames.removeAll()
+        webBusy.removeAll()
         if let o = tickObserver { NotificationCenter.default.removeObserver(o) }
         tickObserver = nil
         let was = token != nil
@@ -223,9 +247,19 @@ final class ShareServer {
             watchClose(conn)
             v.send(head)
             sendMeta(to: [v])
+            for (id, f) in webFrames { v.send(Self.webEvent(id: id, version: f.version)) }
+            for (id, log) in mirrors {
+                for (i, chunk) in log.chunks.enumerated() { v.send(Self.domEvent(id: id, reset: i == 0, json: chunk)) }
+            }
+            // 첫 사람이 오면 바로 기록을 시작한다(1초 타이머를 기다리지 않음).
+            syncMirrors()
             onChange?()
         case .image(let raw):
             serveImage(conn, nodeID: UUID(uuidString: raw))
+        case .web(let raw):
+            serveWebFrame(conn, nodeID: UUID(uuidString: raw))
+        case .replayScript:
+            serveReplayScript(conn)
         case .notFound:
             let body = Data("Not found\n".utf8)
             var out = ShareLink.httpHead(status: "404 Not Found", contentType: "text/plain; charset=utf-8",
@@ -273,6 +307,167 @@ final class ShareServer {
         var out = ShareLink.httpHead(status: "200 OK", contentType: type, extra: ["Content-Length: \(body.count)", "Connection: close"])
         out.append(body)
         conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
+    }
+
+    /// 공유한 작업공간의 웹 타일을 맥에서 찍은 마지막 화면. 아직 찍은 적 없거나 범위 밖이면 404.
+    private func serveWebFrame(_ conn: NWConnection, nodeID: UUID?) {
+        guard let id = nodeID, sharedWebNodeIDs.contains(id), let frame = webFrames[id] else {
+            let out = ShareLink.httpHead(status: "404 Not Found", contentType: "text/plain; charset=utf-8", extra: ["Content-Length: 0", "Connection: close"])
+            conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
+            return
+        }
+        var out = ShareLink.httpHead(status: "200 OK", contentType: "image/jpeg",
+                                     extra: ["Content-Length: \(frame.data.count)", "Connection: close"])
+        out.append(frame.data)
+        conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
+    }
+
+    /// 웹 타일 페이지를 다시 그리는 rrweb 재생기. 앱에 함께 든 파일이다.
+    private func serveReplayScript(_ conn: NWConnection) {
+        guard let body = WebMirror.replaySource else {
+            let out = ShareLink.httpHead(status: "404 Not Found", contentType: "text/plain; charset=utf-8", extra: ["Content-Length: 0", "Connection: close"])
+            conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
+            return
+        }
+        var out = ShareLink.httpHead(status: "200 OK", contentType: "text/javascript; charset=utf-8",
+                                     extra: ["Content-Length: \(body.count)", "Connection: close"])
+        out.append(body)
+        conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
+    }
+
+    // MARK: 웹 타일 옮겨 그리기(rrweb)
+
+    /// 새로 온 사람에게 줄 기록이 이보다 커지면 전체 장면을 새로 찍게 한다.
+    static let mirrorLogLimit = 16_000_000
+    /// 기록기 한 묶음의 최대 크기. 넘으면 버린다(그 페이지는 다음 전체 장면부터 이어진다).
+    static let mirrorChunkLimit = 24_000_000
+
+    /// 보는 사람이 있으면 공유한 웹 타일마다 기록을 받게 걸고, 기록기가 살아 있는지 챙긴다. 없으면 모두 푼다.
+    private func syncMirrors() {
+        guard isActive, !viewers.isEmpty else { unhookMirrors(); return }
+        let ids = sharedWebNodeIDs
+        for (id, hook) in mirrorHooks where !ids.contains(id) || hook.content == nil {
+            hook.content?.onMirror = nil
+            mirrorHooks[id] = nil
+            dropMirror(id)
+        }
+        for id in ids {
+            let content = webContentFor?(id)
+            let hooked = mirrorHooks[id]?.content
+            if let content, content === hooked {
+                content.ensureMirror()
+                continue
+            }
+            hooked?.onMirror = nil
+            mirrorHooks[id] = nil
+            guard let content else { continue }
+            mirrorHooks[id] = WeakWeb(content)
+            content.onMirror = { [weak self] m in self?.mirrorMessage(id, m) }
+        }
+    }
+
+    private func unhookMirrors() {
+        for hook in mirrorHooks.values { hook.content?.onMirror = nil }
+        mirrorHooks.removeAll()
+        for id in Array(mirrors.keys) { dropMirror(id) }
+    }
+
+    /// 옮겨 그리기를 그만둔 타일. 보는 쪽은 찍은 화면으로 돌아간다.
+    private func dropMirror(_ id: UUID) {
+        guard mirrors.removeValue(forKey: id) != nil else { return }
+        let ev = ShareLink.sseEvent("domoff", "{\"id\":\"\(id.uuidString)\"}")
+        for v in viewers.values { v.send(ev) }
+    }
+
+    private func mirrorMessage(_ id: UUID, _ message: WebMirror.Message) {
+        guard isActive, sharedWebNodeIDs.contains(id) else { return }
+        switch message {
+        case .off:
+            dropMirror(id)
+        case .events(let reset, let json):
+            let size = json.utf8.count
+            guard size <= Self.mirrorChunkLimit else { return }
+            if reset {
+                mirrors[id] = MirrorLog(chunks: [json], bytes: size)
+            } else {
+                // 전체 장면을 받기 전의 조각은 다시 그릴 바탕이 없어 버린다.
+                guard var log = mirrors[id] else { return }
+                log.chunks.append(json)
+                log.bytes += size
+                if log.bytes > Self.mirrorLogLimit, !log.askedFull {
+                    log.askedFull = true
+                    mirrorHooks[id]?.content?.requestFullMirror()
+                }
+                mirrors[id] = log
+            }
+            let ev = Self.domEvent(id: id, reset: reset, json: json)
+            for v in viewers.values { v.send(ev) }
+        }
+    }
+
+    /// json 은 기록기가 JSON.stringify 로 만든 배열이라 줄바꿈이 없고 그대로 끼워 넣을 수 있다.
+    private static func domEvent(id: UUID, reset: Bool, json: String) -> Data {
+        ShareLink.sseEvent("dom", "{\"id\":\"\(id.uuidString)\",\"r\":\(reset),\"d\":\(json)}")
+    }
+
+    // MARK: 웹 타일 찍은 화면(옮겨 그리지 못할 때만)
+
+    /// 웹 타일을 찍는 간격. 바뀐 장만 보내므로 가만히 있는 페이지는 오가는 것이 없다.
+    static let webInterval: TimeInterval = 0.5
+    /// 찍은 화면의 긴 변 최대 픽셀. 레티나 원본은 크기만 크고 링크로 보기엔 이 정도면 충분하다.
+    static let webMaxPixels: CGFloat = 1600
+
+    private var sharedWebNodeIDs: Set<UUID> {
+        Set(sharedWorkspaces.flatMap { $0.nodes.filter { $0.kind == .web }.map(\.id) })
+    }
+
+    /// 보는 사람이 있으면 옮겨 그리지 못하는 웹 타일만 찍는다. 화면이 바뀐 타일만 판 번호를 올려 알린다.
+    /// 창에 붙어 있지 않은(다른 작업공간 화면) 타일은 찍지 않고 마지막 장을 그대로 둔다.
+    private func captureWebTiles() {
+        let ids = sharedWebNodeIDs
+        for id in webFrames.keys where !ids.contains(id) { webFrames[id] = nil }
+        guard !viewers.isEmpty else { return }
+        for id in ids where !webBusy.contains(id) && mirrors[id] == nil {
+            guard let w = webContentFor?(id)?.webView, w.window != nil, w.url != nil,
+                  w.bounds.width >= 2, w.bounds.height >= 2 else { continue }
+            webBusy.insert(id)
+            let config = WKSnapshotConfiguration()
+            let scale = w.window?.backingScaleFactor ?? 2
+            let longest = max(w.bounds.width, w.bounds.height) * scale
+            if longest > Self.webMaxPixels { config.snapshotWidth = NSNumber(value: Double(w.bounds.width * Self.webMaxPixels / longest / scale)) }
+            w.takeSnapshot(with: config) { [weak self] image, _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    guard self.isActive, let cg = image?.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                        self.webBusy.remove(id); return
+                    }
+                    let box = ImageBox(cg)
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        let data = Self.jpeg(box.image)
+                        DispatchQueue.main.async {
+                            MainActor.assumeIsolated { self.webCaptured(id, data) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func webCaptured(_ id: UUID, _ data: Data?) {
+        webBusy.remove(id)
+        guard isActive, let data, sharedWebNodeIDs.contains(id), webFrames[id]?.data != data else { return }
+        let version = (webFrames[id]?.version ?? 0) + 1
+        webFrames[id] = (data, version)
+        let ev = Self.webEvent(id: id, version: version)
+        for v in viewers.values { v.send(ev) }
+    }
+
+    nonisolated private static func jpeg(_ image: CGImage) -> Data? {
+        NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.72])
+    }
+
+    private static func webEvent(id: UUID, version: Int) -> Data {
+        ShareLink.sseEvent("web", "{\"id\":\"\(id.uuidString)\",\"v\":\(version)}")
     }
 
     private func watchClose(_ conn: NWConnection) {
@@ -525,4 +720,23 @@ struct ChatTail {
         if entries.count > ShareLink.chatHistoryLimit { entries.removeFirst(entries.count - ShareLink.chatHistoryLimit) }
         return fresh
     }
+}
+
+/// 찍은 그림을 줄이는 큐로 넘기는 상자. CGImage 는 바꿀 수 없는 값이라 넘겨도 안전하다.
+private final class ImageBox: @unchecked Sendable {
+    let image: CGImage
+    init(_ image: CGImage) { self.image = image }
+}
+
+/// 옮겨 그리기 기록 한 타일 몫.
+private struct MirrorLog {
+    var chunks: [String]
+    var bytes: Int
+    /// 너무 커져 전체 장면을 이미 부탁했는지.
+    var askedFull = false
+}
+
+private final class WeakWeb {
+    weak var content: WebContent?
+    init(_ content: WebContent) { self.content = content }
 }

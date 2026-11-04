@@ -22,6 +22,10 @@ public enum ShareLink {
         case events(control: Bool)
         /// 보드의 이미지 노드 그림(노드 id).
         case image(String)
+        /// 웹 타일을 맥에서 찍은 화면(노드 id). 보드 JSON 에는 주소만 있고 페이지 내용은 이 그림으로만 간다.
+        case web(String)
+        /// 웹 타일 페이지를 다시 그리는 재생 스크립트(rrweb). 앱에 함께 든 파일을 보낸다.
+        case replayScript
         /// 조작 링크에서 콘솔로 보내는 입력(POST).
         case input
         case notFound
@@ -61,7 +65,7 @@ public enum ShareLink {
     /// 입력 몸통 최대 크기.
     public static let maxInputBytes = 64_000
 
-    /// `/v/<보기 토큰>` 은 보기, `/c/<조작 토큰>` 은 조작. 그 아래 `events`, `img/<id>`, 조작만 `input`(POST).
+    /// `/v/<보기 토큰>` 은 보기, `/c/<조작 토큰>` 은 조작. 그 아래 `events`, `img/<id>`, `web/<id>`, `rrweb.js`, 조작만 `input`(POST).
     /// 그 밖이나 토큰이 틀리면 notFound.
     public static func route(method: String, path: String, token: String, controlToken: String? = nil) -> Route {
         let clean = path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? path
@@ -74,8 +78,19 @@ public enum ShareLink {
         if parts.count == 3, parts[2] == "input" { return control && method == "POST" ? .input : .notFound }
         guard method == "GET" else { return .notFound }
         if parts.count == 2 { return .page(control: control) }
-        if parts.count == 4 { return parts[2] == "img" && UUID(uuidString: parts[3]) != nil ? .image(parts[3]) : .notFound }
-        return parts[2] == "events" ? .events(control: control) : .notFound
+        if parts.count == 4 {
+            guard UUID(uuidString: parts[3]) != nil else { return .notFound }
+            switch parts[2] {
+            case "img": return .image(parts[3])
+            case "web": return .web(parts[3])
+            default: return .notFound
+            }
+        }
+        switch parts[2] {
+        case "events": return .events(control: control)
+        case "rrweb.js": return .replayScript
+        default: return .notFound
+        }
     }
 
     /// 조작 링크에서 온 입력 한 번. keys 는 터미널에 친 그대로의 글자(xterm onData), text 는 대화 보기 입력칸의 글.
