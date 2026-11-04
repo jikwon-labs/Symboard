@@ -36,7 +36,28 @@ final class NodeView: NSView {
         didSet {
             updateBorder()
             if !isSelected && editing { setEditing(false) }
+            updateFold()
         }
+    }
+
+    /// 쉬는 콘솔은 머리만 남기고 접는다(고르면 펼친다). 모델의 크기는 그대로 두고 뷰 높이만 줄인다.
+    /// 몸통(터미널)은 원래 크기로 두고 잘라 보여서, 접고 펴도 콘솔 크기(PTY)가 바뀌지 않는다.
+    private(set) var folded = false
+    private var fullHeight: CGFloat = 0
+
+    private func updateFold() {
+        let want = isConsoleBody && lastStatus == .idle && !isSelected
+        guard want != folded else { return }
+        folded = want
+        resizeHandle.isHidden = folded
+        if let node = model.node(nodeID) { frame = foldedRect(CanvasGeometry.viewRect(node.frame)) }
+        canvas?.layoutGroups()
+    }
+
+    private func foldedRect(_ r: NSRect) -> NSRect {
+        fullHeight = r.height
+        guard folded else { return r }
+        return NSRect(x: r.minX, y: r.minY, width: r.width, height: Self.headerHeight)
     }
 
     /// 헤더 없이 본문만 보이는 노드(글자·스티키·이미지). 몸통을 끌어 옮기고 두 번 눌러 편집한다.
@@ -120,7 +141,8 @@ final class NodeView: NSView {
         let b = bounds
         let top = headerless ? 0 : Self.headerHeight
         header.frame = NSRect(x: 0, y: 0, width: b.width, height: Self.headerHeight)
-        content.view.frame = NSRect(x: 0, y: top, width: b.width, height: max(0, b.height - top))
+        let h = folded ? max(fullHeight, b.height) : b.height
+        content.view.frame = NSRect(x: 0, y: top, width: b.width, height: max(0, h - top))
         shield.frame = b
         resizeHandle.frame = NSRect(x: b.width - 16, y: b.height - 16, width: 16, height: 16)
         wirePort.frame = NSRect(x: b.width - 18, y: b.midY - 9, width: 18, height: 18)
@@ -139,7 +161,7 @@ final class NodeView: NSView {
 
     func syncFromModel() {
         guard let node = model.node(nodeID) else { return }
-        let target = CanvasGeometry.viewRect(node.frame)
+        let target = foldedRect(CanvasGeometry.viewRect(node.frame))
         if frame != target, (slidingUntil.map { Date() > $0 } ?? true) { frame = target }
         if header.titleLabel.stringValue != node.displayTitle { header.titleLabel.stringValue = node.displayTitle; header.needsLayout = true }
         header.roleLabel.stringValue = node.role ?? ""
@@ -170,6 +192,7 @@ final class NodeView: NSView {
         if status != lastStatus {
             lastStatus = status
             updateBorder()
+            updateFold()
         }
     }
 
@@ -329,7 +352,9 @@ final class NodeView: NSView {
     }
 
     func commitFrame() {
-        let r = CanvasGeometry.modelRect(frame)
+        var r = CanvasGeometry.modelRect(frame)
+        // 접힌 동안 옮기면 자리만 바꾸고 높이는 원래대로 둔다.
+        if folded, let h = model.node(nodeID)?.frame.h { r.h = h }
         model.mutateNode(nodeID) { $0.frame = r }
     }
 

@@ -176,7 +176,7 @@ final class GroupFrameView: NSView {
 /// 노드·그룹 사이 곡선 연결선. 선 위로 점이 흐른다. 클릭은 받지 않는다.
 final class LinksView: NSView {
     var isArrowLayer = false
-    private var layers: [UUID: (CAShapeLayer, CALayer, CGPath)] = [:]
+    private var layers: [UUID: (CAShapeLayer, CALayer, CGPath, Bool)] = [:]
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -268,8 +268,9 @@ final class LinksView: NSView {
     /// faint: 에이전트가 띄운 콘솔과 부른 콘솔 사이 선(8차 3번). 모양은 같고 색만 옅다.
     private var linkCache: (key: RouteKey, routes: [UUID: [Point]])?
 
+    /// resting: 양 끝 콘솔이 모두 쉬는 선. 회색 점선으로 그리고 흐르는 점은 뺀다.
     /// obstacles: 선이 돌아갈 노드(선 끝 상자는 알아서 뺀다).
-    func update(_ segments: [(UUID, NSRect, NSRect)], faint: Set<UUID> = [], obstacles: [NSRect] = []) {
+    func update(_ segments: [(UUID, NSRect, NSRect)], faint: Set<UUID> = [], resting: Set<UUID> = [], obstacles: [NSRect] = []) {
         guard let root = layer else { return }
         let ids = Set(segments.map(\.0))
         for (id, l) in layers where !ids.contains(id) {
@@ -288,14 +289,18 @@ final class LinksView: NSView {
         for (id, _, _) in segments {
             guard let pts = routes[id] else { continue }
             let path: CGPath = Self.roundedPath(pts.map { CGPoint(x: $0.x, y: $0.y) })
-            if let cur = layers[id], cur.2 == path { continue }
+            let rest = resting.contains(id)
+            if let cur = layers[id], cur.2 == path, cur.3 == rest { continue }
             let shape = layers[id]?.0 ?? CAShapeLayer()
             let dot = layers[id]?.1 ?? CALayer()
             shape.path = path
             shape.fillColor = nil
             let light = faint.contains(id)
-            shape.strokeColor = Theme.accent.withAlphaComponent(light ? 0.22 : 0.55).cgColor
+            shape.strokeColor = rest
+                ? NSColor.systemGray.withAlphaComponent(light ? 0.35 : 0.6).cgColor
+                : Theme.accent.withAlphaComponent(light ? 0.22 : 0.55).cgColor
             shape.lineWidth = 2.5
+            shape.lineDashPattern = rest ? [6, 5] : nil
             dot.bounds = CGRect(x: 0, y: 0, width: 7, height: 7)
             dot.cornerRadius = 3.5
             dot.backgroundColor = Theme.accent.withAlphaComponent(light ? 0.45 : 1).cgColor
@@ -306,15 +311,17 @@ final class LinksView: NSView {
             // 그림자 모양을 알려 주면 매 프레임 층 모양으로 그림자를 다시 구하지 않는다(점은 끝없이 움직인다).
             dot.shadowPath = CGPath(ellipseIn: dot.bounds, transform: nil)
             if shape.superlayer == nil { root.addSublayer(shape); root.addSublayer(dot) }
+            dot.removeAnimation(forKey: "flow")
+            dot.isHidden = rest
+            if rest { layers[id] = (shape, dot, path, rest); continue }
             let anim = CAKeyframeAnimation(keyPath: "position")
             anim.path = path
             anim.calculationMode = .paced
             let len = ArrowRouter.length(pts)
             anim.duration = max(1.6, Double(len) / 140)
             anim.repeatCount = .infinity
-            dot.removeAnimation(forKey: "flow")
             dot.add(anim, forKey: "flow")
-            layers[id] = (shape, dot, path)
+            layers[id] = (shape, dot, path, rest)
         }
     }
 }

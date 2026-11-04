@@ -328,7 +328,19 @@ final class CanvasView: NSView {
             guard let v = nodeViews[n.id], !v.isHidden else { return nil }
             return v.frame
         }
-        linksView.update(segs, faint: Set((ws.links ?? []).filter { $0.style == NodeLink.spawnedStyle }.map(\.id)), obstacles: avoid)
+        // 하위 쪽(to) 콘솔이 일하고 있지 않은 선은 쉬는 선이다(회색 점선, 흐르는 점 없음). 팀 끝은 팀원 중 하나라도 일하면 일하는 것으로 본다.
+        // to 가 콘솔·팀이 아니면(카드·웹 페이지) 양 끝 어느 쪽도 일하지 않을 때만 쉰다.
+        func isSession(_ id: UUID) -> Bool {
+            ws.teams.contains { $0.id == id } || ws.nodes.contains { $0.id == id && $0.kind == .terminal }
+        }
+        func working(_ id: UUID) -> Bool {
+            if ws.teams.contains(where: { $0.id == id }) {
+                return ws.nodes.contains { $0.teamID == id && model.sessions.status(of: $0.id) == .working }
+            }
+            return model.sessions.status(of: id) == .working
+        }
+        let resting = Set((ws.links ?? []).filter { $0.style != "arrow" && !working($0.to) && (isSession($0.to) || !working($0.from)) }.map(\.id))
+        linksView.update(segs, faint: Set((ws.links ?? []).filter { $0.style == NodeLink.spawnedStyle }.map(\.id)), resting: resting, obstacles: avoid)
         // 화살표가 피할 상자: 보드의 도형. 다른 도형을 품은 도형(다이어그램 그룹 테두리)은 뺀다.
         var obstacles: [NSRect] = []
         if !arrows.isEmpty {
