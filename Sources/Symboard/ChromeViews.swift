@@ -1056,7 +1056,8 @@ struct SharePopover: View {
                         ForEach(chrome.shareConsoles) { row in
                             Toggle(isOn: Binding(get: { row.allowed }, set: { c.setShareInput(row.id, allowed: $0) })) {
                                 HStack(spacing: 6) {
-                                    Text(row.name).font(.system(size: 12, weight: .medium))
+                                    if row.isWeb { Image(systemName: "globe").font(.system(size: 10)).foregroundStyle(Color.symDim) }
+                                    Text(row.name).font(.system(size: 12, weight: .medium)).lineLimit(1)
                                     Text(row.workspace).font(.system(size: 11)).foregroundStyle(Color.symDim)
                                 }
                             }
@@ -1067,6 +1068,11 @@ struct SharePopover: View {
                     }
                 }
                 .frame(maxHeight: 180)
+            }
+            if chrome.shareConsoles.contains(where: \.isWeb) {
+                Text(L("Web tiles you turn on can be clicked, scrolled and typed into from the control link, on the sites you are signed in to on this Mac."))
+                    .font(.system(size: 11)).foregroundStyle(Color.symDim)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if anyAllowed {
                 Label(L("Typing is on for some consoles."), systemImage: "exclamationmark.triangle.fill")

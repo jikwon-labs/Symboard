@@ -537,6 +537,7 @@ public enum Strings {
         "Remote input to %@": "%@에 원격 입력",
         "Share links": "공유 링크",
         "Typing is on for some consoles.": "일부 콘솔에 입력이 켜져 있습니다.",
+        "Web tiles you turn on can be clicked, scrolled and typed into from the control link, on the sites you are signed in to on this Mac.": "켠 웹 타일은 조작 링크에서 누르고 스크롤하고 입력할 수 있습니다. 이 맥에서 로그인해 둔 사이트 그대로입니다.",
         "Works on the same Wi-Fi or over Tailscale. macOS may ask once to allow incoming connections.": "같은 와이파이나 Tailscale 에서 열립니다. macOS 가 처음 한 번 들어오는 연결을 허용할지 물을 수 있습니다.",
         "Zoom to fit": "화면에 맞추기",
         "accounts": "계정",

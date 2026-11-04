@@ -133,6 +133,9 @@ enum ShareViewerPage {
   .webmirror .replayer-wrapper { position:absolute; left:0; top:0; transform-origin:0 0; }
   .webmirror iframe { border:0; display:block; background:#fff; pointer-events:none; }
   .webmirror .replayer-mouse, .webmirror .replayer-mouse-tail { display:none; }
+  .webctl { position:absolute; left:0; right:0; top:44px; bottom:0; display:none; cursor:default; touch-action:none; outline:none; }
+  .webctl.on { display:block; }
+  .webctl textarea { position:absolute; left:0; top:0; width:1px; height:1px; opacity:0; border:0; padding:0; resize:none; pointer-events:none; }
   .ph { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--dim); font-size:12px; text-align:center; padding:16px; }
   .imgnode img { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; user-select:none; }
 
@@ -304,6 +307,7 @@ enum ShareViewerPage {
     return null;
   }
   viewport.addEventListener('wheel', function (e) {
+    if (!e.ctrlKey && e.target.closest && e.target.closest('.webctl.on')) return;   // 조작하는 웹 타일은 그 페이지를 스크롤
     if (!e.ctrlKey && scrollable(e.target)) {
       // 전체 화면 프로그램(claude)을 터미널 화면으로 볼 때는 지난 줄이 없어 휠이 아무 일도 하지 않았다.
       // 대화 보기가 있으면 그리로 바꿔 스크롤하고, 없으면 보드를 움직인다. 입력이 허용된 콘솔은 xterm 이 휠을 프로그램에 넘긴다.
@@ -690,6 +694,108 @@ enum ShareViewerPage {
   function toggleMirror(id) {
     var live = !!(mirrors[id] && mirrors[id].player);
     document.querySelectorAll('[data-mirror="' + id + '"]').forEach(function (m) { m.style.display = live ? 'block' : 'none'; });
+    updateWebControls();
+  }
+
+  // ---------- 웹 타일 원격 조작(조작 링크 + 맥에서 허용한 타일만) ----------
+  // 다시 그린 페이지 위에 투명한 막을 덮어 누르기·끌기·휠·키를 받고, 페이지 화면 CSS 픽셀 좌표로 바꿔 맥에 보낸다.
+  // 맥은 진짜 마우스·키 이벤트로 넣고, 바뀐 페이지는 옮겨 그리기로 돌아온다. 손가락으로 끌면 스크롤이다.
+  var webQueue = Promise.resolve(), webFailShown = 0;
+  function sendWeb(id, w) {
+    webQueue = webQueue.then(function () {
+      return fetch(BASE + '/input', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, web: w }) })
+        .then(function (r) {
+          if (!r.ok && Date.now() - webFailShown > 3000) { webFailShown = Date.now(); flash('Could not control this page. Open its workspace on the Mac.'); }
+        })
+        .catch(function () { flash('Could not reach the Mac.'); });
+    });
+  }
+  function webAllowed(id) { return CONTROL && snap && (snap.webInput || []).indexOf(id) >= 0 && !!(mirrors[id] && mirrors[id].player); }
+  function updateWebControls() {
+    document.querySelectorAll('.webctl').forEach(function (c) { c.classList.toggle('on', webAllowed(c.getAttribute('data-webctl'))); });
+  }
+  function webControl(id, mount) {
+    var c = el('div', 'webctl'); c.setAttribute('data-webctl', id); c.tabIndex = -1;
+    var ta = el('textarea'); ta.setAttribute('autocapitalize', 'off'); ta.setAttribute('autocomplete', 'off'); ta.spellcheck = false;
+    c.appendChild(ta);
+    function at(e) {
+      var x = mirrors[id], r = c.getBoundingClientRect();
+      if (!x || !x.w || !r.width) return null;
+      var k = r.width / x.w;
+      return { x: Math.round((e.clientX - r.left) / k), y: Math.round((e.clientY - r.top) / k) };
+    }
+    function mods(e, w) { if (e.shiftKey) w.shift = true; if (e.altKey) w.alt = true; if (e.metaKey) w.meta = true; if (e.ctrlKey) w.ctrl = true; return w; }
+    var down = null, lastDrag = 0, wheel = null;
+    function flushWheel() {
+      if (!wheel) return;
+      var w = wheel; wheel = null;
+      if (Math.abs(w.dx) >= 1 || Math.abs(w.dy) >= 1) sendWeb(id, { type: 'wheel', x: w.x, y: w.y, dx: Math.round(w.dx), dy: Math.round(w.dy) });
+    }
+    function addWheel(p, dx, dy) {
+      if (!wheel) { wheel = { x: p.x, y: p.y, dx: 0, dy: 0 }; setTimeout(flushWheel, 50); }
+      wheel.dx += dx; wheel.dy += dy;
+    }
+    c.addEventListener('mousedown', function (e) { e.preventDefault(); });   // 초점이 막으로 가지 않고 입력칸에 남게
+    c.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.stopPropagation(); e.preventDefault();
+      ta.focus({ preventScroll: true });
+      var p = at(e); if (!p) return;
+      c.setPointerCapture(e.pointerId);
+      down = { id: e.pointerId, touch: e.pointerType !== 'mouse', p: p, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, moved: false, clicks: Math.min(e.detail || 1, 3) };
+      if (!down.touch) sendWeb(id, mods(e, { type: 'down', x: p.x, y: p.y, clicks: down.clicks }));
+    });
+    c.addEventListener('pointermove', function (e) {
+      if (!down || down.id !== e.pointerId) return;
+      e.stopPropagation();
+      var p = at(e); if (!p) return;
+      if (Math.hypot(e.clientX - down.sx, e.clientY - down.sy) > 6) down.moved = true;
+      if (down.touch) {
+        // 손가락 끌기는 스크롤(끈 방향의 반대로 페이지가 움직인다).
+        var r = c.getBoundingClientRect(), x = mirrors[id], k = x && x.w ? r.width / x.w : 1;
+        addWheel(p, -(e.clientX - down.lx) / k, -(e.clientY - down.ly) / k);
+        down.lx = e.clientX; down.ly = e.clientY;
+        return;
+      }
+      if (Date.now() - lastDrag < 40) return;
+      lastDrag = Date.now();
+      sendWeb(id, mods(e, { type: 'drag', x: p.x, y: p.y }));
+    });
+    function release(e) {
+      if (!down || down.id !== e.pointerId) return;
+      e.stopPropagation();
+      var p = at(e) || down.p, d = down; down = null;
+      if (d.touch) {
+        flushWheel();
+        if (!d.moved) { sendWeb(id, { type: 'down', x: d.p.x, y: d.p.y, clicks: 1 }); sendWeb(id, { type: 'up', x: d.p.x, y: d.p.y, clicks: 1 }); }
+        return;
+      }
+      sendWeb(id, mods(e, { type: 'up', x: p.x, y: p.y, clicks: d.clicks }));
+    }
+    c.addEventListener('pointerup', release);
+    c.addEventListener('pointercancel', release);
+    c.addEventListener('wheel', function (e) {
+      if (e.ctrlKey) return;   // 확대는 보드가
+      e.preventDefault(); e.stopPropagation();
+      var p = at(e); if (!p) return;
+      var unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      var r = c.getBoundingClientRect(), x = mirrors[id], k = x && x.w ? r.width / x.w : 1;
+      addWheel(p, e.deltaX * unit / k, e.deltaY * unit / k);
+    }, { passive: false });
+    var SPECIAL = ['Enter', 'Backspace', 'Tab', 'Escape', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+    ta.addEventListener('keydown', function (e) {
+      if (e.isComposing || e.keyCode === 229) return;
+      if (SPECIAL.indexOf(e.key) >= 0) { e.preventDefault(); sendWeb(id, mods(e, { type: 'key', key: e.key })); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') { e.preventDefault(); sendWeb(id, mods(e, { type: 'key', key: 'a' })); return; }
+      if (e.metaKey || e.ctrlKey) e.preventDefault();   // 다른 단축키는 넘기지 않는다
+    });
+    // 한글처럼 조합하는 글자는 조합이 끝났을 때 한 번만 보낸다(브라우저마다 input 순서가 달라 직접 표시해 둔다).
+    var composing = false;
+    function sendText(t) { if (t) sendWeb(id, { type: 'text', text: t }); ta.value = ''; }
+    ta.addEventListener('compositionstart', function () { composing = true; });
+    ta.addEventListener('input', function (e) { if (!composing && !e.isComposing) sendText(ta.value); });
+    ta.addEventListener('compositionend', function (e) { composing = false; sendText(e.data || ta.value); });
+    return c;
   }
   function fitMirror(x) {
     if (!x.mount || !x.w) return;
@@ -730,7 +836,7 @@ enum ShareViewerPage {
       var p = placeholder('The page appears here while the tile is open on the Mac'); p.style.top = '44px'; p.setAttribute('data-webph', n.id);
       var shot = el('img', 'webshot'); shot.alt = ''; shot.setAttribute('data-web', n.id);
       var mount = el('div', 'webmirror'); mount.setAttribute('data-mirror', n.id);
-      b.appendChild(p); b.appendChild(shot); b.appendChild(mount);
+      b.appendChild(p); b.appendChild(shot); b.appendChild(mount); b.appendChild(webControl(n.id, mount));
       showWeb(shot, p, n.id);
     } else if (n.kind === 'image') {
       b.className = 'imgnode'; b.style.background = 'transparent';
@@ -947,6 +1053,7 @@ enum ShareViewerPage {
     document.getElementById('liveN').textContent = snap.live;
     document.getElementById('liveDot').style.background = snap.working ? 'var(--accent)' : (snap.live ? '#3fb950' : 'var(--dim)');
     document.getElementById('working').textContent = snap.working ? '· ' + snap.working + ' working' : '';
+    updateWebControls();
   });
   es.addEventListener('out', function (e) {
     var m = JSON.parse(e.data), c = consoleFor(m.id);

@@ -118,12 +118,14 @@ final class ChromeModel: ObservableObject {
     }
 }
 
-/// 공유 팝오버의 콘솔 한 줄(입력 허용 스위치).
+/// 공유 팝오버의 콘솔·웹 타일 한 줄(입력 허용 스위치).
 struct ShareConsoleRow: Identifiable, Equatable {
     let id: UUID
     var name: String
     var workspace: String
     var allowed: Bool
+    /// 웹 타일이면 조작 링크에서 클릭·스크롤·입력을 받는다.
+    var isWeb = false
 }
 
 struct PendingConfirm: Identifiable {

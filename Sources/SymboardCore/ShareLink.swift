@@ -93,20 +93,75 @@ public enum ShareLink {
         }
     }
 
-    /// 조작 링크에서 온 입력 한 번. keys 는 터미널에 친 그대로의 글자(xterm onData), text 는 대화 보기 입력칸의 글.
+    /// 조작 링크에서 온 입력 한 번. keys 는 터미널에 친 그대로의 글자(xterm onData), text 는 대화 보기 입력칸의 글,
+    /// web 은 웹 타일에 넣을 마우스·키 동작.
     public struct InputRequest: Codable, Equatable, Sendable {
         public var id: String
         public var keys: String?
         public var text: String?
         public var submit: Bool?
-        public init(id: String, keys: String? = nil, text: String? = nil, submit: Bool? = nil) {
-            self.id = id; self.keys = keys; self.text = text; self.submit = submit
+        public var web: WebInput?
+        public init(id: String, keys: String? = nil, text: String? = nil, submit: Bool? = nil, web: WebInput? = nil) {
+            self.id = id; self.keys = keys; self.text = text; self.submit = submit; self.web = web
         }
+    }
+
+    /// 웹 타일 원격 조작 한 번. 좌표는 페이지 화면(뷰포트) 왼쪽 위 기준 CSS 픽셀이다.
+    /// down·up·drag 는 왼쪽 단추, wheel 은 dx·dy 만큼 스크롤, key 는 특수 키 하나, text 는 글자 넣기.
+    public struct WebInput: Codable, Equatable, Sendable {
+        public var type: String
+        public var x: Double?
+        public var y: Double?
+        public var dx: Double?
+        public var dy: Double?
+        public var key: String?
+        public var text: String?
+        public var clicks: Int?
+        public var shift: Bool?
+        public var alt: Bool?
+        public var meta: Bool?
+        public var ctrl: Bool?
+        public init(type: String, x: Double? = nil, y: Double? = nil, dx: Double? = nil, dy: Double? = nil, key: String? = nil,
+                    text: String? = nil, clicks: Int? = nil, shift: Bool? = nil, alt: Bool? = nil, meta: Bool? = nil, ctrl: Bool? = nil) {
+            self.type = type; self.x = x; self.y = y; self.dx = dx; self.dy = dy; self.key = key; self.text = text
+            self.clicks = clicks; self.shift = shift; self.alt = alt; self.meta = meta; self.ctrl = ctrl
+        }
+
+        public static let pointerTypes: Set<String> = ["down", "up", "drag"]
+        /// 원격으로 받는 특수 키(브라우저 KeyboardEvent.key 이름). 글자 키는 text 로 온다.
+        public static let keys: Set<String> = ["Enter", "Backspace", "Tab", "Escape", "Delete", "ArrowLeft", "ArrowRight",
+                                               "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "a"]
+        /// 페이지 좌표·스크롤 양의 허용 범위(이상한 값으로 화면 밖을 누르지 않게).
+        static let coordRange = -100.0...40_000.0
+        static let deltaRange = -20_000.0...20_000.0
     }
 
     public enum InputAction: Equatable, Sendable {
         case keys(UUID, [UInt8])
         case text(UUID, String, submit: Bool)
+        case web(UUID, WebInput)
+    }
+
+    /// 웹 동작이 받을 만한 모양인지. 종류마다 필요한 값이 있고, 좌표는 범위 안이어야 한다.
+    /// a 키는 Cmd/Ctrl 과 함께일 때만(전체 선택) 받는다. 되돌리기(Cmd+Z)는 맥에서 보드 되돌리기로 갈 수 있어 받지 않는다.
+    static func validWebInput(_ w: WebInput) -> Bool {
+        func inRange(_ v: Double?, _ r: ClosedRange<Double>) -> Bool { v.map { $0.isFinite && r.contains($0) } ?? false }
+        switch w.type {
+        case _ where WebInput.pointerTypes.contains(w.type):
+            return inRange(w.x, WebInput.coordRange) && inRange(w.y, WebInput.coordRange) && (w.clicks ?? 1) >= 1 && (w.clicks ?? 1) <= 3
+        case "wheel":
+            return inRange(w.x, WebInput.coordRange) && inRange(w.y, WebInput.coordRange)
+                && inRange(w.dx ?? 0, WebInput.deltaRange) && inRange(w.dy ?? 0, WebInput.deltaRange)
+        case "key":
+            guard let k = w.key, WebInput.keys.contains(k) else { return false }
+            if k == "a" { return w.meta == true || w.ctrl == true }
+            return true
+        case "text":
+            guard let t = w.text else { return false }
+            return !t.isEmpty && t.utf8.count <= 8_192
+        default:
+            return false
+        }
     }
 
     /// 입력 몸통을 읽고, 허용한 콘솔이면 할 일을 돌려준다. 허용하지 않았거나 비었거나 너무 크면 nil.
@@ -114,6 +169,7 @@ public enum ShareLink {
         guard body.count <= maxInputBytes,
               let req = try? JSONDecoder().decode(InputRequest.self, from: body),
               let id = UUID(uuidString: req.id), allowed.contains(id) else { return nil }
+        if let web = req.web { return validWebInput(web) ? .web(id, web) : nil }
         if let keys = req.keys, !keys.isEmpty {
             let bytes = Array(keys.utf8)
             return bytes.count <= 8_192 ? .keys(id, bytes) : nil
@@ -207,6 +263,8 @@ public enum ShareLink {
         public var working: Int
         /// 조작 링크로 들어온 사람인지.
         public var control: Bool = false
+        /// 조작 링크에서 클릭·입력을 받는 웹 타일 id(맥에서 허용한 것). 보기 링크에는 넣지 않는다.
+        public var webInput: [String]?
         public init(project: String?, workspaces: [WorkspaceInfo], current: String?, consoles: [ConsoleInfo],
                     theme: String = "dark", live: Int = 0, working: Int = 0) {
             self.project = project; self.workspaces = workspaces; self.current = current; self.consoles = consoles

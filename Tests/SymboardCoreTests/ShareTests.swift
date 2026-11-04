@@ -80,6 +80,30 @@ import Testing
         ])
     }
 
+    @Test func webInputIsCheckedBeforeUse() {
+        let a = UUID(), b = UUID()
+        func body(_ w: ShareLink.WebInput, id: UUID? = nil) -> Data {
+            try! JSONEncoder().encode(ShareLink.InputRequest(id: (id ?? a).uuidString, web: w))
+        }
+        typealias W = ShareLink.WebInput
+        #expect(ShareLink.inputAction(body(W(type: "down", x: 10, y: 20)), allowed: [a]) == .web(a, W(type: "down", x: 10, y: 20)))
+        #expect(ShareLink.inputAction(body(W(type: "wheel", x: 1, y: 1, dy: 120)), allowed: [a]) == .web(a, W(type: "wheel", x: 1, y: 1, dy: 120)))
+        #expect(ShareLink.inputAction(body(W(type: "key", key: "Enter")), allowed: [a]) == .web(a, W(type: "key", key: "Enter")))
+        #expect(ShareLink.inputAction(body(W(type: "text", text: "안녕")), allowed: [a]) == .web(a, W(type: "text", text: "안녕")))
+        // 허용하지 않은 타일, 좌표 없음·범위 밖, 모르는 종류·키, 빈 글은 받지 않는다.
+        #expect(ShareLink.inputAction(body(W(type: "down", x: 10, y: 20), id: b), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "down", x: 10)), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "up", x: 10, y: 1e9)), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "down", x: 10, y: 20, clicks: 9)), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "wheel", x: 1, y: 1, dy: 1e7)), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "move", x: 1, y: 1)), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "key", key: "F12")), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "key", key: "a")), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "key", key: "a", meta: true)), allowed: [a]) == .web(a, W(type: "key", key: "a", meta: true)))
+        #expect(ShareLink.inputAction(body(W(type: "key", key: "z", meta: true)), allowed: [a]) == nil)
+        #expect(ShareLink.inputAction(body(W(type: "text", text: "")), allowed: [a]) == nil)
+    }
+
     @Test func imageRouteNeedsUUID() {
         let t = "0123456789abcdef0123456789abcdef"
         let id = UUID().uuidString

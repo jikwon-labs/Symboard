@@ -923,7 +923,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     private func publishShare() {
         let s = model.share
         chrome.shareControlLink = s.controlLink
-        chrome.shareConsoles = s.sharedConsoles.map { ShareConsoleRow(id: $0.id, name: $0.name, workspace: $0.workspace, allowed: s.inputAllowed.contains($0.id)) }
+        chrome.shareConsoles = s.sharedConsoles.map { ShareConsoleRow(id: $0.id, name: $0.name, workspace: $0.workspace, allowed: s.inputAllowed.contains($0.id), isWeb: $0.isWeb) }
         chrome.shareActive = s.isActive
         chrome.shareLinks = s.links
         chrome.shareViewers = s.viewerCount

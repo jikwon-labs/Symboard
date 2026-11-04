@@ -308,6 +308,120 @@ final class WebContent: NSObject, NodeContent, WKNavigationDelegate, WKUIDelegat
         mirrored = nil
     }
 
+    // MARK: 원격 조작(공유 조작 링크)
+
+    /// 조작 링크에서 온 웹 동작을 지금 탭 페이지에 넣는다. 맥 화면의 창에 붙어 있어야 한다(다른 작업공간이면 false).
+    /// 마우스·특수 키는 맥에서 직접 누른 것과 같은 NSEvent 로 웹뷰에 바로 넣어, 사이트가 사람 입력으로 받는다
+    /// (창 hitTest 를 거치지 않아 다른 노드가 덮고 있어도 된다). 누르면 웹뷰가 키 입력 초점을 가져간다(맥에서 누른 것과 같다).
+    /// 글자는 맥 입력기(한글 등)가 다시 해석하지 않게 페이지에 insertText 로 넣고, 휠은 그 자리의 스크롤 칸을 스크롤한다.
+    func remoteInput(_ w: SymboardCore.ShareLink.WebInput) -> Bool {
+        let view = webView
+        guard let window = view.window, view.url != nil, !stage.isHidden else { return false }
+        let mods = Self.modifierFlags(w)
+        let now = ProcessInfo.processInfo.systemUptime
+        switch w.type {
+        case "down", "up", "drag":
+            guard let x = w.x, let y = w.y else { return false }
+            let p = windowPoint(x: x, y: y, in: view)
+            func mouse(_ type: NSEvent.EventType) -> NSEvent? {
+                NSEvent.mouseEvent(with: type, location: p, modifierFlags: mods, timestamp: now, windowNumber: window.windowNumber,
+                                   context: nil, eventNumber: 0, clickCount: w.clicks ?? 1, pressure: type == .leftMouseUp ? 0 : 1)
+            }
+            switch w.type {
+            case "down":
+                window.makeFirstResponder(view)
+                // 마우스를 올린 상태(hover)를 먼저 맞춘다.
+                if let move = mouse(.mouseMoved) { view.mouseMoved(with: move) }
+                guard let e = mouse(.leftMouseDown) else { return false }
+                view.mouseDown(with: e)
+            case "up":
+                guard let e = mouse(.leftMouseUp) else { return false }
+                view.mouseUp(with: e)
+            default:
+                guard let e = mouse(.leftMouseDragged) else { return false }
+                view.mouseDragged(with: e)
+            }
+            return true
+        case "wheel":
+            guard let x = w.x, let y = w.y else { return false }
+            view.callAsyncJavaScript(Self.wheelScript, arguments: ["x": x, "y": y, "dx": w.dx ?? 0, "dy": w.dy ?? 0],
+                                     in: nil, in: WebMirror.world) { _ in }
+            return true
+        case "key":
+            guard let key = w.key else { return false }
+            if key == "a" {
+                window.makeFirstResponder(view)
+                return NSApp.sendAction(#selector(NSText.selectAll(_:)), to: view, from: nil)
+            }
+            guard let k = Self.specialKeys[key] else { return false }
+            let chars = String(Character(UnicodeScalar(k.char)!))
+            for type in [NSEvent.EventType.keyDown, .keyUp] {
+                guard let e = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: mods, timestamp: now,
+                                               windowNumber: window.windowNumber, context: nil, characters: chars,
+                                               charactersIgnoringModifiers: chars, isARepeat: false, keyCode: k.code) else { return false }
+                if type == .keyDown { view.keyDown(with: e) } else { view.keyUp(with: e) }
+            }
+            return true
+        case "text":
+            guard let text = w.text else { return false }
+            view.callAsyncJavaScript(Self.textScript, arguments: ["t": text], in: nil, in: WebMirror.world) { _ in }
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// 페이지 화면 CSS 픽셀 → 창 좌표. 표시 크기(pageZoom)와 캔버스 배율은 convert 가 함께 맞춘다.
+    private func windowPoint(x: Double, y: Double, in view: WKWebView) -> NSPoint {
+        let z = Double(view.pageZoom)
+        let local = NSPoint(x: x * z, y: view.isFlipped ? y * z : Double(view.bounds.height) - y * z)
+        return view.convert(local, to: nil)
+    }
+
+    private static func modifierFlags(_ w: SymboardCore.ShareLink.WebInput) -> NSEvent.ModifierFlags {
+        var f: NSEvent.ModifierFlags = []
+        if w.shift == true { f.insert(.shift) }
+        if w.alt == true { f.insert(.option) }
+        if w.meta == true { f.insert(.command) }
+        if w.ctrl == true { f.insert(.control) }
+        return f
+    }
+
+    /// 브라우저 키 이름 → (macOS 키 코드, 글자). 화살표 등은 NSEvent 기능 키 글자.
+    private static let specialKeys: [String: (code: UInt16, char: UInt32)] = [
+        "Enter": (36, 0x0D), "Backspace": (51, 0x7F), "Tab": (48, 0x09), "Escape": (53, 0x1B),
+        "Delete": (117, 0xF728), "ArrowLeft": (123, 0xF702), "ArrowRight": (124, 0xF703),
+        "ArrowDown": (125, 0xF701), "ArrowUp": (126, 0xF700), "Home": (115, 0xF729), "End": (119, 0xF72B),
+        "PageUp": (116, 0xF72C), "PageDown": (121, 0xF72D),
+    ]
+
+    /// 그 자리에서 스크롤할 수 있는 가장 가까운 칸을, 없으면 페이지를 스크롤한다.
+    private static let wheelScript = """
+    var el = document.elementFromPoint(x, y);
+    function can(e) {
+      if (!e || e === document.body || e === document.documentElement) return false;
+      var s = getComputedStyle(e), sc = /(auto|scroll|overlay)/;
+      return (sc.test(s.overflowY) && e.scrollHeight > e.clientHeight && dy) || (sc.test(s.overflowX) && e.scrollWidth > e.clientWidth && dx);
+    }
+    while (el && !can(el)) el = el.parentElement;
+    (el || window).scrollBy({ left: dx, top: dy, behavior: 'instant' });
+    return true;
+    """
+
+    /// 지금 초점이 있는 입력칸에 글자를 넣는다. execCommand 는 사람이 친 것과 같은 input 이벤트를 낸다.
+    private static let textScript = """
+    var el = document.activeElement;
+    if (!el) return false;
+    if (document.execCommand('insertText', false, t)) return true;
+    if ('value' in el && typeof el.value === 'string') {
+      var a = el.selectionStart == null ? el.value.length : el.selectionStart, b = el.selectionEnd == null ? a : el.selectionEnd;
+      el.value = el.value.slice(0, a) + t + el.value.slice(b);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    }
+    return false;
+    """
+
     // MARK: WKNavigationDelegate
 
     /// 웹 주소가 아닌 링크(mailto:, tel:, 앱 주소 등)는 웹뷰가 열지 못하므로 누른 것만 맥 기본 앱에 넘긴다.

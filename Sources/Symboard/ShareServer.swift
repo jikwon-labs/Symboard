@@ -73,8 +73,10 @@ final class ShareServer {
     }
 
     /// 공유하는 콘솔(팝오버의 입력 허용 목록).
-    var sharedConsoles: [(id: UUID, name: String, workspace: String)] {
-        sharedNodes.map { ($0.node.id, $0.node.displayTitle, $0.ws.name) }
+    /// 웹 타일도 들어간다(조작 링크에서 클릭·입력을 받을 수 있다).
+    var sharedConsoles: [(id: UUID, name: String, workspace: String, isWeb: Bool)] {
+        sharedNodes.map { ($0.node.id, $0.node.displayTitle, $0.ws.name, false) }
+            + sharedWebNodes.map { ($0.node.id, $0.node.displayTitle, $0.ws.name, true) }
     }
 
     func setInput(_ id: UUID, allowed: Bool) {
@@ -271,7 +273,7 @@ final class ShareServer {
 
     /// 조작 링크의 입력. 허용한 콘솔이고 공유 범위 안이면 내가 친 것처럼 넣는다.
     private func handleInput(_ body: Data) -> Bool {
-        let shared = Set(sharedNodes.map(\.node.id))
+        let shared = Set(sharedNodes.map(\.node.id)).union(sharedWebNodeIDs)
         guard let action = ShareLink.inputAction(body, allowed: inputAllowed.intersection(shared)) else { return false }
         let id: UUID
         switch action {
@@ -282,6 +284,10 @@ final class ShareServer {
         case .text(let nid, let text, let submit):
             guard let s = model.sessions.session(for: nid), s.running else { return false }
             s.sendText(text, submit: submit)
+            id = nid
+        case .web(let nid, let input):
+            // 맥 화면에 그 타일이 떠 있어야 넣을 수 있다(다른 작업공간 화면이면 실패).
+            guard let content = webContentFor?(nid), content.remoteInput(input) else { return false }
             id = nid
         }
         // 같은 콘솔은 몇 초에 한 번만 알린다(글자마다 뜨지 않게).
@@ -417,9 +423,11 @@ final class ShareServer {
     /// 찍은 화면의 긴 변 최대 픽셀. 레티나 원본은 크기만 크고 링크로 보기엔 이 정도면 충분하다.
     static let webMaxPixels: CGFloat = 1600
 
-    private var sharedWebNodeIDs: Set<UUID> {
-        Set(sharedWorkspaces.flatMap { $0.nodes.filter { $0.kind == .web }.map(\.id) })
+    private var sharedWebNodes: [(ws: Workspace, node: BoardNode)] {
+        sharedWorkspaces.flatMap { ws in ws.nodes.filter { $0.kind == .web }.map { (ws, $0) } }
     }
+
+    private var sharedWebNodeIDs: Set<UUID> { Set(sharedWebNodes.map(\.node.id)) }
 
     /// 보는 사람이 있으면 옮겨 그리지 못하는 웹 타일만 찍는다. 화면이 바뀐 타일만 판 번호를 올려 알린다.
     /// 창에 붙어 있지 않은(다른 작업공간 화면) 타일은 찍지 않고 마지막 장을 그대로 둔다.
@@ -524,6 +532,7 @@ final class ShareServer {
         var ctl = snap
         ctl.control = true
         for i in ctl.consoles.indices { ctl.consoles[i].input = UUID(uuidString: ctl.consoles[i].id).map { inputAllowed.contains($0) } ?? false }
+        ctl.webInput = sharedWebNodes.map(\.node.id).filter { inputAllowed.contains($0) }.map(\.uuidString)
         guard let json = try? JSONEncoder().encode(snap), let cjson = try? JSONEncoder().encode(ctl) else { return }
         let viewMeta = ShareLink.sseEvent("meta", String(decoding: json, as: UTF8.self))
         let controlMeta = ShareLink.sseEvent("meta", String(decoding: cjson, as: UTF8.self))
@@ -576,8 +585,8 @@ final class ShareServer {
     private func tick() {
         guard isActive else { return }
         if sharedWorkspaces.isEmpty { stop(); return }
-        // 콘솔이 늘거나 줄면 팝오버의 입력 허용 목록을 맞춘다. 없어진 콘솔의 허용은 지운다.
-        let ids = sharedNodes.map(\.node.id)
+        // 콘솔·웹 타일이 늘거나 줄면 팝오버의 입력 허용 목록을 맞춘다. 없어진 것의 허용은 지운다.
+        let ids = sharedNodes.map(\.node.id) + sharedWebNodes.map(\.node.id)
         if ids != lastConsoleIDs {
             lastConsoleIDs = ids
             inputAllowed.formIntersection(ids)
