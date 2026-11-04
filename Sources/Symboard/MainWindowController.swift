@@ -1885,9 +1885,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let previous = closeUp?.workspaceID == wsID ? closeUp!.previous
             : Viewport(center: scrollView.visibleCenter, zoom: Double(scrollView.magnification))
         closeUp = CloseUp(nodeID: id, previous: previous, workspaceID: wsID)
-        // 위 막대(70)·아래 명령 바(110)를 뺀 곳에 맞춘다(safeCanvasRect 와 같은 값).
+        // 위 막대(70)·아래 명령 바(110)·좌우 도구 막대(80씩)를 뺀 곳에 맞춘다(safeCanvasRect 와 같은 값).
         let size = scrollView.frame.size
-        let z = CloseUp.zoom(fitting: n.frame, width: Double(size.width), height: Double(size.height) - 180,
+        let z = CloseUp.zoom(fitting: n.frame, width: Double(size.width) - 160, height: Double(size.height) - 180,
                              minZoom: Double(scrollView.minMagnification))
         let c = CloseUp.center(of: n.frame)
         currentCanvas?.select(id)
