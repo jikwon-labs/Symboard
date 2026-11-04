@@ -15,6 +15,15 @@ import Testing
         let p = CanvasInput.unscaledWindowPoint(localX: 10, localY: 20, originX: 5, originY: 5, flipped: false)
         #expect(p.x == 15 && p.y == 25)
     }
+
+    /// 트랙패드를 빠르게 쓸면 양이 -100 가까이 온다. 예전 계산은 계수 0 이 되어 배율이 바닥으로 떨어졌다.
+    @Test func zoomFactorIsClamped() {
+        #expect(CanvasInput.zoomFactor(deltaY: -120, precise: true) == 0.8)
+        #expect(CanvasInput.zoomFactor(deltaY: 200, precise: true) == 1.25)
+        #expect(CanvasInput.zoomFactor(deltaY: -30, precise: false) == 0.8)
+        #expect(abs(CanvasInput.zoomFactor(deltaY: 5, precise: true) - 1.05) < 1e-9)
+        #expect(abs(CanvasInput.zoomFactor(deltaY: -1, precise: false) - 0.9) < 1e-9)
+    }
 }
 
 @Suite struct ComposerResizeTests {

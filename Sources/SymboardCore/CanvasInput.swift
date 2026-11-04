@@ -11,6 +11,12 @@ public enum CanvasInput {
                                            flipped: Bool) -> (x: Double, y: Double) {
         (originX + localX, flipped ? originY - localY : originY + localY)
     }
+
+    /// Cmd + 스크롤 한 번에 곱할 배율. 정밀 스크롤(트랙패드)은 화소 양 x 0.01, 휠은 칸 수 x 0.1.
+    /// 빠르게 쓸면 양이 -100 가까이 와서 계수가 0 이하가 되어 배율이 한 번에 바닥으로 떨어졌다. 한 번에 0.8~1.25 배로 묶는다.
+    public static func zoomFactor(deltaY: Double, precise: Bool) -> Double {
+        min(1.25, max(0.8, 1 + deltaY * (precise ? 0.01 : 0.1)))
+    }
 }
 
 /// 새 노드를 화면에 보이는 자리로 옮기는 계산.

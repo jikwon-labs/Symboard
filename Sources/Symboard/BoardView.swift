@@ -41,13 +41,26 @@ final class BoardScrollView: NSScrollView {
 
     /// Cmd + 스크롤은 확대/축소.
     override func scrollWheel(with event: NSEvent) {
+        // 손으로 움직이면 앱이 옮기던 화면 이동(glide)을 멈춘다. 둘이 매 프레임 서로 되돌려 화면이 떨렸다.
+        stopGlide()
         if event.modifierFlags.contains(.command) {
-            let factor = 1 + event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 0.01 : 0.1)
+            let factor = CanvasInput.zoomFactor(deltaY: event.scrollingDeltaY, precise: event.hasPreciseScrollingDeltas)
             let p = contentView.convert(event.locationInWindow, from: nil)
             setMagnification(max(minMagnification, min(maxMagnification, magnification * factor)), centeredAt: p)
             return
         }
         super.scrollWheel(with: event)
+    }
+
+    override func magnify(with event: NSEvent) {
+        stopGlide()
+        super.magnify(with: event)
+    }
+
+    /// 진행 중인 glide 를 그 자리에서 멈춘다.
+    func stopGlide() {
+        glide?.invalidate()
+        glide = nil
     }
 
     /// 화면 중앙의 캔버스 좌표.
@@ -130,7 +143,9 @@ final class CanvasView: NSView {
         addSubview(v, positioned: .below, relativeTo: nil)
         return v
     }()
-    private var panStart: (NSPoint, NSPoint)?
+    /// 빈 곳을 끌어 이동할 때 직전 마우스 위치(창 좌표). 누른 순간의 원점에 기대면, 끄는 중에
+    /// 배율이 바뀔 때(에이전트가 띄운 콘솔로 glide) 옛 화면의 왼쪽 위 모서리로 튀었다. 그래서 직전과의 차이만큼만 옮긴다.
+    private var panLast: NSPoint?
     private var currentStroke: [Point]?
     var penColor: String { controller?.chrome.penColor ?? "#F05A38" }
     var penWidth: Double { controller?.chrome.penWidth ?? 3 }
@@ -510,8 +525,9 @@ final class CanvasView: NSView {
             NotificationCenter.default.post(name: .canvasDoubleClick, object: self, userInfo: ["point": CanvasGeometry.modelPoint(p)])
             return
         }
-        guard let clip = enclosingScrollView?.contentView else { return }
-        panStart = (event.locationInWindow, clip.bounds.origin)
+        guard let sv = enclosingScrollView as? BoardScrollView else { return }
+        sv.stopGlide()
+        panLast = event.locationInWindow
         NSCursor.closedHand.push()
     }
 
@@ -534,11 +550,15 @@ final class CanvasView: NSView {
             inkView.showLive(currentStroke, color: penColor, width: penWidth)
             return
         }
-        guard let (startWin, startOrigin) = panStart, let sv = enclosingScrollView else { return }
+        guard let last = panLast, let sv = enclosingScrollView as? BoardScrollView else { return }
+        sv.stopGlide()
+        let now = event.locationInWindow
+        panLast = now
         let mag = sv.magnification
-        let dx = (event.locationInWindow.x - startWin.x) / mag
-        let dy = (event.locationInWindow.y - startWin.y) / mag
-        sv.contentView.scroll(to: NSPoint(x: startOrigin.x - dx, y: startOrigin.y + dy))
+        let dx = (now.x - last.x) / mag
+        let dy = (now.y - last.y) / mag
+        let origin = sv.contentView.bounds.origin
+        sv.contentView.scroll(to: NSPoint(x: origin.x - dx, y: origin.y + dy))
         sv.reflectScrolledClipView(sv.contentView)
     }
 
@@ -566,8 +586,8 @@ final class CanvasView: NSView {
             syncInk()
             return
         }
-        if panStart != nil {
-            panStart = nil
+        if panLast != nil {
+            panLast = nil
             NSCursor.pop()
         }
     }
