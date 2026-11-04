@@ -188,28 +188,8 @@ final class LinksView: NSView {
     override var isFlipped: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
-    /// 두 사각형의 마주 보는 변 가운데를 잇는 곡선.
-    static func path(from a: NSRect, to b: NSRect) -> CGPath {
-        let p = CGMutablePath()
-        let dx = b.midX - a.midX, dy = b.midY - a.midY
-        if abs(dx) >= abs(dy) {
-            let s = CGPoint(x: dx >= 0 ? a.maxX : a.minX, y: a.midY)
-            let e = CGPoint(x: dx >= 0 ? b.minX : b.maxX, y: b.midY)
-            let k = max(abs(e.x - s.x) * 0.5, 40) * (dx >= 0 ? 1 : -1)
-            p.move(to: s)
-            p.addCurve(to: e, control1: CGPoint(x: s.x + k, y: s.y), control2: CGPoint(x: e.x - k, y: e.y))
-        } else {
-            let s = CGPoint(x: a.midX, y: dy >= 0 ? a.maxY : a.minY)
-            let e = CGPoint(x: b.midX, y: dy >= 0 ? b.minY : b.maxY)
-            let k = max(abs(e.y - s.y) * 0.5, 40) * (dy >= 0 ? 1 : -1)
-            p.move(to: s)
-            p.addCurve(to: e, control1: CGPoint(x: s.x, y: s.y + k), control2: CGPoint(x: e.x, y: e.y - k))
-        }
-        return p
-    }
-
-    /// 다이어그램 화살표: 길(ArrowRouter)의 꺾이는 점을 둥근 모서리로 잇고 끝에 화살촉.
-    static func arrowPath(_ pts: [CGPoint]) -> CGPath {
+    /// 꺾이는 점을 둥근 모서리로 잇는 선(콘솔 선·화살표 공통).
+    static func roundedPath(_ pts: [CGPoint]) -> CGMutablePath {
         let p = CGMutablePath()
         guard let first = pts.first, let e = pts.last, pts.count >= 2 else { return p }
         p.move(to: first)
@@ -219,6 +199,13 @@ final class LinksView: NSView {
             p.addArc(tangent1End: cur, tangent2End: next, radius: r)
         }
         p.addLine(to: e)
+        return p
+    }
+
+    /// 다이어그램 화살표: 길(ArrowRouter)의 꺾이는 점을 둥근 모서리로 잇고 끝에 화살촉.
+    static func arrowPath(_ pts: [CGPoint]) -> CGPath {
+        let p = roundedPath(pts)
+        guard let e = pts.last, pts.count >= 2 else { return p }
         let from = pts[pts.count - 2]
         let ang = atan2(e.y - from.y, e.x - from.x)
         for d in [CGFloat.pi * 0.8, -CGFloat.pi * 0.8] {
@@ -279,15 +266,28 @@ final class LinksView: NSView {
     }
 
     /// faint: 에이전트가 띄운 콘솔과 부른 콘솔 사이 선(8차 3번). 모양은 같고 색만 옅다.
-    func update(_ segments: [(UUID, NSRect, NSRect)], faint: Set<UUID> = []) {
+    private var linkCache: (key: RouteKey, routes: [UUID: [Point]])?
+
+    /// obstacles: 선이 돌아갈 노드(선 끝 상자는 알아서 뺀다).
+    func update(_ segments: [(UUID, NSRect, NSRect)], faint: Set<UUID> = [], obstacles: [NSRect] = []) {
         guard let root = layer else { return }
         let ids = Set(segments.map(\.0))
         for (id, l) in layers where !ids.contains(id) {
             l.0.removeFromSuperlayer(); l.1.removeFromSuperlayer()
             layers[id] = nil
         }
-        for (id, a, b) in segments {
-            let path = Self.path(from: a, to: b)
+        func rect(_ r: NSRect) -> Rect { Rect(x: r.minX, y: r.minY, w: r.width, h: r.height) }
+        // 선을 한꺼번에 찾아야 서로 겹치지 않게 비켜 간다. 상자 자리가 그대로면 지난 길을 쓴다.
+        let edges = segments.map { (id: $0.0, from: rect($0.1), to: rect($0.2)) }
+        let key = RouteKey(ids: edges.map(\.id), rects: edges.flatMap { [$0.from, $0.to] }, obstacles: obstacles.map(rect))
+        let routes: [UUID: [Point]]
+        if let cached = linkCache, cached.key == key { routes = cached.routes } else {
+            routes = ArrowRouter.linkRoutes(edges, obstacles: key.obstacles)
+            linkCache = (key, routes)
+        }
+        for (id, _, _) in segments {
+            guard let pts = routes[id] else { continue }
+            let path: CGPath = Self.roundedPath(pts.map { CGPoint(x: $0.x, y: $0.y) })
             if let cur = layers[id], cur.2 == path { continue }
             let shape = layers[id]?.0 ?? CAShapeLayer()
             let dot = layers[id]?.1 ?? CALayer()
@@ -309,7 +309,7 @@ final class LinksView: NSView {
             let anim = CAKeyframeAnimation(keyPath: "position")
             anim.path = path
             anim.calculationMode = .paced
-            let len = hypot(b.midX - a.midX, b.midY - a.midY)
+            let len = ArrowRouter.length(pts)
             anim.duration = max(1.6, Double(len) / 140)
             anim.repeatCount = .infinity
             dot.removeAnimation(forKey: "flow")

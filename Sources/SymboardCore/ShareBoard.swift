@@ -58,6 +58,8 @@ public struct ShareBoard: Codable, Equatable, Sendable {
         public var b: Rect
         /// 에이전트가 띄운 콘솔 선(옅게).
         public var faint: Bool
+        /// 다른 노드를 돌아가는 꺾은선(앱의 LinksView 와 같은 길). 없으면 브라우저가 a·b 곡선으로 그린다.
+        public var points: [Point]? = nil
     }
 
     public struct Arrow: Codable, Equatable, Sendable {
@@ -133,9 +135,15 @@ public struct ShareBoard: Codable, Equatable, Sendable {
             return n.frame
         }
         let all = ws.links ?? []
-        let links = all.filter { $0.style != "arrow" }.compactMap { l -> Link? in
+        var links = all.filter { $0.style != "arrow" }.compactMap { l -> Link? in
             guard let a = rect(l.from), let b = rect(l.to) else { return nil }
             return Link(id: l.id.uuidString, a: a, b: b, faint: l.style == NodeLink.spawnedStyle)
+        }
+        if !links.isEmpty {
+            let avoid = ws.nodes.filter { ArrowRouter.linkAvoids($0.kind) && !isHidden($0) }.map(\.frame)
+            let edges = links.compactMap { l in UUID(uuidString: l.id).map { (id: $0, from: l.a, to: l.b) } }
+            let routes = ArrowRouter.linkRoutes(edges, obstacles: avoid)
+            for i in links.indices { links[i].points = UUID(uuidString: links[i].id).flatMap { routes[$0] } }
         }
         let arrowLinks = all.filter { $0.style == "arrow" }
         var arrows: [Arrow] = []

@@ -852,7 +852,7 @@ enum ShareViewerPage {
   }
 
   // ---------- 선·그룹·획 ----------
-  // LinksView.path(from:to:) 와 같은 곡선.
+  // 두 상자를 곧장 잇는 곡선(points 가 없는 예전 보드 자료용).
   function linkPath(a, b) {
     var amx = a.x + a.w / 2, amy = a.y + a.h / 2, bmx = b.x + b.w / 2, bmy = b.y + b.h / 2, dx = bmx - amx, dy = bmy - amy, s, e, k;
     if (Math.abs(dx) >= Math.abs(dy)) {
@@ -864,8 +864,8 @@ enum ShareViewerPage {
     k = Math.max(Math.abs(e[1] - s[1]) * 0.5, 40) * (dy >= 0 ? 1 : -1);
     return 'M' + s[0] + ' ' + s[1] + 'C' + s[0] + ' ' + (s[1] + k) + ' ' + e[0] + ' ' + (e[1] - k) + ' ' + e[0] + ' ' + e[1];
   }
-  // LinksView.arrowPath: 꺾이는 점을 둥근 모서리로 잇고 끝에 화살촉.
-  function arrowPath(pts) {
+  // LinksView.roundedPath: 꺾이는 점을 둥근 모서리로 잇는다(콘솔 선).
+  function roundedPath(pts) {
     if (pts.length < 2) return '';
     var d = 'M' + pts[0].x + ' ' + pts[0].y;
     for (var i = 1; i < pts.length - 1; i++) {
@@ -874,8 +874,14 @@ enum ShareViewerPage {
       var a = [c.x - (c.x - p.x) / (l1 || 1) * r, c.y - (c.y - p.y) / (l1 || 1) * r], b = [c.x + (n.x - c.x) / (l2 || 1) * r, c.y + (n.y - c.y) / (l2 || 1) * r];
       d += 'L' + a[0] + ' ' + a[1] + 'Q' + c.x + ' ' + c.y + ' ' + b[0] + ' ' + b[1];
     }
+    var e = pts[pts.length - 1];
+    return d + 'L' + e.x + ' ' + e.y;
+  }
+  // LinksView.arrowPath: 둥근 꺾은선 끝에 화살촉.
+  function arrowPath(pts) {
+    if (pts.length < 2) return '';
+    var d = roundedPath(pts);
     var e = pts[pts.length - 1], f = pts[pts.length - 2], ang = Math.atan2(e.y - f.y, e.x - f.x);
-    d += 'L' + e.x + ' ' + e.y;
     [Math.PI * 0.8, -Math.PI * 0.8].forEach(function (k) { d += 'M' + e.x + ' ' + e.y + 'L' + (e.x + 12 * Math.cos(ang + k)) + ' ' + (e.y + 12 * Math.sin(ang + k)); });
     return d;
   }
@@ -907,9 +913,11 @@ enum ShareViewerPage {
     var defs = svg('defs', {}), glow = svg('filter', { id: 'glow', x: '-200%', y: '-200%', width: '500%', height: '500%' });
     glow.appendChild(svg('feGaussianBlur', { stdDeviation: 2.5 })); defs.appendChild(glow); under.appendChild(defs);
     b.links.forEach(function (l) {
-      var d = linkPath(l.a, l.b);
+      var d = l.points && l.points.length >= 2 ? roundedPath(l.points) : linkPath(l.a, l.b);
       under.appendChild(svg('path', { d: d, fill: 'none', stroke: 'var(--accent)', 'stroke-opacity': l.faint ? .22 : .55, 'stroke-width': 2.5 }));
-      var len = Math.hypot((l.b.x + l.b.w / 2) - (l.a.x + l.a.w / 2), (l.b.y + l.b.h / 2) - (l.a.y + l.a.h / 2));
+      var len = 0;
+      if (l.points && l.points.length >= 2) { for (var j = 1; j < l.points.length; j++) len += Math.hypot(l.points[j].x - l.points[j - 1].x, l.points[j].y - l.points[j - 1].y); }
+      else len = Math.hypot((l.b.x + l.b.w / 2) - (l.a.x + l.a.w / 2), (l.b.y + l.b.h / 2) - (l.a.y + l.a.h / 2));
       var dur = Math.max(1.6, len / 140) + 's';
       [['glow', .9], [null, l.faint ? .45 : 1]].forEach(function (k) {
         var c = svg('circle', { r: 3.5, fill: 'var(--accent)', 'fill-opacity': k[1] });

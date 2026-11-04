@@ -292,7 +292,12 @@ final class CanvasView: NSView {
             return (l.id, a, b, l.label, l.colorHex ?? Theme.text.hexString)
         }
         if segs.isEmpty && arrows.isEmpty && linksView.layer?.sublayers?.isEmpty ?? true { return }
-        linksView.update(segs, faint: Set((ws.links ?? []).filter { $0.style == NodeLink.spawnedStyle }.map(\.id)))
+        // 콘솔 선이 돌아갈 노드: 보이는 창형 노드·메모(도형·글자는 뺀다).
+        let avoid: [NSRect] = segs.isEmpty ? [] : ws.nodes.filter { ArrowRouter.linkAvoids($0.kind) }.compactMap { n in
+            guard let v = nodeViews[n.id], !v.isHidden else { return nil }
+            return v.frame
+        }
+        linksView.update(segs, faint: Set((ws.links ?? []).filter { $0.style == NodeLink.spawnedStyle }.map(\.id)), obstacles: avoid)
         // 화살표가 피할 상자: 보드의 도형. 다른 도형을 품은 도형(다이어그램 그룹 테두리)은 뺀다.
         var obstacles: [NSRect] = []
         if !arrows.isEmpty {

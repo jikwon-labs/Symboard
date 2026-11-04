@@ -95,6 +95,8 @@ public enum CanvasLayout {
     }
 
     /// reference 바로 아래 줄에서 왼쪽(reference 왼쪽 끝)부터 오른쪽으로 빈 칸을 찾는다. 줄이 차면 그 아래 줄로.
+    /// 줄은 reference 의 몫(같은 줄 오른쪽 이웃 앞까지, 이웃이 없으면 maxRowWidth)만 쓴다.
+    /// 나란히 선 lead 들이 각자 일을 맡기면, 한쪽 콘솔이 이웃 lead 밑으로 들어가 선이 엇갈렸다.
     public static func belowSlot(w: Double, h: Double, reference ref: Rect, obstacles: [Rect],
                                  gap: Double = 40, maxRowWidth: Double = 2100) -> Rect {
         let clearance = 24.0
@@ -103,10 +105,12 @@ public enum CanvasLayout {
                 f.x < o.x + o.w + clearance && o.x < f.x + f.w + clearance && f.y < o.y + o.h + clearance && o.y < f.y + f.h + clearance
             }
         }
+        let neighbor = obstacles.filter { $0.x >= ref.x + ref.w && $0.y < ref.y + ref.h && ref.y < $0.y + $0.h }.map(\.x).min()
+        let laneRight = min(ref.x + maxRowWidth, neighbor.map { $0 - gap } ?? .infinity)
         var y = ref.y + ref.h + gap
         for _ in 0..<12 {
             var x = ref.x, tries = 0
-            while x == ref.x || x + w - ref.x <= maxRowWidth, tries < 30 {
+            while x == ref.x || x + w <= laneRight, tries < 30 {
                 let f = Rect(x: x, y: y, w: w, h: h)
                 let b = blockers(f)
                 if b.isEmpty { return f }

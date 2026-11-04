@@ -170,3 +170,18 @@ extension Rect {
     /// 안쪽으로 d 만큼 줄인(음수면 넓힌) 사각형.
     func inset(_ d: Double) -> Rect { Rect(x: x + d, y: y + d, w: w - d * 2, h: h - d * 2) }
 }
+
+extension ArrowRouter {
+    /// 콘솔 사이 선(에이전트가 띄운 선·넘겨주기 선)의 길. 두 상자를 곧장 잇는 곡선이 다른 콘솔 위를 지나가
+    /// lead 가 여럿이면 누가 누구를 띄웠는지 알아보기 어려웠다. 다이어그램 화살표와 같은 꺾은선으로 다른 상자를 돌아간다.
+    /// 화살촉이 없으니 상자 변에 바로 붙인다(gap 0).
+    public static func linkRoutes(_ edges: [(id: UUID, from: Rect, to: Rect)], obstacles: [Rect]) -> [UUID: [Point]] {
+        route(edges, obstacles: obstacles, gap: 0).mapValues(\.points)
+    }
+
+    /// 콘솔 선이 피할 노드인지. 다이어그램 도형·글자는 수가 많고 선이 지나가도 가리지 않으니 뺀다.
+    public static func linkAvoids(_ kind: NodeKind) -> Bool { kind != .shape && kind != .text }
+
+    /// 꺾은선 길이(흐르는 점의 속도를 맞출 때).
+    public static func length(_ pts: [Point]) -> Double { zip(pts, pts.dropFirst()).reduce(0) { $0 + dist($1.0, $1.1) } }
+}
