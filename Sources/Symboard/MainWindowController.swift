@@ -157,6 +157,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
 
         sidePanel.model = model
         sidePanel.onFocusNode = { [weak self] id in self?.focus(nodeID: id) }
+        sidePanel.onClose = { [weak self] in self?.hidePanel() }
         panelContainer.translatesAutoresizingMaskIntoConstraints = false
         panelContainer.wantsLayer = true
         panelContainer.layer?.cornerRadius = 16
@@ -316,7 +317,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             panelContainer.topAnchor.constraint(equalTo: content.topAnchor, constant: 54),
             panelContainer.trailingAnchor.constraint(equalTo: right.leadingAnchor, constant: -12),
             panelContainer.bottomAnchor.constraint(equalTo: bottom.topAnchor, constant: -12),
-            panelContainer.widthAnchor.constraint(equalToConstant: 340),
+            panelContainer.widthAnchor.constraint(equalToConstant: Self.panelWidth),
             sidePanel.view.topAnchor.constraint(equalTo: panelContainer.topAnchor),
             sidePanel.view.leadingAnchor.constraint(equalTo: panelContainer.leadingAnchor),
             sidePanel.view.trailingAnchor.constraint(equalTo: panelContainer.trailingAnchor),
@@ -618,6 +619,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func setHome(_ on: Bool) {
         chrome.showingHome = on
         homeHost.isHidden = !on
+        // 세션 목록은 홈 화면 위에 남지 않게 닫는다(도구 막대도 홈에서는 숨는다).
+        if on { hidePanel() }
         scrollView.isHidden = on
     }
 
@@ -891,12 +894,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         sidePanel.refreshStatuses()
     }
 
-    func togglePanel(tab: String) {
-        if !panelContainer.isHidden && sidePanel.state.tab == tab {
-            panelContainer.isHidden = true
-            chrome.panelOpen = false
-        } else { showPanel(tab: tab) }
+    func hidePanel() {
+        panelContainer.isHidden = true
+        chrome.panelOpen = false
     }
+
+    func togglePanel(tab: String = "Mission") {
+        if !panelContainer.isHidden && sidePanel.state.tab == tab { hidePanel() } else { showPanel(tab: tab) }
+    }
+
+    /// 오른쪽 세션 목록의 폭과, 열려 있을 때 오른쪽에서 가리는 폭(목록 + 도구 막대와의 틈 12).
+    static let panelWidth: CGFloat = 300
+    var panelCover: CGFloat { panelContainer.isHidden ? 0 : Self.panelWidth + 12 }
 
     func openUsage() { chrome.usageOpen.toggle() }
 
@@ -1886,14 +1895,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
             : Viewport(center: scrollView.visibleCenter, zoom: Double(scrollView.magnification))
         closeUp = CloseUp(nodeID: id, previous: previous, workspaceID: wsID)
         // 위 막대(70)·아래 명령 바(110)·좌우 도구 막대(80씩)를 뺀 곳에 맞춘다(safeCanvasRect 와 같은 값).
-        let size = scrollView.frame.size
-        let z = CloseUp.zoom(fitting: n.frame, width: Double(size.width) - 160, height: Double(size.height) - 180,
+        // 세션 목록이 열려 있으면 그 폭도 오른쪽에서 뺀다.
+        let size = scrollView.frame.size, cover = Double(panelCover)
+        let z = CloseUp.zoom(fitting: n.frame, width: Double(size.width) - 160 - cover, height: Double(size.height) - 180,
                              minZoom: Double(scrollView.minMagnification))
         let c = CloseUp.center(of: n.frame)
         currentCanvas?.select(id)
         if let t = model.sessions.session(for: id)?.view { window?.makeFirstResponder(t) }
-        // 보이는 영역의 가운데는 화면 가운데보다 20pt 위다(glideReveal 과 같은 보정).
-        scrollView.glide(to: Point(x: c.x, y: c.y + 20 / z), zoom: CGFloat(z))
+        // 보이는 영역의 가운데는 화면 가운데보다 20pt 위, 목록이 열려 있으면 목록 폭의 절반만큼 왼쪽이다(glideReveal 과 같은 보정).
+        scrollView.glide(to: Point(x: c.x + cover / 2 / z, y: c.y + 20 / z), zoom: CGFloat(z))
     }
 
     @objc func zoomToFit(_ sender: Any?) {

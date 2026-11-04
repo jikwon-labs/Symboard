@@ -107,7 +107,8 @@ struct TopRightBar: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 6) {
+            // 누르면 오른쪽 세션 목록을 열고 닫는다.
+            Button { c.togglePanel() } label: { HStack(spacing: 6) {
                 // 일하는 콘솔이 있으면 점을 강조색으로 바꾸고 개수를 붙인다.
                 Circle().fill(chrome.workingCount > 0 ? Color.symAccent : (chrome.liveCount > 0 ? Color.green : Color.symDim)).frame(width: 7, height: 7)
                 Text("\(chrome.liveCount)").font(.system(size: 12, weight: .semibold))
@@ -118,7 +119,12 @@ struct TopRightBar: View {
             }
             .padding(.horizontal, 11).padding(.vertical, 6)
             .floatingCapsule(radius: 10)
-            .hint(L("Running consoles"))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(chrome.panelOpen ? Color.symAccent : Color.clear, lineWidth: 1))
+            .contentShape(Rectangle())
+            }
+            .buttonStyle(.plainHit)
+            .tip(L("Running sessions"))
+            .axName("Running consoles")
 
             if let u = chrome.update {
                 Button { c.updates.pillClicked() } label: {
@@ -368,6 +374,10 @@ struct RightRail: View {
 
     var body: some View {
         VStack(spacing: 4) {
+            Button { c.togglePanel() } label: { Image(systemName: "list.bullet.rectangle") }
+                .buttonStyle(RailButtonStyle(active: chrome.panelOpen)).tip(L("Running sessions"))
+                .axName("Sessions")
+            Divider().frame(width: 22).overlay(Color.symBorder)
             Button { layersOpen.toggle() } label: { Image(systemName: "square.3.layers.3d") }
                 .buttonStyle(RailButtonStyle()).tip(L("Layers"))
                 .popover(isPresented: $layersOpen, arrowEdge: .leading) { LayersList(model: c.model, c: c) }

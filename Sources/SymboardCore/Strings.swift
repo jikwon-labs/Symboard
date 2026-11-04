@@ -695,6 +695,8 @@ public enum Strings {
         "STOP": "멈춤 조건",
         "STROKE": "선",
         "Sessions": "세션",
+        "SESSIONS": "세션",
+        "Running sessions": "돌고 있는 세션",
         "Size": "크기",
         "Sticky note": "메모",
         "Structure": "구조",
