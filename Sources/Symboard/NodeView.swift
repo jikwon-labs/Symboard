@@ -319,6 +319,7 @@ final class NodeView: NSView {
     }
 
     func beginInteraction() {
+        canvas?.stopRipple(nodeID)
         canvas?.select(nodeID)
     }
 

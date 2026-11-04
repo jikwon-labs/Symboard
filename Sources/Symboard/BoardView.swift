@@ -110,6 +110,8 @@ final class CanvasView: NSView {
     /// 웹 도구로 캔버스를 끄는 중이면 시작점과 지금 점(뷰 좌표). 원본처럼 끈 크기가 타일 크기가 된다.
     private var sizingDrag: (start: NSPoint, current: NSPoint)?
     private(set) var nodeViews: [UUID: NodeView] = [:]
+    /// 노드 뒤에 치고 있는 주황 파동(NodeRipple.swift).
+    var ripples: [UUID: NodeRippleView] = [:]
     private(set) var groupViews: [UUID: GroupFrameView] = [:]
     private(set) lazy var inkView: InkOverlayView = {
         let v = InkOverlayView(frame: bounds)
@@ -186,6 +188,7 @@ final class CanvasView: NSView {
         let ids = Set(ws.nodes.map(\.id))
         for (id, v) in nodeViews where !ids.contains(id) {
             nodeViews[id] = nil
+            stopRipple(id)
             if hasLoaded { NodeMotion.disappear(v) } else { v.removeFromSuperview() }
         }
         for node in ws.nodes where nodeViews[node.id] == nil {

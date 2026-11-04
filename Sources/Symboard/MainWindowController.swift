@@ -49,7 +49,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     /// 새 버전 알림(위쪽 오른쪽 알약).
     private(set) lazy var updates: UpdateChecker = { let u = UpdateChecker(chrome: chrome); u.window = window; return u }()
     /// 에이전트가 연 콘솔이 끝나면 lead 에 알리고 오른쪽 위에 띄운다.
-    private(set) lazy var workerReports = WorkerReporter(model: model, chrome: chrome)
+    private(set) lazy var workerReports: WorkerReporter = {
+        let r = WorkerReporter(model: model, chrome: chrome)
+        // 알림을 받은 lead 뒤로 주황 파동을 켠다. 사용자가 그 콘솔을 볼 때까지 계속된다.
+        r.onDelivered = { [weak self] lead in
+            guard let self, let ws = self.model.workspaceID(containing: lead) else { return }
+            self.canvases[ws]?.startRipple(lead)
+        }
+        return r
+    }()
     let scrollView = BoardScrollView(frame: .zero)
     let sidePanel = SidePanelController()
     private let panelContainer = NSView()
@@ -552,6 +560,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         // 접혀 있는 패널의 목록은 다시 만들지 않는다(쉬는 시간 글자가 매초 바뀌어 매번 새로 그려졌다). 열 때 채운다.
         if !panelContainer.isHidden { sidePanel.refreshStatuses() }
         workerReports.tick()
+        for cv in canvases.values where !cv.ripples.isEmpty {
+            cv.stopRipplesTypedInto { [model] in model.sessions.session(for: $0)?.lastUserKey }
+        }
         currentCanvas?.layoutGroups()
         StatusBeat.shared.tick &+= 1
         let pill = model.usage.pill
@@ -1776,6 +1787,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     /// 콘솔을 고르고 키보드 입력을 바로 받게 한 뒤 화면을 그쪽으로 옮긴다.
     func focusConsole(_ id: UUID) {
         guard let n = model.node(id) else { return }
+        currentCanvas?.stopRipple(id)
         currentCanvas?.select(id)
         if let t = model.sessions.session(for: id)?.view { window?.makeFirstResponder(t) }
         glideReveal([n.frame])

@@ -25,6 +25,8 @@ final class WorkerReporter {
     /// 알림이 저절로 닫히는 시간.
     static let noticeSeconds: TimeInterval = 12
     static let maxNotices = 3
+    /// lead 에 알림 줄을 넣은 뒤 부른다(캔버스가 lead 뒤로 파동을 친다).
+    var onDelivered: ((UUID) -> Void)?
 
     init(model: AppModel, chrome: ChromeModel) {
         self.model = model
@@ -79,6 +81,7 @@ final class WorkerReporter {
             let names = workers.compactMap { model.node($0)?.title }
             guard !names.isEmpty else { continue }
             s.sendText(WorkerReport.notice(workers: names), submit: true)
+            onDelivered?(lead)
             for i in chrome.workerNotices.indices where workers.contains(chrome.workerNotices[i].workerID) {
                 chrome.workerNotices[i].delivered = true
             }
