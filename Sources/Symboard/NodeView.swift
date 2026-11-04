@@ -48,9 +48,18 @@ final class NodeView: NSView {
     var isParent = false {
         didSet { if isParent != oldValue { updateFold() } }
     }
+    /// 부모 콘솔에 선으로 이어진 하위 콘솔인가. 하위 콘솔은 5분 넘게 쉬어야 접는다.
+    var isChild = false {
+        didSet { if isChild != oldValue { updateFold() } }
+    }
+    static let childFoldDelay: TimeInterval = 5 * 60
 
     private func updateFold() {
-        let want = isConsoleBody && lastStatus == .idle && !isSelected && !isParent
+        var want = isConsoleBody && lastStatus == .idle && !isSelected && !isParent
+        if want, isChild {
+            let since = model.sessions.statusSince[nodeID] ?? Date()
+            want = Date().timeIntervalSince(since) >= Self.childFoldDelay
+        }
         guard want != folded else { return }
         folded = want
         resizeHandle.isHidden = folded
@@ -196,6 +205,9 @@ final class NodeView: NSView {
         if status != lastStatus {
             lastStatus = status
             updateBorder()
+            updateFold()
+        } else if isChild, status == .idle, !folded {
+            // 하위 콘솔은 쉰 지 5분이 지나야 접으므로, 상태가 그대로여도 매 틱 다시 본다.
             updateFold()
         }
     }
