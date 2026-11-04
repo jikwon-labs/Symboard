@@ -2,8 +2,8 @@ import AppKit
 import SymboardCore
 
 /// 하루에 한 번 GitHub 최신 릴리스를 묻고, 지금보다 높으면 위쪽 막대 알약(ChromeModel.update)에 넣는다.
-/// 받기·설치는 하지 않는다. 알약을 누르면 릴리스 페이지를 연다.
-/// 새 버전을 처음 알게 되면 창에 안내 시트를 한 번 띄운다(버전마다 한 번, 그 뒤로는 알약만).
+/// 새 버전을 처음 알게 되면 창에 안내 시트를 한 번 띄운다(버전마다 한 번, 그 뒤로는 알약만). 알약을 누르면 같은 안내가 다시 뜬다.
+/// "설치하고 다시 열기" 를 고르면 UpdateInstaller 가 받아서 바꿔 끼우고 다시 연다. 못 하면 까닭을 알리고 릴리스 페이지로 보낸다.
 /// 시험용: SYMBOARD_NO_UPDATE_CHECK=1 이면 묻지 않는다(남겨 둔 결과만 보인다).
 @MainActor
 final class UpdateChecker {
@@ -15,6 +15,7 @@ final class UpdateChecker {
     private var alertOpen = false
     private var timer: Timer?
     private var inFlight = false
+    private var installing = false
     private let prefs: Prefs
     static let disabledByEnv = ProcessInfo.processInfo.environment["SYMBOARD_NO_UPDATE_CHECK"] == "1"
 
@@ -96,24 +97,80 @@ final class UpdateChecker {
     }
 
     private func showPrompt(_ r: UpdateCheck.Release, on target: NSWindow?) {
-        guard !alertOpen else { return }
+        guard !alertOpen, !installing else { return }
         UpdateCheck.markPrompted(r, prefs)
         alertOpen = true
         let a = NSAlert()
         a.messageText = L("Symboard %@ is available", r.version)
-        a.informativeText = L("You have %@. Download the new version from the release page and replace the app in Applications.", Symboard.version)
-        a.addButton(withTitle: L("Download"))
+        a.informativeText = KeepConsolesPrefs.enabled(prefs)
+            ? L("You have %@. Symboard downloads the new version, replaces itself and opens again. Consoles keep running.", Symboard.version)
+            : L("You have %@. Symboard downloads the new version, replaces itself and opens again. Running consoles stop and come back when it opens.", Symboard.version)
+        a.addButton(withTitle: L("Install and Restart"))
         a.addButton(withTitle: L("Later"))
+        a.addButton(withTitle: L("Release Page"))
         let done: (NSApplication.ModalResponse) -> Void = { [weak self] resp in
-            self?.alertOpen = false
-            self?.prompting = false
-            if resp == .alertFirstButtonReturn { NSWorkspace.shared.open(r.url) }
+            guard let self else { return }
+            self.alertOpen = false
+            self.prompting = false
+            switch resp {
+            case .alertFirstButtonReturn: self.install(r)
+            case .alertThirdButtonReturn: NSWorkspace.shared.open(r.url)
+            default: break
+            }
         }
+        present(a, on: target, done)
+    }
+
+    private func present(_ a: NSAlert, on target: NSWindow?, _ done: @escaping (NSApplication.ModalResponse) -> Void) {
         if let w = target, w.isVisible, w.attachedSheet == nil {
             a.beginSheetModal(for: w, completionHandler: done)
         } else {
             done(a.runModal())
         }
+    }
+
+    /// 받기·검사가 끝나면 도우미를 띄우고 앱을 끈다. 남겨 둔 결과에 zip 주소가 없으면(예전 버전이 남긴 것) 먼저 다시 묻는다.
+    private func install(_ r: UpdateCheck.Release) {
+        guard !installing else { return }
+        installing = true
+        chrome?.updateInstalling = true
+        Task { @MainActor [weak self] in
+            var release = r
+            if release.asset == nil, let fresh = await self?.fetchLatest() { release = fresh }
+            do {
+                let prepared = try await UpdateInstaller.prepare(release)
+                try UpdateInstaller.launchSwap(prepared)
+                AppDelegate.skipQuitConfirm = true
+                NSApp.terminate(nil)
+            } catch {
+                guard let self else { return }
+                self.installing = false
+                self.chrome?.updateInstalling = false
+                self.showFailure(error as? UpdateInstaller.Problem ?? .downloadFailed, release)
+            }
+        }
+    }
+
+    private func fetchLatest() async -> UpdateCheck.Release? {
+        await withCheckedContinuation { cont in fetch { cont.resume(returning: $0) } }
+    }
+
+    private func showFailure(_ p: UpdateInstaller.Problem, _ r: UpdateCheck.Release) {
+        let a = NSAlert()
+        a.alertStyle = .warning
+        a.messageText = L("Couldn't install the update")
+        a.informativeText = UpdateInstaller.message(p)
+        a.addButton(withTitle: L("Open the release page"))
+        a.addButton(withTitle: L("OK"))
+        present(a, on: window) { resp in
+            if resp == .alertFirstButtonReturn { NSWorkspace.shared.open(r.url) }
+        }
+    }
+
+    /// 위쪽 막대 알약. 안내를 다시 띄운다(설치 중이면 아무것도 하지 않는다).
+    func pillClicked() {
+        guard let r = chrome?.update else { openReleasePage(); return }
+        showPrompt(r, on: window)
     }
 
     func openReleasePage() {

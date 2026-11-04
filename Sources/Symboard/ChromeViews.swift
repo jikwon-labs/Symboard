@@ -121,14 +121,20 @@ struct TopRightBar: View {
             .hint(L("Running consoles"))
 
             if let u = chrome.update {
-                Button { c.updates.openReleasePage() } label: {
+                Button { c.updates.pillClicked() } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.down.circle.fill").foregroundStyle(Color.symAccent)
-                        Text(L("New version %@", u.version))
+                        if chrome.updateInstalling {
+                            ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
+                            Text(L("Updating…"))
+                        } else {
+                            Image(systemName: "arrow.down.circle.fill").foregroundStyle(Color.symAccent)
+                            Text(L("New version %@", u.version))
+                        }
                     }
                 }
                 .buttonStyle(PillButtonStyle(active: false))
-                .tip(L("Open the release page"))
+                .disabled(chrome.updateInstalling)
+                .tip(L("Install the new version"))
                 .axName("Update available")
             }
 

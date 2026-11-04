@@ -1,23 +1,28 @@
 import Foundation
 
-/// 새 버전 알림. 자동으로 받거나 설치하지 않고, GitHub 최신 릴리스가 지금 버전보다 높으면 위쪽 막대에 알약만 띄운다.
-/// 하루에 한 번만 묻고, 설정 "Check for updates" 로 끈다(기본 켬).
+/// 새 버전 알림. GitHub 최신 릴리스가 지금 버전보다 높으면 위쪽 막대에 알약을 띄운다.
+/// 받기·설치는 사람이 고를 때만 한다(UpdateInstall). 하루에 한 번만 묻고, 설정 "Check for updates" 로 끈다(기본 켬).
 public enum UpdateCheck {
     public static let repo = "jikwon-labs/Symboard"
     public static let latestURL = URL(string: "https://api.github.com/repos/\(repo)/releases/latest")!
     public static let releasesPage = URL(string: "https://github.com/\(repo)/releases")!
     public static let prefKey = "updates.check"
     public static let lastCheckKey = "updates.lastCheck"
-    /// 마지막으로 받은 최신 릴리스(태그 \t 주소). 하루 안에 다시 켜도 알약이 바로 보이게 남긴다.
+    /// 마지막으로 받은 최신 릴리스(태그 \t 주소 \t zip). 하루 안에 다시 켜도 알약이 바로 보이게 남긴다.
     public static let latestKey = "updates.latest"
     public static let interval: TimeInterval = 24 * 60 * 60
     /// 업데이트 안내 창을 이미 띄운 버전. 같은 버전은 한 번만 묻고, 그 뒤로는 알약만 남는다.
     public static let promptedKey = "updates.prompted"
 
+    /// 릴리스에 붙은 설치용 파일 이름(release.sh 가 올린다).
+    public static let assetName = "Symboard.zip"
+
     public struct Release: Equatable, Sendable {
         public var version: String
         public var url: URL
-        public init(version: String, url: URL) { self.version = version; self.url = url }
+        /// 앱 안에서 받아 설치할 zip. 릴리스에 없거나 예전에 남긴 결과면 nil.
+        public var asset: URL?
+        public init(version: String, url: URL, asset: URL? = nil) { self.version = version; self.url = url; self.asset = asset }
     }
 
     public static func enabled(_ prefs: Prefs) -> Bool { prefs.string(prefKey) != "off" }
@@ -38,7 +43,12 @@ public enum UpdateCheck {
               obj["draft"] as? Bool != true, obj["prerelease"] as? Bool != true,
               parseVersion(tag) != nil else { return nil }
         let url = (obj["html_url"] as? String).flatMap(URL.init(string:)) ?? releasesPage
-        return Release(version: normalized(tag), url: url)
+        let asset = (obj["assets"] as? [[String: Any]])?
+            .first { $0["name"] as? String == assetName }
+            .flatMap { $0["browser_download_url"] as? String }
+            .flatMap(URL.init(string:))
+            .flatMap { $0.scheme == "https" ? $0 : nil }
+        return Release(version: normalized(tag), url: url, asset: asset)
     }
 
     /// "v1.2.3" → [1, 2, 3]. 빠진 자리는 0 으로 본다. 숫자가 아닌 조각이 있으면 nil.
@@ -72,14 +82,15 @@ public enum UpdateCheck {
 
     public static func store(_ r: Release, _ prefs: Prefs, now: Date = Date()) {
         prefs.set(now.timeIntervalSince1970, for: lastCheckKey)
-        prefs.set("\(r.version)\t\(r.url.absoluteString)", for: latestKey)
+        // 태그 \t 페이지 [\t zip]. 예전 두 칸짜리도 읽는다.
+        prefs.set(([r.version, r.url.absoluteString] + (r.asset.map { [$0.absoluteString] } ?? [])).joined(separator: "\t"), for: latestKey)
     }
 
     public static func cached(_ prefs: Prefs) -> Release? {
         guard let s = prefs.string(latestKey) else { return nil }
-        let parts = s.split(separator: "\t", maxSplits: 1).map(String.init)
-        guard parts.count == 2, let url = URL(string: parts[1]), parseVersion(parts[0]) != nil else { return nil }
-        return Release(version: parts[0], url: url)
+        let parts = s.split(separator: "\t").map(String.init)
+        guard parts.count >= 2, let url = URL(string: parts[1]), parseVersion(parts[0]) != nil else { return nil }
+        return Release(version: parts[0], url: url, asset: parts.count >= 3 ? URL(string: parts[2]) : nil)
     }
 
     /// 알약에 보일 릴리스: 남겨 둔 최신이 지금 버전보다 높을 때만.

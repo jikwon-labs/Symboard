@@ -118,7 +118,7 @@ final class SettingsWindowController: NSWindowController {
         let reportNote = NSTextField(wrappingLabelWithString: L("When a console opened by an agent finishes, Symboard types a one-line notice into the console that opened it once that console is free, and shows a notice at the top right."))
         reportNote.font = .systemFont(ofSize: 11)
         reportNote.textColor = Theme.textDim
-        let updatesNote = NSTextField(wrappingLabelWithString: L("Once a day, asks GitHub for the latest release and shows a pill when a newer version is out. Nothing is downloaded."))
+        let updatesNote = NSTextField(wrappingLabelWithString: L("Once a day, asks GitHub for the latest release and shows a pill when a newer version is out. Nothing is downloaded until you choose to install it."))
         updatesNote.font = .systemFont(ofSize: 11)
         updatesNote.textColor = Theme.textDim
         checkNow.title = L("Check Now")
