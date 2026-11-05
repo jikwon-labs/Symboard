@@ -781,14 +781,23 @@ struct BranchChip: View {
     }
 }
 
+/// 홈에서 숨기기는 화면 모델을 보고, 배율 글자는 작은 배율 모델만 본다(확대·축소 중 다른 막대가 다시 계산되지 않게).
 struct ZoomControl: View {
     @ObservedObject var chrome: ChromeModel
+    let c: MainWindowController
+    var body: some View {
+        ZoomButtons(zoom: chrome.zoom, c: c).hiddenOnHome(chrome)
+    }
+}
+
+struct ZoomButtons: View {
+    @ObservedObject var zoom: ZoomReadout
     let c: MainWindowController
     var body: some View {
         HStack(spacing: 2) {
             Button { c.zoomOut(nil) } label: { Image(systemName: "minus").frame(width: 24, height: 24) }.tip(L("Zoom out"))
             Button { c.zoomReset(nil) } label: {
-                Text("\(chrome.zoomPercent)%").font(.system(size: 12, weight: .medium, design: .monospaced)).frame(minWidth: 44)
+                Text("\(zoom.percent)%").font(.system(size: 12, weight: .medium, design: .monospaced)).frame(minWidth: 44)
             }
             .tip(L("Reset to 100%"))
             Button { c.zoomIn(nil) } label: { Image(systemName: "plus").frame(width: 24, height: 24) }.tip(L("Zoom in"))
@@ -798,7 +807,6 @@ struct ZoomControl: View {
         .padding(.horizontal, 6).padding(.vertical, 3)
         .floatingCapsule(radius: 10)
         .fixedSize()
-        .hiddenOnHome(chrome)
     }
 }
 

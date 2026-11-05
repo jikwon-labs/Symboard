@@ -300,7 +300,26 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     // MARK: TerminalViewDelegate
 
     nonisolated func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
-        MainActor.assumeIsolated { link.resize(cols: newCols, rows: newRows) }
+        MainActor.assumeIsolated { scheduleResize(cols: newCols, rows: newRows) }
+    }
+
+    /// 마지막으로 정한 콘솔 크기(아직 프로세스에 알리지 않은 것).
+    private var pendingSize: (cols: Int, rows: Int)?
+    private var resizeWork: DispatchWorkItem?
+
+    /// 노드 크기를 끄는 동안에는 한 칸 바뀔 때마다 프로세스에 알리지 않고, 멎은 뒤(0.12초) 마지막 크기만 알린다.
+    /// 알릴 때마다 claude·codex 가 화면 전체를 다시 그려 보내서, 끄는 내내 큰 출력이 쏟아졌다(성능 점검 2차).
+    private func scheduleResize(cols: Int, rows: Int) {
+        pendingSize = (cols, rows)
+        resizeWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, let size = self.pendingSize else { return }
+            self.pendingSize = nil
+            self.resizeWork = nil
+            self.link.resize(cols: size.cols, rows: size.rows)
+        }
+        resizeWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
     }
 
     nonisolated func setTerminalTitle(source: TerminalView, title: String) {

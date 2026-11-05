@@ -286,6 +286,10 @@ final class LinksView: NSView {
             routes = ArrowRouter.linkRoutes(edges, obstacles: key.obstacles)
             linkCache = (key, routes)
         }
+        // 선 모양 바꾸기에 기본 움직임(0.25초)을 붙이지 않는다. 노드를 끌 때 선이 늦게 따라왔다(성능 점검 2차).
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
         for (id, _, _) in segments {
             guard let pts = routes[id] else { continue }
             let path: CGPath = Self.roundedPath(pts.map { CGPoint(x: $0.x, y: $0.y) })

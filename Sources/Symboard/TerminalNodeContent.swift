@@ -152,6 +152,33 @@ final class TerminalContainerView: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    // MARK: 확대·축소 중 사진 덮기(성능 점검 2차)
+
+    /// 확대·축소하는 동안 터미널 위에 덮는 직전 화면 사진.
+    private var freezeView: SnapshotView?
+
+    /// on: 지금 화면을 사진으로 떠서 덮고 터미널 그리기를 멈춘다. off: 사진을 걷고 한 번 다시 그린다.
+    /// 화면 밖 터미널은 사진 없이 멈추기만 한다(어차피 보이지 않는다).
+    func setFrozen(_ on: Bool) {
+        guard let t = terminal as? SymTerminalView else { return }
+        if on {
+            guard !t.drawingSuspended else { return }
+            if !t.visibleRect.isEmpty, let rep = t.bitmapImageRepForCachingDisplay(in: t.bounds) {
+                t.cacheDisplay(in: t.bounds, to: rep)
+                let snap = SnapshotView(frame: t.frame)
+                snap.image = rep.cgImage
+                addSubview(snap, positioned: .above, relativeTo: t)
+                freezeView = snap
+            }
+            t.drawingSuspended = true
+        } else {
+            guard t.drawingSuspended else { return }
+            t.drawingSuspended = false
+            freezeView?.removeFromSuperview()
+            freezeView = nil
+        }
+    }
+
     @objc private func scrollToBottom() {
         guard let t = terminal as? SymTerminalView else { return }
         t.scrollToBottom()
@@ -178,4 +205,21 @@ final class TerminalContainerView: NSView {
         (superview as? NodeView)?.beginInteraction()
         if let t = terminal { window?.makeFirstResponder(t) }
     }
+}
+
+/// 비트맵 한 장을 층 내용으로만 보이는 뷰. 확대·축소해도 다시 그리지 않고 GPU 가 늘려 보인다.
+final class SnapshotView: NSView {
+    var image: CGImage? { didSet { needsDisplay = true } }
+    override var wantsUpdateLayer: Bool { true }
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layerContentsRedrawPolicy = .onSetNeedsDisplay
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func updateLayer() {
+        layer?.contents = image
+        layer?.contentsGravity = .resize
+    }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

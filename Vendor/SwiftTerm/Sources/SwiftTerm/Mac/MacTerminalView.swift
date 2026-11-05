@@ -538,6 +538,12 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     }
     
     override public func draw (_ dirtyRect: NSRect) {
+        // Symboard: 확대·축소 중에는 배율이 바뀔 때마다 AppKit 이 다시 그리라고 하지만, 앱이 사진을 덮어 두었으므로 건너뛴다.
+        // 다 끝나면 drawingSuspended 를 꺼서 한 번 그린다(PATCHES.md 12번).
+        if drawingSuspended {
+            offscreenDirty = true
+            return
+        }
         guard let currentContext = getCurrentGraphicsContext() else {
             return
         }
@@ -558,7 +564,18 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     // updateDisplay 가 그동안 그리기·커서 옮기기·접근성 알림을 건너뛴다(PATCHES.md 8번).
     var offscreenDirty = false
 
-    var isOffscreen: Bool { window == nil || isHiddenOrHasHiddenAncestor }
+    // Symboard: 앱이 그리기를 잠시 멈췄으면(확대·축소 중) 그리지 않는다(PATCHES.md 12번).
+    // 보드에서 스크롤해 화면 밖으로 나간 터미널은 AppKit 이 이미 그리지 않아서(재 보니 0%) 따로 보지 않는다.
+    var isOffscreen: Bool { drawingSuspended || window == nil || isHiddenOrHasHiddenAncestor }
+
+    /// Symboard: 켜 두는 동안 그리지 않는다(앱이 확대·축소하는 동안 사진을 덮어 보인다). 끄면 전체를 다시 그린다(PATCHES.md 12번).
+    public var drawingSuspended = false {
+        didSet {
+            guard oldValue != drawingSuspended, !drawingSuspended else { return }
+            offscreenDirty = true
+            redrawIfShownAgain()
+        }
+    }
 
     open override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -896,7 +913,9 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     // 조합 중 글자가 확정되기 전까지 보이지 않았다. 커서 자리에 밑줄과 함께 겹쳐 그린다.
     private var markedTextString = ""
     /// Symboard: 두 칸 글자용으로 키운 글꼴(글꼴 이름@크기).
-    var wideFontCache: [String: CTFont] = [:]
+    /// Symboard: 넓힌 두 칸 글꼴 캐시. 열쇠는 글꼴 이름·크기·가로 배율이고, 이름은 Swift 문자열로 바꾸지 않는다(PATCHES.md 11번).
+    struct WideFontKey: Hashable { let name: NSString; let size: CGFloat; let stretch: CGFloat }
+    var wideFontCache: [WideFontKey: CTFont] = [:]
     private lazy var markedTextLabel: NSTextField = {
         let l = NSTextField(labelWithString: "")
         l.drawsBackground = true
@@ -967,7 +986,7 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         let sx = (stretch * 100).rounded() / 100
         var drawFont = font
         if size > CTFontGetSize(font) + 0.01 || sx > 1.001 {
-            let key = "\(CTFontCopyPostScriptName(font) as String)@\(size)x\(sx)"
+            let key = WideFontKey(name: CTFontCopyPostScriptName(font) as NSString, size: size, stretch: sx)
             if let cached = wideFontCache[key] {
                 drawFont = cached
             } else {

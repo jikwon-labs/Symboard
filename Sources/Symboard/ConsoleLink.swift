@@ -352,12 +352,15 @@ final class AgentdHost {
         writeArmed = false
     }
 
+    /// 읽기 버퍼. 읽을 때마다 256KB 를 새로 만들고 0 으로 채우지 않게 하나를 다시 쓴다(성능 점검 2차).
+    private var readBuffer = [UInt8](repeating: 0, count: 256 * 1024)
+
     private func readAvailable() {
-        var buf = [UInt8](repeating: 0, count: 256 * 1024)
-        let n = read(fd, &buf, buf.count)
+        let n = readBuffer.withUnsafeMutableBytes { read(fd, $0.baseAddress, $0.count) }
         if n == 0 || (n < 0 && errno != EAGAIN && errno != EINTR) { disconnect(); return }
         guard n > 0 else { return }
-        guard let frames = try? reader.feed(Data(buf[0..<n])) else { disconnect(); return }
+        let chunk = readBuffer.withUnsafeBytes { Data($0[0..<n]) }
+        guard let frames = try? reader.feed(chunk) else { disconnect(); return }
         for f in frames { links[f.id]?.link?.received(f) }
     }
 

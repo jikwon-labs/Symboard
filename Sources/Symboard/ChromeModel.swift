@@ -48,7 +48,12 @@ enum BoardTool: Equatable {
 @MainActor
 final class ChromeModel: ObservableObject {
     @Published var tool: BoardTool = .select
-    @Published var zoomPercent = 100
+    /// 배율 표시는 따로 둔다. 확대·축소하는 동안 매 단계 바뀌어서, 여기 @Published 로 두면 이 모델을 보는 막대가 전부 다시 계산됐다(성능 점검 2차).
+    let zoom = ZoomReadout()
+    var zoomPercent: Int {
+        get { zoom.percent }
+        set { if zoom.percent != newValue { zoom.percent = newValue } }
+    }
     @Published var liveCount = 0
     @Published var workingCount = 0
     @Published var branch: String?
@@ -138,4 +143,10 @@ struct PendingConfirm: Identifiable {
     /// true 면 아래 확인 띠 대신 THREAD 안에 Confirm · Cancel 로 보인다.
     var inThread = false
     var onCancel: (() -> Void)? = nil
+}
+
+/// 아래 오른쪽 배율 표시만 보는 작은 모델.
+@MainActor
+final class ZoomReadout: ObservableObject {
+    @Published var percent = 100
 }

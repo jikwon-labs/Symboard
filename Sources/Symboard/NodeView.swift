@@ -135,7 +135,7 @@ final class NodeView: NSView {
         header.duplicateButton.target = self
         header.duplicateButton.action = #selector(duplicateClicked)
         header.isTerminal = node.kind == .terminal
-        header.kindIcon.image = NSImage(systemSymbolName: LayersList.symbol(node.kind), accessibilityDescription: nil)
+        header.kindIcon.image = NSImage(systemSymbolName: LayersList.symbol(node.kind), accessibilityDescription: nil)?.baked()
         updateBorder()
         layoutParts()
         syncFromModel()
@@ -435,7 +435,7 @@ final class NodeHeaderView: NSView {
             b.bezelStyle = .inline
             b.isBordered = false
             b.image = NSImage(systemSymbolName: sym, accessibilityDescription: tip)?
-                .withSymbolConfiguration(.init(pointSize: b === chevron ? 8 : 11, weight: .semibold))
+                .withSymbolConfiguration(.init(pointSize: b === chevron ? 8 : 11, weight: .semibold))?.baked()
             b.contentTintColor = Theme.textDim
             b.toolTip = tip
         }
@@ -886,5 +886,28 @@ final class WirePortView: NSView {
     private static func message(_ c: MainWindowController, orch: UUID, target: UUID, name: String) -> String {
         let wired = c.model.selectedWorkspace.links?.contains { $0.from == orch && $0.to == target } ?? false
         return wired ? "Wired \(name)" : "Unwired \(name)"
+    }
+}
+
+extension NSImage {
+    /// 기호 그림을 한 번 비트맵으로 굽는다(성능 점검 2차). 기호 그림은 보드 배율이 바뀔 때마다 새 해상도로 다시 그려져서,
+    /// 노드 머리의 단추 그림들이 확대·축소 때 메인 스레드의 약 10% 를 썼다. 4배 해상도로 구워 두면 늘려 보여도 선명하다.
+    /// 템플릿 여부를 그대로 두어 단추의 contentTintColor 는 그대로 먹는다.
+    func baked(scale: CGFloat = 4) -> NSImage {
+        let w = Int((size.width * scale).rounded(.up)), h = Int((size.height * scale).rounded(.up))
+        guard w > 0, h > 0, let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8,
+                                                         samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return self }
+        rep.size = size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = ctx
+        draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .copy, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        let out = NSImage(size: size)
+        out.addRepresentation(rep)
+        out.isTemplate = isTemplate
+        out.accessibilityDescription = accessibilityDescription
+        return out
     }
 }

@@ -55,6 +55,55 @@ final class BoardScrollView: NSScrollView {
     override func magnify(with event: NSEvent) {
         stopGlide()
         super.magnify(with: event)
+        noteZoom()
+    }
+
+    // MARK: 확대·축소 중 터미널 그리기 멈추기(성능 점검 2차)
+
+    /// 확대·축소가 시작되면 true, 멎으면 false. 컨트롤러가 보이는 터미널에 사진을 덮고 그리기를 멈춘다.
+    /// 배율이 한 단계 바뀔 때마다 보이는 터미널을 전부 새 배율로 다시 그리던 것이 확대·축소 때 메인 스레드의 약 3분의 1 이었다.
+    var onZoomActivity: ((Bool) -> Void)?
+    private var zoomQuiet = QuietTimer(quiet: 0.18)
+    private var zoomEndWork: DispatchWorkItem?
+    private var zooming = false
+
+    override var magnification: CGFloat {
+        get { super.magnification }
+        set {
+            let old = super.magnification
+            super.magnification = newValue
+            if abs(super.magnification - old) > 0.0001 { noteZoom() }
+        }
+    }
+
+    override func setMagnification(_ magnification: CGFloat, centeredAt point: NSPoint) {
+        let old = super.magnification
+        super.setMagnification(magnification, centeredAt: point)
+        if abs(super.magnification - old) > 0.0001 { noteZoom() }
+    }
+
+    private func noteZoom() {
+        let now = ProcessInfo.processInfo.systemUptime
+        zoomQuiet.poke(now: now)
+        if !zooming {
+            zooming = true
+            onZoomActivity?(true)
+        }
+        scheduleZoomEnd(after: zoomQuiet.remaining(now: now))
+    }
+
+    private func scheduleZoomEnd(after delay: TimeInterval) {
+        zoomEndWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            let now = ProcessInfo.processInfo.systemUptime
+            if !self.zoomQuiet.isQuiet(now: now) { self.scheduleZoomEnd(after: self.zoomQuiet.remaining(now: now)); return }
+            self.zoomEndWork = nil
+            self.zooming = false
+            self.onZoomActivity?(false)
+        }
+        zoomEndWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     /// 진행 중인 glide 를 그 자리에서 멈춘다.
@@ -241,6 +290,11 @@ final class CanvasView: NSView {
         layoutGroups()
         syncInk()
         needsDisplay = true
+    }
+
+    /// 확대·축소하는 동안 이 보드의 터미널에 사진을 덮고 그리기를 멈춘다(성능 점검 2차).
+    func setTerminalsFrozen(_ on: Bool) {
+        for v in nodeViews.values { (v.content as? TerminalNodeContent)?.container.setFrozen(on) }
     }
 
     /// 펜 획 층을 맨 위에 두고 모델과 맞춘다.

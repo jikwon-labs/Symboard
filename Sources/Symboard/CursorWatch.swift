@@ -51,18 +51,31 @@ enum CursorWatch {
 enum TextCursor {
     private static var monitor: Any?
     private static var owning = false
+    /// 이미 판정을 예약해 두었는지. 마우스 이동·스크롤이 한 프레임에 여러 번 와도 판정(창 전체 hitTest)은 한 번만 한다(성능 점검 2차).
+    private static var pending = false
 
     static func install() {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .cursorUpdate, .leftMouseUp, .rightMouseUp, .scrollWheel]) { e in
             if let w = e.window {
                 w.acceptsMouseMovedEvents = true
+                // 스크롤은 움직이는 동안이 아니라 멎을 때만 본다(스크롤 중에는 마우스 아래가 계속 바뀌어 매번 판정할 까닭이 없다).
+                if e.type == .scrollWheel, !Self.scrollEnded(e) { return e }
+                guard !pending else { return e }
+                pending = true
                 // 이 이벤트로 호스팅 뷰가 커서를 고친 뒤에 판정해야 덮이지 않는다.
-                DispatchQueue.main.async { MainActor.assumeIsolated { update(w) } }
+                DispatchQueue.main.async { MainActor.assumeIsolated { pending = false; update(w) } }
             }
             return e
         }
         for w in NSApp.windows { w.acceptsMouseMovedEvents = true }
+    }
+
+    /// 스크롤이 멎은 이벤트인가: 손을 뗐고 관성도 없거나, 관성이 끝났거나, 단계가 없는 휠(마우스 휠은 한 칸씩이라 늘 본다).
+    static func scrollEnded(_ e: NSEvent) -> Bool {
+        if e.phase.isEmpty && e.momentumPhase.isEmpty { return true }
+        return e.momentumPhase.contains(.ended) || e.momentumPhase.contains(.cancelled)
+            || (e.momentumPhase.isEmpty && (e.phase.contains(.ended) || e.phase.contains(.cancelled)))
     }
 
     static func update(_ w: NSWindow) {

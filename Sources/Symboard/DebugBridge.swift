@@ -326,6 +326,10 @@ final class DebugBridge {
         case "spawnQuick":
             // 막대의 New console 단추와 같은 길(확대해 가기·바로 입력 받기 시험용).
             controller.spawnQuick(count: cmd["count"] as? Int ?? 1)
+        case "cursorStats":
+            // 커서 거르기(성능 점검 2차): 실제로 건 횟수와 건너뛴 횟수. reset 이면 0 으로.
+            log.append("cursor applied=\(CursorThrottle.applied) skipped=\(CursorThrottle.skipped)")
+            if cmd["reset"] as? Bool ?? false { CursorThrottle.applied = 0; CursorThrottle.skipped = 0 }
         case "zoomInfo":
             let fr = controller.window?.firstResponder.map { String(describing: type(of: $0)) } ?? "nil"
             log.append("mag=\(controller.scrollView.magnification) center=\(controller.scrollView.visibleCenter) firstResponder=\(fr)")

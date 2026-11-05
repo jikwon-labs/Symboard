@@ -148,7 +148,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(scrollView)
 
-        let home = HiddenAwareHostingView(rootView: HomeView(model: model, c: self).localized())
+        let home = HiddenAwareHostingView(rootView: HomeHost(model: model, chrome: chrome, c: self).localized())
         home.translatesAutoresizingMaskIntoConstraints = false
         home.sizingOptions = []
         home.isHidden = true
@@ -345,6 +345,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                     if event.type == .otherMouseUp { canvas.endPan() } else { canvas.continuePan(event) }
                     return nil
                 }
+                // 보통 스크롤(Option·Cmd 없음)은 아래에서 아무것도 하지 않으므로 창 전체 hitTest 를 하지 않는다.
+                // 트랙패드 스크롤은 초당 수십 번 와서 그때마다 SwiftUI 막대까지 훑었다(성능 점검 2차).
+                if event.type == .scrollWheel, !event.modifierFlags.contains(.option), !event.modifierFlags.contains(.command) { return event }
                 guard let hit = self.window?.contentView?.hitTest(event.locationInWindow) else { return event }
                 if event.type == .otherMouseDown {
                     guard event.buttonNumber == 2, hit.isDescendant(of: self.scrollView), let canvas = self.currentCanvas else { return event }
@@ -496,6 +499,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
                 self?.newTerminal(at: p)
             }
         })
+        // 확대·축소하는 동안 보이는 터미널에 사진을 덮고 그리기를 멈춘다(성능 점검 2차). 멎으면 모든 보드를 풀어 한 번 그린다.
+        scrollView.onZoomActivity = { [weak self] on in
+            guard let self else { return }
+            if on { self.currentCanvas?.setTerminalsFrozen(true) } else { for c in self.canvases.values { c.setTerminalsFrozen(false) } }
+        }
         scrollView.contentView.postsBoundsChangedNotifications = true
         observers.append(nc.addObserver(forName: NSView.boundsDidChangeNotification, object: scrollView.contentView, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.viewportMoved() }
@@ -1958,6 +1966,16 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         let size = scrollView.frame.size
         let zoom = min((size.width - 160) / (maxX - minX + 40), (size.height - 220) / (maxY - minY + 40), 1)
         scrollView.glide(to: Point(x: (minX + maxX) / 2, y: (minY + maxY) / 2 + 20 / max(zoom, 0.1)), zoom: zoom)
+    }
+}
+
+/// 홈 화면은 보일 때만 그린다. 숨겨진 채로도 모델이 바뀔 때마다(노드를 옮기고 놓을 때 등) 프로젝트 목록을 다시 만들었다(성능 점검 2차).
+struct HomeHost: View {
+    let model: AppModel
+    @ObservedObject var chrome: ChromeModel
+    let c: MainWindowController
+    var body: some View {
+        if chrome.showingHome { HomeView(model: model, c: c) }
     }
 }
 

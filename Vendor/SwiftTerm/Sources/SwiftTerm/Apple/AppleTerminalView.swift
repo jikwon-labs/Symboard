@@ -743,6 +743,15 @@ extension TerminalView {
         return selectionRange.lowerBound < endColumn && column < selectionRange.upperBound
     }
 
+    /// Symboard: 글리프 묶음 속성을 찾을 때 쓰는 열쇠(NSString 으로 한 번만 만든다, PATCHES.md 11번).
+    enum RunKey {
+        static let font = NSAttributedString.Key.font.rawValue as NSString
+        static let foreground = NSAttributedString.Key.foregroundColor.rawValue as NSString
+        static let background = NSAttributedString.Key.backgroundColor.rawValue as NSString
+        static let selectionBackground = NSAttributedString.Key.selectionBackgroundColor.rawValue as NSString
+        static let underline = NSAttributedString.Key.underlineStyle.rawValue as NSString
+    }
+
     func drawRunAttributes(_ attributes: [NSAttributedString.Key : Any], glyphPositions positions: [CGPoint], in currentContext: CGContext) {
         currentContext.saveGState()
 
@@ -1046,15 +1055,11 @@ extension TerminalView {
                     if runGlyphsCount == 0 {
                         continue
                     }
-                    let runAttributes = CTRunGetAttributes(run) as? [NSAttributedString.Key: Any] ?? [:]
+                    // Symboard: 속성 사전을 Swift 사전으로 바꾸지 않고 그대로 찾는다(PATCHES.md 11번).
+                    let runAttributes = CTRunGetAttributes(run) as NSDictionary
                     let startColumn = prepared.segment.column + (processedGlyphs * prepared.segment.columnWidth)
                     let endColumn = startColumn + (runGlyphsCount * prepared.segment.columnWidth)
-                    var backgroundColor: TTColor?
-                    if runAttributes.keys.contains(.selectionBackgroundColor) {
-                        backgroundColor = runAttributes[.selectionBackgroundColor] as? TTColor
-                    } else if runAttributes.keys.contains(.backgroundColor) {
-                        backgroundColor = runAttributes[.backgroundColor] as? TTColor
-                    }
+                    let backgroundColor = (runAttributes.object(forKey: RunKey.selectionBackground) ?? runAttributes.object(forKey: RunKey.background)) as? TTColor
 
                     if let backgroundColor = backgroundColor {
                         let columnSpan = max(0, endColumn - startColumn)
@@ -1130,8 +1135,9 @@ extension TerminalView {
                     if runGlyphsCount == 0 {
                         continue
                     }
-                    let runAttributes = CTRunGetAttributes(run) as? [NSAttributedString.Key: Any] ?? [:]
-                    let runFont = runAttributes[.font] as! TTFont
+                    // Symboard: 속성 사전을 Swift 사전으로 바꾸지 않고 그대로 찾는다(PATCHES.md 11번).
+                    let runAttributes = CTRunGetAttributes(run) as NSDictionary
+                    let runFont = runAttributes.object(forKey: RunKey.font) as! TTFont
                     let startColumn = prepared.segment.column + (processedGlyphs * prepared.segment.columnWidth)
 
                     let runGlyphs = [CGGlyph](unsafeUninitializedCapacity: runGlyphsCount) { (bufferPointer, count) in
@@ -1161,21 +1167,25 @@ extension TerminalView {
                     let drawFont = runFont
                     #endif
 
-                    nativeForegroundColor.set()
-
-                    if runAttributes.keys.contains(.foregroundColor) {
-                        let color = runAttributes[.foregroundColor] as! TTColor
+                    // Symboard: 글자색이 있으면 그 색만 칠한다. 기본색을 먼저 칠했다가 덮어쓰지 않는다(PATCHES.md 11번).
+                    if let color = runAttributes.object(forKey: RunKey.foreground) as? TTColor {
                         let cgColor = color.cgColor
                         if let colorSpace = cgColor.colorSpace {
                             context.setFillColorSpace(colorSpace)
                         }
                         context.setFillColor(cgColor)
+                    } else {
+                        nativeForegroundColor.set()
                     }
 
                     CTFontDrawGlyphs(drawFont, runGlyphs, &positions, positions.count, context)
 
                     // Draw other attributes
-                    drawRunAttributes(runAttributes, glyphPositions: positions, in: context)
+                    // Symboard: 밑줄이 있을 때만 Swift 사전으로 바꿔 그린다(그 밖의 속성은 이 함수가 그리지 않는다).
+                    if runAttributes.object(forKey: RunKey.underline) != nil,
+                       let swiftAttributes = runAttributes as? [NSAttributedString.Key: Any] {
+                        drawRunAttributes(swiftAttributes, glyphPositions: positions, in: context)
+                    }
 
                     processedGlyphs += runGlyphsCount
                 }
