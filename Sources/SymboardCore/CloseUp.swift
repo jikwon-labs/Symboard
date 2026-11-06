@@ -9,9 +9,26 @@ public struct CloseUp: Equatable, Sendable {
     public var previous: Viewport
     /// 어느 작업공간에서 들어갔는지. 작업공간이 바뀌면 되돌리지 않는다.
     public var workspaceID: UUID
+    /// 가까이 보기로 맞춘 화면. 사용자가 화면을 옮기면 이것과 달라지고, 그때는 가까이 보기를 벗어난 것으로 본다.
+    public var shown: Viewport?
 
-    public init(nodeID: UUID, previous: Viewport, workspaceID: UUID) {
-        self.nodeID = nodeID; self.previous = previous; self.workspaceID = workspaceID
+    public init(nodeID: UUID, previous: Viewport, workspaceID: UUID, shown: Viewport? = nil) {
+        self.nodeID = nodeID; self.previous = previous; self.workspaceID = workspaceID; self.shown = shown
+    }
+
+    /// 지금 화면(`now`)이 아직 가까이 보기로 맞춘 화면 그대로인가. 화면 점으로 8pt, 배율 1% 까지는 같은 것으로 친다.
+    /// 맞춘 화면을 모르면(shown 이 nil) 그대로로 본다.
+    public func stillShown(_ now: Viewport) -> Bool {
+        guard let s = shown else { return true }
+        guard s.zoom > 0, abs(now.zoom / s.zoom - 1) <= 0.01 else { return false }
+        let dx = (now.center.x - s.center.x) * s.zoom, dy = (now.center.y - s.center.y) * s.zoom
+        return dx * dx + dy * dy <= 64
+    }
+
+    /// 가까이 보기를 벗어났으면(작업공간이 다르거나 화면을 옮겼으면) 지난 기록은 버린다.
+    public static func active(_ current: CloseUp?, workspaceID: UUID, now: Viewport) -> CloseUp? {
+        guard let c = current, c.workspaceID == workspaceID, c.stillShown(now) else { return nil }
+        return c
     }
 
     /// 콘솔 둘레에 남기는 여백(캔버스 좌표가 아니라 화면 점).

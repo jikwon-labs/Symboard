@@ -29,4 +29,21 @@ import Testing
         #expect(CloseUp.step(current: c, target: a, workspaceID: other) == .enter)
         #expect(CloseUp.center(of: Rect(x: 10, y: 20, w: 100, h: 50)) == Point(x: 60, y: 45))
     }
+
+    @Test func forgetsAfterViewMoves() {
+        let a = UUID(), ws = UUID(), other = UUID()
+        let shown = Viewport(center: Point(x: 1000, y: 500), zoom: 2)
+        let c = CloseUp(nodeID: a, previous: Viewport(center: Point(x: 0, y: 0), zoom: 0.5), workspaceID: ws, shown: shown)
+        // 그대로면(조금 흔들려도) 기록을 쓴다.
+        #expect(CloseUp.active(c, workspaceID: ws, now: shown) == c)
+        #expect(CloseUp.active(c, workspaceID: ws, now: Viewport(center: Point(x: 1002, y: 501), zoom: 2)) == c)
+        // 화면을 옮기거나 배율을 바꿨거나 다른 작업공간이면 버린다.
+        #expect(CloseUp.active(c, workspaceID: ws, now: Viewport(center: Point(x: 1200, y: 500), zoom: 2)) == nil)
+        #expect(CloseUp.active(c, workspaceID: ws, now: Viewport(center: Point(x: 1000, y: 500), zoom: 1.5)) == nil)
+        #expect(CloseUp.active(c, workspaceID: other, now: shown) == nil)
+        #expect(CloseUp.active(nil, workspaceID: ws, now: shown) == nil)
+        // 맞춘 화면을 모르면 예전처럼 그대로 본다.
+        let old = CloseUp(nodeID: a, previous: shown, workspaceID: ws)
+        #expect(CloseUp.active(old, workspaceID: ws, now: Viewport(center: Point(x: 9, y: 9), zoom: 1)) == old)
+    }
 }

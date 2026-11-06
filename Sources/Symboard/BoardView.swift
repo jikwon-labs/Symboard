@@ -110,6 +110,7 @@ final class BoardScrollView: NSScrollView {
     func stopGlide() {
         glide?.invalidate()
         glide = nil
+        glideTarget = nil
     }
 
     /// 화면 중앙의 캔버스 좌표.
@@ -129,20 +130,27 @@ final class BoardScrollView: NSScrollView {
     private var glide: Timer?
 
     /// center(on:zoom:) 를 짧게 미끄러지듯. 배율은 로그 눈금으로 옮겨 확대·축소 속도가 고르다.
-    func glide(to p: Point, zoom: CGFloat, duration: TimeInterval = 0.35) {
+    /// 미끄러지는 중이면 도착할 화면. 다 왔거나 멈췄으면 nil.
+    private(set) var glideTarget: Viewport?
+
+    /// done: 끝까지 미끄러졌을 때만 부른다(중간에 멈추거나 다른 glide 로 바뀌면 부르지 않는다).
+    func glide(to p: Point, zoom: CGFloat, duration: TimeInterval = 0.35, done: (() -> Void)? = nil) {
         glide?.invalidate()
         let z1 = max(minMagnification, min(maxMagnification, zoom))
+        glideTarget = Viewport(center: p, zoom: Double(z1))
         let z0 = magnification
         let c0 = visibleCenter
         let start = Date()
         glide = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] t in
             MainActor.assumeIsolated {
                 guard let self else { t.invalidate(); return }
+                // 다른 쪽에서 glide 를 다시 걸었거나 멈췄으면 이 타이머는 그만둔다.
+                guard self.glide === t else { t.invalidate(); return }
                 let raw = min(1, Date().timeIntervalSince(start) / duration)
                 let e = 1 - pow(1 - raw, 3)
                 let z = exp(log(z0) + (log(z1) - log(z0)) * e)
                 self.center(on: Point(x: c0.x + (p.x - c0.x) * e, y: c0.y + (p.y - c0.y) * e), zoom: z)
-                if raw >= 1 { t.invalidate(); self.glide = nil }
+                if raw >= 1 { t.invalidate(); self.glide = nil; self.glideTarget = nil; done?() }
             }
         }
     }

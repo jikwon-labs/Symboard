@@ -1930,16 +1930,18 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     @objc func toggleCloseUp(_ sender: Any?) {
         guard let wsID = shownWorkspaceID else { return }
         let target = closeUpTarget()
-        if let c = closeUp, c.workspaceID == wsID, target == nil || CloseUp.step(current: c, target: target!, workspaceID: wsID) == .restore {
+        // 가까이 본 뒤 화면을 옮겼거나(끌기·확대·다른 콘솔로 가기) 다른 작업공간이면 지난 기록은 버린다.
+        // 예전엔 기록이 남아, 나중에 다른 콘솔에서 들어갔다 나오면 옛 자리(다른 콘솔 근처)로 날아갔다.
+        let now = scrollView.glideTarget ?? Viewport(center: scrollView.visibleCenter, zoom: Double(scrollView.magnification))
+        let active = CloseUp.active(closeUp, workspaceID: wsID, now: now)
+        if let c = active, target == nil || CloseUp.step(current: c, target: target!, workspaceID: wsID) == .restore {
             closeUp = nil
             scrollView.glide(to: c.previous.center, zoom: CGFloat(c.previous.zoom))
             return
         }
-        guard let id = target, let n = model.node(id) else { return }
-        // 다른 콘솔로 옮겨 가도 되돌아갈 자리는 처음 들어가기 전 화면이다.
-        let previous = closeUp?.workspaceID == wsID ? closeUp!.previous
-            : Viewport(center: scrollView.visibleCenter, zoom: Double(scrollView.magnification))
-        closeUp = CloseUp(nodeID: id, previous: previous, workspaceID: wsID)
+        guard let id = target, let n = model.node(id) else { closeUp = active; return }
+        // 가까이 보는 중에 다른 콘솔로 옮겨 가면, 되돌아갈 자리는 처음 들어가기 전 화면이다.
+        let previous = active?.previous ?? now
         // 위 막대(70)·아래 명령 바(110)·좌우 도구 막대(80씩)를 뺀 곳에 맞춘다(safeCanvasRect 와 같은 값).
         // 세션 목록이 열려 있으면 그 폭도 오른쪽에서 뺀다.
         let size = scrollView.frame.size, cover = Double(panelCover)
@@ -1949,7 +1951,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         currentCanvas?.select(id)
         if let t = model.sessions.session(for: id)?.view { window?.makeFirstResponder(t) }
         // 보이는 영역의 가운데는 화면 가운데보다 20pt 위, 목록이 열려 있으면 목록 폭의 절반만큼 왼쪽이다(glideReveal 과 같은 보정).
-        scrollView.glide(to: Point(x: c.x + cover / 2 / z, y: c.y + 20 / z), zoom: CGFloat(z))
+        let dest = Point(x: c.x + cover / 2 / z, y: c.y + 20 / z)
+        scrollView.glide(to: dest, zoom: CGFloat(z)) { [weak self] in
+            // 캔버스 끝에 걸리면 목표와 조금 다를 수 있어, 다 온 뒤 실제 화면으로 고쳐 적는다.
+            guard let self, self.closeUp?.nodeID == id else { return }
+            self.closeUp?.shown = Viewport(center: self.scrollView.visibleCenter, zoom: Double(self.scrollView.magnification))
+        }
+        // 배율은 최소·최대에 맞춰 잘릴 수 있어, 실제로 갈 화면을 기록한다.
+        closeUp = CloseUp(nodeID: id, previous: previous, workspaceID: wsID, shown: scrollView.glideTarget ?? Viewport(center: dest, zoom: z))
     }
 
     @objc func zoomToFit(_ sender: Any?) {
