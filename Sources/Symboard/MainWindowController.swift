@@ -1509,7 +1509,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     }
 
     @discardableResult
-    func addTerminal(spec: TerminalSpec, at point: Point?, size: CGSize = CGSize(width: 640, height: 400),
+    func addTerminal(spec: TerminalSpec, at point: Point?, size: CGSize = Placement.consoleSize,
                      title: String? = nil, teamID: UUID? = nil, role: String? = nil, applyActiveProfile: Bool = true,
                      near: UUID? = nil) -> BoardNode {
         var spec = spec

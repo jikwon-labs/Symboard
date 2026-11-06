@@ -14,9 +14,12 @@ enum Placement: Equatable {
     case calendar
     case shape(String)
 
+    /// 새 콘솔(claude·codex·셸)의 처음 크기. 클릭 배치와 addTerminal 기본값이 함께 쓴다.
+    static let consoleSize = CGSize(width: 900, height: 580)
+
     var size: CGSize {
         switch self {
-        case .agent: return CGSize(width: 640, height: 400)
+        case .agent: return Self.consoleSize
         case .text: return CGSize(width: 520, height: 90)
         case .sticky: return CGSize(width: 240, height: 220)
         case .checklist: return CGSize(width: 300, height: 320)
