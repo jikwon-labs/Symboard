@@ -55,7 +55,9 @@ final class NodeView: NSView {
     static let childFoldDelay: TimeInterval = 5 * 60
 
     private func updateFold() {
-        var want = isConsoleBody && lastStatus == .idle && !isSelected && !isParent
+        // 셸 터미널은 부모 콘솔처럼 쉬어도 접지 않는다(프롬프트에서 기다리는 게 평소 모습이다).
+        let isShell = model.node(nodeID)?.terminal?.agent == .shell
+        var want = isConsoleBody && lastStatus == .idle && !isSelected && !isParent && !isShell
         if want, isChild {
             let since = model.sessions.statusSince[nodeID] ?? Date()
             want = Date().timeIntervalSince(since) >= Self.childFoldDelay

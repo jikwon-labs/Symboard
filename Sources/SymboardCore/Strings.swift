@@ -138,6 +138,7 @@ public enum Strings {
         "%@ finished": "%@ 작업 끝남",
         "Told %@": "%@ 콘솔에 알림",
         "Will tell %@ when it is free": "%@ 콘솔이 쉬면 알림",
+        "%@ has unsent text. It will be told after you send it": "%@ 콘솔에 보내지 않은 글이 있어, 보낸 뒤에 알림",
         "Click to see the report": "눌러서 보고 보기",
         "Dismiss": "닫기",
         "Cancel diagram": "다이어그램 취소",

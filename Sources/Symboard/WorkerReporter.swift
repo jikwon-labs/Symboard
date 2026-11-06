@@ -9,6 +9,8 @@ struct WorkerDoneNotice: Identifiable, Equatable {
     var leadName: String?
     /// lead 에 알림을 넣었는가(아직이면 lead 가 쉴 때 넣는다).
     var delivered: Bool
+    /// lead 는 쉬는데 사용자가 lead 에 쓰다 만 글이 있어 알림을 미루는 중.
+    var waitingOnDraft = false
 }
 
 /// 에이전트가 연 콘솔이 일을 끝내면 연 콘솔(lead)에 한 줄 알리고, 오른쪽 위에 알림을 띄운다.
@@ -89,7 +91,28 @@ final class WorkerReporter {
         let leadIsAgent = leadNode?.terminal.map { $0.agent == .claude || $0.agent == .codex } ?? false
         let tell = WorkerReport.enabled(Prefs.shared) && leadIsAgent && lead.flatMap { model.sessions.session(for: $0) }?.running == true
         if tell, let lead { queue.add(worker: id, lead: lead) }
-        show(WorkerDoneNotice(workerID: id, workerName: node.title, leadName: tell ? leadNode?.title : nil, delivered: !tell))
+        var n = WorkerDoneNotice(workerID: id, workerName: node.title, leadName: tell ? leadNode?.title : nil, delivered: !tell)
+        if tell, let lead { n.waitingOnDraft = draftBlocks(lead) }
+        show(n)
+        if !NSApp.isActive {
+            SystemNotices.shared.post(title: L("%@ finished", n.workerName), body: Self.subtitle(n), nodeID: id)
+        }
+    }
+
+    /// lead 가 쉬는데도 사용자가 쓰다 만 글 때문에 알림을 넣지 못하는가.
+    private func draftBlocks(_ lead: UUID) -> Bool {
+        guard let s = model.sessions.session(for: lead), s.running else { return false }
+        let st = model.sessions.status(of: lead)
+        guard st == .idle || st == .done else { return false }
+        return !WorkerReport.canDeliver(leadStatus: st, leadIdleSince: restSince[lead], lastUserKey: s.lastUserKey)
+    }
+
+    /// 알림 둘째 줄(오른쪽 위 알림·macOS 알림 같이 쓴다).
+    static func subtitle(_ n: WorkerDoneNotice) -> String {
+        guard let lead = n.leadName else { return L("Click to see the report") }
+        if n.delivered { return L("Told %@", lead) }
+        if n.waitingOnDraft { return L("%@ has unsent text. It will be told after you send it", lead) }
+        return L("Will tell %@ when it is free", lead)
     }
 
     private func flush() {
@@ -106,6 +129,7 @@ final class WorkerReporter {
             onDelivered?(lead)
             for i in chrome.workerNotices.indices where workers.contains(chrome.workerNotices[i].workerID) {
                 chrome.workerNotices[i].delivered = true
+                chrome.workerNotices[i].waitingOnDraft = false
             }
         }
     }

@@ -878,10 +878,7 @@ struct WorkerDoneToasts: View {
         }
     }
 
-    private func subtitle(_ n: WorkerDoneNotice) -> String {
-        guard let lead = n.leadName else { return L("Click to see the report") }
-        return n.delivered ? L("Told %@", lead) : L("Will tell %@ when it is free", lead)
-    }
+    private func subtitle(_ n: WorkerDoneNotice) -> String { WorkerReporter.subtitle(n) }
 
     private func open(_ n: WorkerDoneNotice) {
         chrome.workerNotices.removeAll { $0.id == n.id }
