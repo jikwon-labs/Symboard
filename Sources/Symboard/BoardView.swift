@@ -277,14 +277,7 @@ final class CanvasView: NSView {
             if hasLoaded, !quietAppear.contains(node.id) { NodeMotion.appear(v) }
         }
         hasLoaded = true
-        // 화살표가 아닌 선을 내보내는 콘솔은 부모(쉬어도 접지 않음), 받는 콘솔은 하위(5분 쉬면 접음)다.
-        let wires = (ws.links ?? []).filter { $0.style != "arrow" }
-        let parents = Set(wires.map(\.from))
-        let children = Set(wires.map(\.to))
-        for node in ws.nodes {
-            nodeViews[node.id]?.isParent = parents.contains(node.id)
-            nodeViews[node.id]?.isChild = children.contains(node.id)
-        }
+        syncWireRoles(ws)
         for node in ws.nodes { nodeViews[node.id]?.syncFromModel() }
         applyOrder(ws)
         layoutGroups()
@@ -368,9 +361,22 @@ final class CanvasView: NSView {
         needsDisplay = true
     }
 
+    /// 화살표가 아닌 선을 내보내는 콘솔은 부모(쉬어도 접지 않음), 받는 콘솔은 하위(5분 쉬면 접음)다.
+    /// 선은 노드를 더한 뒤에 붙는 일이 많아(하위 콘솔 띄우기·메뉴로 잇기) reloadNodes 만으로는 늦다. 선을 다시 그릴 때마다 맞춘다.
+    private func syncWireRoles(_ ws: Workspace) {
+        let wires = (ws.links ?? []).filter { $0.style != "arrow" }
+        let parents = Set(wires.map(\.from))
+        let children = Set(wires.map(\.to))
+        for (id, v) in nodeViews {
+            v.isParent = parents.contains(id)
+            v.isChild = children.contains(id)
+        }
+    }
+
     /// 연결선 끝점: 노드면 노드 사각형, 팀이면 그룹 프레임 몸통.
     func layoutLinks() {
         guard let ws = workspace else { return }
+        syncWireRoles(ws)
         func rect(_ id: UUID) -> NSRect? {
             if let g = groupViews[id] { return g.collapsed ? g.frame : g.bodyRect }
             guard let v = nodeViews[id], !v.isHidden else { return nil }
