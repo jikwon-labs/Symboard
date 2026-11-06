@@ -456,7 +456,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         (window as? BoardWindow)?.keyIntercept = { [weak self] event in
             MainActor.assumeIsolated { self?.handleConsoleNavigation(event) ?? false }
         }
-        // Cmd(또는 Cmd+Option)를 누르고 있는 동안 콘솔 머리에 번호를 보인다.
+        // Cmd(또는 Ctrl)를 누르고 있는 동안 콘솔 머리에 번호를 보인다.
         flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
             MainActor.assumeIsolated {
                 guard let self, event.window === self.window else { return event }
@@ -1836,7 +1836,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     }
 
     /// 보드 위 모든 노드가 보이게 맞춘다. 떠 있는 막대에 가리지 않게 여백을 둔다.
-    // MARK: 키보드로 콘솔 사이 옮겨 다니기(Ctrl+Tab · Cmd+1~9 · Cmd+Option+1~9)
+    // MARK: 키보드로 콘솔 사이 옮겨 다니기(Ctrl+Tab · Cmd+1~9 · Ctrl+1~9)
 
     private func consoleItems() -> [(id: UUID, frame: Rect)] {
         model.selectedWorkspace.nodes.filter { $0.kind == .terminal }.map { (id: $0.id, frame: $0.frame) }
@@ -1850,7 +1850,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         ConsoleOrder.roots(consoleItems(), links: model.selectedWorkspace.links ?? [])
     }
 
-    /// Cmd+Option+1~9: 지금 고른 콘솔이 든 트리의 하위 콘솔들(맨 위 콘솔 아래 전부).
+    /// Ctrl+1~9: 지금 고른 콘솔이 든 트리의 하위 콘솔들(맨 위 콘솔 아래 전부).
     func treeConsoleOrder() -> [UUID] {
         guard let cur = closeUpTarget() else { return [] }
         let items = consoleItems(), links = model.selectedWorkspace.links ?? []
@@ -1882,7 +1882,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         focusConsole(ids[number - 1])
     }
 
-    /// Ctrl+Tab / Ctrl+Shift+Tab, Cmd+1~9, Cmd+Option+1~9, Cmd+Shift+1(Zoom to Fit). 키 코드로 봐서 한글 입력 상태에서도 같다.
+    /// Ctrl+Tab / Ctrl+Shift+Tab, Cmd+1~9, Ctrl+1~9, Cmd+Shift+1(Zoom to Fit). 키 코드로 봐서 한글 입력 상태에서도 같다.
     /// 그냥 Tab 은 건드리지 않는다(콘솔 안 프로그램의 자동완성).
     func handleConsoleNavigation(_ event: NSEvent) -> Bool {
         let f = event.modifierFlags.intersection([.command, .control, .option, .shift])
@@ -1897,16 +1897,16 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
         }
         if let d = ConsoleOrder.digit(keyCode: event.keyCode) {
             if f == .command { goToConsole(number: d); return true }
-            if f == [.command, .option] { goToConsole(number: d, inTree: true); return true }
+            if f == .control { goToConsole(number: d, inTree: true); return true }
             if f == [.command, .shift], d == 1 { zoomToFit(nil); return true }
         }
         return false
     }
 
-    /// 누른 키에 맞는 번호를 콘솔 머리에 보인다. Cmd 만: 맨 위 콘솔, Cmd+Option: 지금 트리의 하위 콘솔.
+    /// 누른 키에 맞는 번호를 콘솔 머리에 보인다. Cmd 만: 맨 위 콘솔, Ctrl 만: 지금 트리의 하위 콘솔.
     func showConsoleNumbers(_ flags: NSEvent.ModifierFlags) {
         guard let canvas = currentCanvas else { return }
-        let ids: [UUID] = flags == .command ? rootConsoleOrder() : flags == [.command, .option] ? treeConsoleOrder() : []
+        let ids: [UUID] = flags == .command ? rootConsoleOrder() : flags == .control ? treeConsoleOrder() : []
         for (id, v) in canvas.nodeViews where v.header.isTerminal {
             let i = ids.firstIndex(of: id)
             v.header.setNumber(i != nil && i! < 9 ? i! + 1 : nil)

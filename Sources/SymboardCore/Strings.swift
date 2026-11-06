@@ -281,7 +281,7 @@ public enum Strings {
         "Go to console N inside the current tree": "지금 트리 안의 N번 하위 콘솔로 이동",
         "Go to Console in Tree": "트리 안 콘솔로 이동",
         "Sub-console %d": "하위 콘솔 %d",
-        "Hold ⌘  /  ⌥⌘": "⌘ / ⌥⌘ 누르고 있기",
+        "Hold ⌘  /  ⌃": "⌘ / ⌃ 누르고 있기",
         "Go to the console": "콘솔로 이동",
         "Group": "그룹",
         "Group: %@": "그룹: %@",

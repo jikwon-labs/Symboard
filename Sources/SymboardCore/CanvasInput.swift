@@ -239,7 +239,7 @@ public enum KeyInput {
     }
 }
 
-/// 키보드로 콘솔 사이를 옮겨 다닐 때의 순서(Ctrl+Tab·Cmd+1~9·Cmd+Option+1~9).
+/// 키보드로 콘솔 사이를 옮겨 다닐 때의 순서(Ctrl+Tab·Cmd+1~9·Ctrl+1~9).
 public enum ConsoleOrder {
     /// 화면 위치 순: 위 → 아래 줄, 줄 안에서 왼 → 오른쪽. 윗변 차이가 rowTolerance 안이면 같은 줄로 본다.
     public static func order(_ items: [(id: UUID, frame: Rect)], rowTolerance: Double = 120) -> [UUID] {
@@ -277,7 +277,7 @@ public enum ConsoleOrder {
         return cur
     }
 
-    /// 맨 위 콘솔 아래의 모든 콘솔(자식·손자…), 화면 위치 순. Cmd+Option+1~9 가 고르는 목록.
+    /// 맨 위 콘솔 아래의 모든 콘솔(자식·손자…), 화면 위치 순. Ctrl+1~9 가 고르는 목록.
     public static func descendants(of root: UUID, items: [(id: UUID, frame: Rect)], links: [NodeLink]) -> [UUID] {
         let ids = Set(items.map(\.id))
         var found: Set<UUID> = []

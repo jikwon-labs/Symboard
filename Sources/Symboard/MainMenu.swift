@@ -65,7 +65,7 @@ enum MainMenu {
         let treeMenu = NSMenu(title: L("Go to Console in Tree"))
         for i in 1...9 {
             let it = treeMenu.addItem(withTitle: L("Sub-console %d", i), action: #selector(MainWindowController.goToTreeConsoleMenu(_:)), keyEquivalent: "\(i)")
-            it.keyEquivalentModifierMask = [.command, .option]
+            it.keyEquivalentModifierMask = .control
             it.tag = i
         }
         treeItem.submenu = treeMenu
