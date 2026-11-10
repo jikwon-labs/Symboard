@@ -26,13 +26,18 @@ public enum WorkerReport {
         return nil
     }
 
+    /// 끝 알림에 붙이는 검토 지시. 보고를 옮기기만 하지 말고 직접 확인한 뒤 알리게 한다.
+    static let reviewRule = "do not take the report on trust. Check the changed files (the diff) and the verification it claims against the goal you gave, " +
+        "rerunning a check yourself when that is cheap. Tell the user the result with what you confirmed and what you could not confirm kept apart, " +
+        "and send the console back with send_to_console if something is wrong or missing."
+
     /// lead 에 넣을 한 줄. 에이전트가 읽는 글이라 영어(DECISIONS 10차-3).
     public static func notice(workers: [String]) -> String {
         let names = workers.map { "\"\($0)\"" }
         if names.count == 1 {
-            return "\(tag) Console \(names[0]) finished its goal. Read its report with read_console(\(names[0])), tell the user the result, and start any goal that was waiting on it."
+            return "\(tag) Console \(names[0]) finished its goal. Read its report with read_console(\(names[0])), then review it before you pass it on: \(reviewRule) Then start any goal that was waiting on it."
         }
-        return "\(tag) Consoles \(names.joined(separator: ", ")) finished their goals. Read each report with read_console, tell the user the results, and start any goals that were waiting on them."
+        return "\(tag) Consoles \(names.joined(separator: ", ")) finished their goals. Read each report with read_console, then review each one before you pass it on: \(reviewRule) Then start any goals that were waiting on them."
     }
 
     /// 지금 lead 에 넣어도 되는가.

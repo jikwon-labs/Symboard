@@ -118,6 +118,11 @@ import Testing
         #expect(one.hasPrefix(WorkerReport.tag) && one.contains("read_console(\"api-fix\")") && !one.contains("\n"))
         let two = WorkerReport.notice(workers: ["a", "b"])
         #expect(two.contains("\"a\", \"b\"") && two.contains("Consoles"))
+        // 보고를 그대로 옮기지 않고 검토한 뒤 알리라는 지시가 알림과 lead 안내 둘 다에 있다.
+        for text in [one, two, BoardTools.leadPrompt] {
+            #expect(text.contains("review") && text.contains("could not confirm") && text.contains("send_to_console"))
+        }
+        #expect(!two.contains("\n"))
         #expect(BoardTools.leadPrompt.contains(WorkerReport.tag) && BoardTools.workerPrompt.contains("tells the lead"))
     }
 

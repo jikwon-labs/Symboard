@@ -85,7 +85,10 @@ public enum BoardTools {
         More work on the same goal goes to that goal's console with send_to_console, not to a new one. \
         After opening consoles, tell the user which console has which goal. \
         When a console you opened finishes, Symboard types a [symboard] line into this console naming it: \
-        read its report with read_console, tell the user the result, and open any goal that was waiting on it. \
+        read its report with read_console and review it instead of passing it on as is \
+        (check the changed files and the verification it claims against the goal, and rerun a check yourself when that is cheap), \
+        tell the user the result with what you confirmed and what you could not confirm kept apart, \
+        send the console back with send_to_console if something is wrong or missing, and open any goal that was waiting on it. \
         So you do not need to poll; check with list_consoles and read_console only when the user asks or a notice is late. \
         Report results to the user from what the consoles actually show, and say plainly when something failed or is unverified. \
         \(handOffRule) \
