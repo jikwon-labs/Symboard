@@ -40,7 +40,7 @@ final class NodeView: NSView {
         }
     }
 
-    /// 쉬는 콘솔은 머리만 남기고 접는다(고르면 펼친다). 모델의 크기는 그대로 두고 뷰 높이만 줄인다.
+    /// 쉬는 하위 콘솔(다른 콘솔이 열었거나 선을 받는 콘솔)은 머리만 남기고 접는다(고르면 펼친다). 모델의 크기는 그대로 두고 뷰 높이만 줄인다.
     /// 몸통(터미널)은 원래 크기로 두고 잘라 보여서, 접고 펴도 콘솔 크기(PTY)가 바뀌지 않는다.
     private(set) var folded = false
     private var fullHeight: CGFloat = 0
@@ -56,8 +56,11 @@ final class NodeView: NSView {
 
     private func updateFold() {
         // 셸 터미널은 부모 콘솔처럼 쉬어도 접지 않는다(프롬프트에서 기다리는 게 평소 모습이다).
-        let isShell = model.node(nodeID)?.terminal?.agent == .shell
-        var want = isConsoleBody && lastStatus == .idle && !isSelected && !isParent && !isShell
+        let spec = model.node(nodeID)?.terminal
+        let isShell = spec?.agent == .shell
+        // 사람이 연 콘솔은 하위 콘솔이 없어도 접지 않는다. 접는 것은 다른 콘솔이 열었거나 선을 받는 콘솔뿐이다.
+        let delegated = isChild || spec?.openedByAgent == true
+        var want = isConsoleBody && lastStatus == .idle && !isSelected && !isParent && !isShell && delegated
         if want, isChild {
             let since = model.sessions.statusSince[nodeID] ?? Date()
             want = Date().timeIntervalSince(since) >= Self.childFoldDelay
