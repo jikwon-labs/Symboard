@@ -166,20 +166,22 @@ extension MainWindowController {
         let node: BoardNode
         var spec = choice.spec(cwd: cwd)
         spec.openedByAgent = true
+        // 하위 콘솔은 부른 콘솔과 같은 크기로 연다. 부른 콘솔이 없으면 새 콘솔 기본 크기.
+        let size = callerNode.map { CGSize(width: $0.frame.w, height: $0.frame.h) } ?? Placement.consoleSize
         if let card {
-            let pair = besideFrame(w: Self.cardSize.width + 40 + 640, h: 400, near: caller)
+            let pair = besideFrame(w: Self.cardSize.width + 40 + size.width, h: size.height, near: caller)
             let title = card.title.isEmpty ? "Handoff" : card.title
             cardID = placeCard(text: "\(title) → \(name)\n\n\(card.prompt)", title: title, colorHex: Self.noteColors["yellow"]!,
                                at: Point(x: pair.x, y: pair.y))
-            node = addTerminal(spec: spec, at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), title: name, teamID: teamID)
+            node = addTerminal(spec: spec, at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), size: size, title: name, teamID: teamID)
             glideReveal([pair], zoomIn: true)
         } else if caller != nil {
             // 부른 콘솔(lead) 좌우 같은 줄에 놓는다. 다른 콘솔이 막으면 그것을 피해 가장 가까운 빈 칸으로.
-            let f = sideFrame(w: 640, h: 400, near: caller)
-            node = addTerminal(spec: spec, at: Point(x: f.x, y: f.y), title: name, teamID: teamID)
+            let f = sideFrame(w: size.width, h: size.height, near: caller)
+            node = addTerminal(spec: spec, at: Point(x: f.x, y: f.y), size: size, title: name, teamID: teamID)
             glideReveal([f], zoomIn: true)
         } else {
-            node = addTerminal(spec: spec, at: nil, title: name, teamID: teamID, near: caller)
+            node = addTerminal(spec: spec, at: nil, size: size, title: name, teamID: teamID, near: caller)
         }
         model.mutateWorkspace(wsID) { w in
             var links = w.links ?? []
