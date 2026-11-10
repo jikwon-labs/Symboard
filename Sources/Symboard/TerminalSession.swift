@@ -59,7 +59,6 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         view.appearance = NSAppearance(named: .darkAqua)
         view.onUserInput = { [weak self] in
             self?.tracker.noteInput()
-            self?.lastUserKey = Date()
         }
         link.onData = { [weak self] slice, replay in self?.received(slice, replay: replay) }
         // 그냥 글자로 찍힌 주소의 Cmd+클릭(15차, SwiftTerm 패치 9).
@@ -80,8 +79,16 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         endedWhileAway = !info.running
     }
 
-    /// 사용자가 이 콘솔에 마지막으로 직접 친 시각(sendText 로 보낸 글은 빼고). lead 알림이 쓰다 만 글에 붙지 않게 본다.
+    /// 사용자가 이 콘솔에 마지막으로 직접 친 시각. lead 알림이 쓰다 만 글에 붙지 않게 본다.
+    /// sendText 로 넣은 글과 터미널이 스스로 보내는 것(마우스·초점 보고, 질의 응답)은 세지 않는다.
     private(set) var lastUserKey: Date?
+    /// sendText 가 글을 넣는 중(이때 나가는 바이트는 사용자가 친 것이 아니다).
+    private var injecting = false
+    private func inject(_ text: String) {
+        injecting = true
+        view.send(txt: text)
+        injecting = false
+    }
 
     /// 받은 일을 끝낸 횟수(StatusTracker.finishedCount).
     var finishedCount: Int { tracker.finishedCount }
@@ -148,15 +155,15 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             // 여러 줄은 bracketed paste 로 감싸서 CLI 가 한 번에 받게 한다(줄마다 따로 실행되지 않게).
             // claude·codex 는 늘, 셸 등은 프로그램이 그 모드를 켰을 때만.
             if text.contains("\n") && (self.alwaysBracketedPaste || self.view.getTerminal().bracketedPasteMode) {
-                self.view.send(txt: "\u{1b}[200~" + text + "\u{1b}[201~")
+                self.inject("\u{1b}[200~" + text + "\u{1b}[201~")
             } else {
-                self.view.send(txt: text)
+                self.inject(text)
             }
             self.tracker.noteInput()
             if submit {
                 // CLI 가 붙여넣기를 처리할 시간을 조금 준 뒤 Enter.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-                    self?.view.send(txt: "\r")
+                    self?.inject("\r")
                 }
             }
         }
@@ -331,6 +338,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     nonisolated func send(source: TerminalView, data: ArraySlice<UInt8>) {
         MainActor.assumeIsolated {
             view.onUserInput?()
+            if !injecting, !TerminalReport.isReportOnly(data) { lastUserKey = Date() }
             link.send(data)
         }
     }

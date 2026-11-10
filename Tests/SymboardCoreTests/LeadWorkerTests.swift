@@ -132,6 +132,31 @@ import Testing
         }
     }
 
+    /// 마우스·초점 보고와 자동 응답은 친 글이 아니다(마우스만 지나가도 lead 알림이 막히던 문제).
+    @Test func terminalReportsAreNotUserTyping() {
+        func report(_ s: String) -> Bool { TerminalReport.isReportOnly(Array(s.utf8)) }
+        let esc = "\u{1b}"
+        // 마우스: SGR 움직임·누름·뗌, urxvt, X10.
+        #expect(report("\(esc)[<35;12;7M"))
+        #expect(report("\(esc)[<0;12;7M\(esc)[<0;12;7m"))
+        #expect(report("\(esc)[64;12;7M"))
+        #expect(TerminalReport.isReportOnly([0x1b, 0x5b, 0x4d, 0x20, 0x2c, 0x27]))
+        // 초점 들어옴·나감.
+        #expect(report("\(esc)[I") && report("\(esc)[O"))
+        // 질의 응답: 커서 위치, 상태, 장치 속성, 창 크기, 모드, kitty 키보드, 색(OSC), DCS.
+        #expect(report("\(esc)[24;80R") && report("\(esc)[0n") && report("\(esc)[?1;2c") && report("\(esc)[>0;276;0c"))
+        #expect(report("\(esc)[8;24;80t") && report("\(esc)[?2026;2$y") && report("\(esc)[?0u"))
+        #expect(report("\(esc)]11;rgb:1e1e/1e1e/1e1e\(esc)\\") && report("\(esc)]4;1;rgb:ff/00/00\u{07}"))
+        #expect(report("\(esc)P1$r0m\(esc)\\"))
+        // 친 글: 글자, 한글, Enter, 지우기, Esc, 화살표, 이동 키, 기능 키, kitty 키, 붙여넣기.
+        for typed in ["a", "안녕", "\r", "\u{7f}", esc, "\(esc)[A", "\(esc)OA", "\(esc)[1;5C", "\(esc)[3~", "\(esc)[Z",
+                      "\(esc)[1;2R", "\(esc)[97;5u", "\(esc)[200~hello\(esc)[201~", "\(esc)b"] {
+            #expect(!report(typed), "\(typed.debugDescription)")
+        }
+        // 보고에 글자가 섞이면 친 것으로 본다.
+        #expect(!report("\(esc)[Ix") && !report("y\(esc)[<35;1;1M"))
+    }
+
     @Test func queueGroupsPerLeadOnce() {
         let lead = UUID(), other = UUID(), a = UUID(), b = UUID()
         var q = WorkerReport.Queue()
