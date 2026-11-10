@@ -17,6 +17,13 @@ public enum CanvasInput {
     public static func zoomFactor(deltaY: Double, precise: Bool) -> Double {
         min(1.25, max(0.8, 1 + deltaY * (precise ? 0.01 : 0.1)))
     }
+
+    /// 범위 선택 중 포인터가 보드 가장자리를 넘었을 때 화면을 미는 속도(화면 pt/초). past 는 가장자리를 넘은 거리(화면 pt, 안쪽이면 0 이하).
+    /// AppKit 의 autoscroll 은 마우스가 움직일 때마다 넘은 거리만큼 통째로 밀어서, 축소한 보드에서는 1초도 안 돼 보드 끝까지 갔다.
+    /// 넘은 만큼 빨라지되 초당 1400pt 에서 멈춘다.
+    public static func edgeScrollSpeed(past: Double) -> Double {
+        past <= 0 ? 0 : min(1400, 240 + past * 8)
+    }
 }
 
 /// 새 노드를 화면에 보이는 자리로 옮기는 계산.

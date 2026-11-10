@@ -205,6 +205,8 @@ final class CanvasView: NSView {
     private var panLast: NSPoint?
     /// 선택 도구로 빈 곳을 왼쪽 단추로 끄는 중이면 시작점과 지금 점(뷰 좌표). 놓으면 걸친 노드를 모두 고른다.
     private var marquee: (start: NSPoint, current: NSPoint)?
+    /// 범위 선택 중 가장자리 밀기 타이머.
+    private var edgeScroll: Timer?
     /// 끌어서 고른 노드들(둘 이상일 때). 하나만 걸리면 보통 선택(selectedNodeID)으로 돌린다.
     private(set) var markedNodeIDs: Set<UUID> = []
     private var currentStroke: [Point]?
@@ -594,6 +596,9 @@ final class CanvasView: NSView {
         if let m = marquee {
             let path = NSBezierPath(rect: Self.rect(m.start, m.current))
             path.lineWidth = 1 / max(mag, 0.2)
+            // 테두리는 점선(배율과 상관없이 화면에서 같은 간격).
+            let dash: [CGFloat] = [5 / max(mag, 0.2), 4 / max(mag, 0.2)]
+            path.setLineDash(dash, count: 2, phase: 0)
             Theme.accent.withAlphaComponent(0.08).setFill()
             path.fill()
             Theme.accent.withAlphaComponent(0.9).setStroke()
@@ -771,8 +776,51 @@ final class CanvasView: NSView {
             let next = (start: m.start, current: convert(event.locationInWindow, from: nil))
             marquee = next
             invalidateMarquee(m, next)
-            autoscroll(with: event)
+            startEdgeScroll()
         }
+    }
+
+    /// 범위 선택 중 포인터가 보드 가장자리를 넘어가 있으면 그쪽으로 화면을 민다(속도는 CanvasInput.edgeScrollSpeed 로 묶는다).
+    /// 포인터가 멈춰 있어도 밀리도록 타이머로 돈다. 선택이 끝나면 멈춘다.
+    private func startEdgeScroll() {
+        guard edgeScroll == nil else { return }
+        var last = ProcessInfo.processInfo.systemUptime
+        edgeScroll = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] t in
+            MainActor.assumeIsolated {
+                guard let self, self.edgeScroll === t, let m = self.marquee, let window = self.window,
+                      let sv = self.enclosingScrollView else { t.invalidate(); self?.edgeScroll = nil; return }
+                let now = ProcessInfo.processInfo.systemUptime
+                let dt = min(now - last, 0.05)
+                last = now
+                let inWindow = window.mouseLocationOutsideOfEventStream
+                let p = sv.convert(inWindow, from: nil), b = sv.bounds
+                func speed(_ low: CGFloat, _ high: CGFloat) -> CGFloat {
+                    CGFloat(CanvasInput.edgeScrollSpeed(past: Double(high))) - CGFloat(CanvasInput.edgeScrollSpeed(past: Double(low)))
+                }
+                let vx = speed(b.minX - p.x, p.x - b.maxX)
+                // 스크롤 뷰 좌표가 뒤집혀 있지 않으면 위쪽이 maxY 다. 문서(캔버스)는 아래로 갈수록 y 가 커진다.
+                let vy = sv.isFlipped ? speed(b.minY - p.y, p.y - b.maxY) : speed(p.y - b.maxY, b.minY - p.y)
+                guard vx != 0 || vy != 0 else { return }
+                let mag = max(sv.magnification, 0.05)
+                let clip = sv.contentView
+                let origin = clip.bounds.origin
+                let to = clip.constrainBoundsRect(NSRect(origin: NSPoint(x: origin.x + vx * CGFloat(dt) / mag, y: origin.y + vy * CGFloat(dt) / mag),
+                                                         size: clip.bounds.size)).origin
+                guard to != origin else { return }
+                clip.scroll(to: to)
+                sv.reflectScrolledClipView(clip)
+                let next = (start: m.start, current: self.convert(inWindow, from: nil))
+                self.marquee = next
+                self.invalidateMarquee(m, next)
+            }
+        }
+        // 끄는 중의 런루프 모드에서도 돌게 한다.
+        if let t = edgeScroll { RunLoop.main.add(t, forMode: .common) }
+    }
+
+    private func stopEdgeScroll() {
+        edgeScroll?.invalidate()
+        edgeScroll = nil
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -801,6 +849,7 @@ final class CanvasView: NSView {
         }
         if let m = marquee {
             marquee = nil
+            stopEdgeScroll()
             invalidateMarquee(m, nil)
             let r = Self.rect(m.start, convert(event.locationInWindow, from: nil))
             // 거의 끌지 않았으면 빈 곳 클릭(선택 해제는 mouseDown 에서 이미 했다).

@@ -17,6 +17,13 @@ import Testing
     }
 
     /// 트랙패드를 빠르게 쓸면 양이 -100 가까이 온다. 예전 계산은 계수 0 이 되어 배율이 바닥으로 떨어졌다.
+    @Test func edgeScrollSpeedIsCapped() {
+        #expect(CanvasInput.edgeScrollSpeed(past: -10) == 0)
+        #expect(CanvasInput.edgeScrollSpeed(past: 0) == 0)
+        #expect(CanvasInput.edgeScrollSpeed(past: 10) == 320)
+        #expect(CanvasInput.edgeScrollSpeed(past: 5000) == 1400)
+    }
+
     @Test func zoomFactorIsClamped() {
         #expect(CanvasInput.zoomFactor(deltaY: -120, precise: true) == 0.8)
         #expect(CanvasInput.zoomFactor(deltaY: 200, precise: true) == 1.25)
