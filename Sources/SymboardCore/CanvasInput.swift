@@ -69,8 +69,10 @@ public enum CanvasLayout {
     /// 자리를 정해 주지 않고 만든 노드(New console·Spawn·에이전트가 띄운 콘솔)를 놓을 자리.
     /// 기준 노드(reference, 없으면 마지막 장애물)와 같은 줄 오른쪽의 첫 빈 칸, 줄이 maxRowWidth 를 넘으면 아래 줄 왼쪽부터.
     /// 보드가 비어 있으면 nil(부르는 쪽이 화면 가운데에 놓는다).
+    /// 줄은 기준 노드와 이어진 무리(사이가 joinGap 이하로 붙은 것들)만 한 줄로 친다.
+    /// 같은 높이에 있다는 이유로 멀리 떨어진 무리까지 한 줄로 치면, 줄이 찼다고 보고 그 먼 무리 밑으로 보냈다.
     public static func besideSlot(w: Double, h: Double, reference: Rect?, obstacles: [Rect],
-                                  gap: Double = 40, maxRowWidth: Double = 2100) -> Rect? {
+                                  gap: Double = 40, maxRowWidth: Double = 2100, joinGap: Double = 400) -> Rect? {
         guard let ref = reference ?? obstacles.last else { return nil }
         let clearance = 24.0
         func blockers(_ f: Rect) -> [Rect] {
@@ -78,9 +80,14 @@ public enum CanvasLayout {
                 f.x < o.x + o.w + clearance && o.x < f.x + f.w + clearance && f.y < o.y + o.h + clearance && o.y < f.y + f.h + clearance
             }
         }
-        func band(_ y: Double, _ hh: Double) -> [Rect] { obstacles.filter { $0.y < y + hh && y < $0.y + $0.h } }
-        let firstRow = band(ref.y, ref.h)
-        let rowLeft = min(firstRow.map(\.x).min() ?? ref.x, ref.x)
+        // 기준 노드에서 왼쪽으로, 사이가 joinGap 이하인 것만 따라가며 줄의 왼쪽 끝을 찾는다.
+        var rowLeft = ref.x
+        let sameRow = obstacles.filter { $0.y < ref.y + ref.h && ref.y < $0.y + $0.h }
+        while let next = sameRow.filter({ $0.x < rowLeft && $0.x + $0.w >= rowLeft - joinGap }).map(\.x).min() { rowLeft = next }
+        // 줄에 걸친 것은 이 줄의 폭(rowLeft 부터 maxRowWidth) 안에 있는 것만 본다.
+        func band(_ y: Double, _ hh: Double) -> [Rect] {
+            obstacles.filter { $0.y < y + hh && y < $0.y + $0.h && $0.x < rowLeft + maxRowWidth && rowLeft < $0.x + $0.w }
+        }
         var y = ref.y
         var x = ref.x + ref.w + gap
         for _ in 0..<12 {

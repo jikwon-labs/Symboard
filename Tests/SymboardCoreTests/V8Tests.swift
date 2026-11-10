@@ -25,6 +25,21 @@ import Testing
         #expect(r == Rect(x: 0, y: 440, w: 640, h: 400))
     }
 
+    @Test func farClusterOnSameHeightIsNotPartOfTheRow() {
+        // 왼쪽 멀리 다른 무리가 같은 높이에 있어도, 기준 노드 바로 옆에 놓는다.
+        let far = Rect(x: 0, y: 0, w: 900, h: 1000), ref = Rect(x: 3400, y: 0, w: 760, h: 1000)
+        let r = CanvasLayout.besideSlot(w: 900, h: 620, reference: ref, obstacles: [far, ref])
+        #expect(r == Rect(x: 4200, y: 0, w: 900, h: 620))
+    }
+
+    @Test func fullRowWrapsUnderItsOwnClusterNotTheFarOne() {
+        // 기준 노드의 줄이 차면 그 무리의 왼쪽 끝 아래로 내려간다. 멀리 있는 무리 밑으로 가지 않는다.
+        let far = Rect(x: 0, y: 0, w: 900, h: 1400), ref = Rect(x: 3400, y: 0, w: 760, h: 1000)
+        let group = Rect(x: 4200, y: 0, w: 2000, h: 600)
+        let r = CanvasLayout.besideSlot(w: 900, h: 620, reference: ref, obstacles: [far, ref, group])
+        #expect(r == Rect(x: 3400, y: 1040, w: 900, h: 620))
+    }
+
     @Test func resultNeverOverlaps() {
         let obs = [Rect(x: 0, y: 0, w: 640, h: 400), Rect(x: 700, y: 100, w: 300, h: 300), Rect(x: 0, y: 450, w: 2000, h: 200)]
         let r = CanvasLayout.besideSlot(w: 640, h: 400, reference: obs[0], obstacles: obs)!
