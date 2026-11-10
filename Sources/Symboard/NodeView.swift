@@ -369,6 +369,12 @@ final class NodeView: NSView {
         canvas?.select(nodeID)
     }
 
+    /// 끌어서 옮긴다. 옆 노드와 줄이 맞으면 그 줄에 붙고 점선이 보인다. Cmd 를 누르고 있으면 붙지 않는다.
+    func moveSnapping(to origin: NSPoint, event: NSEvent) {
+        let snapped = canvas?.snappedOrigin(origin, for: self, enabled: !event.modifierFlags.contains(.command)) ?? origin
+        setFrameOrigin(snapped)
+    }
+
     func commitFrame() {
         var r = CanvasGeometry.modelRect(frame)
         // 접힌 동안 옮기면 자리만 바꾸고 높이는 원래대로 둔다.
@@ -581,12 +587,13 @@ final class NodeHeaderView: NSView {
     override func mouseDragged(with event: NSEvent) {
         guard let nv = nodeView, let (start, origin) = dragStart, let sv = nv.superview else { return }
         let p = sv.convert(event.locationInWindow, from: nil)
-        nv.setFrameOrigin(NSPoint(x: round(origin.x + p.x - start.x), y: round(origin.y + p.y - start.y)))
+        nv.moveSnapping(to: NSPoint(x: round(origin.x + p.x - start.x), y: round(origin.y + p.y - start.y)), event: event)
         nv.canvas?.layoutGroups()
     }
 
     override func mouseUp(with event: NSEvent) {
         if dragStart != nil { nodeView?.commitFrame() }
+        nodeView?.canvas?.clearGuides()
         dragStart = nil
     }
 
@@ -691,12 +698,13 @@ final class MoveShieldView: NSView {
         guard let nv = nodeView, let (start, origin) = dragStart, let sv = nv.superview else { return }
         let p = sv.convert(event.locationInWindow, from: nil)
         moved = true
-        nv.setFrameOrigin(NSPoint(x: round(origin.x + p.x - start.x), y: round(origin.y + p.y - start.y)))
+        nv.moveSnapping(to: NSPoint(x: round(origin.x + p.x - start.x), y: round(origin.y + p.y - start.y)), event: event)
         nv.canvas?.layoutLinks()
     }
 
     override func mouseUp(with event: NSEvent) {
         if dragStart != nil && moved { nodeView?.commitFrame() }
+        nodeView?.canvas?.clearGuides()
         dragStart = nil
     }
 }

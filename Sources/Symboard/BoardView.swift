@@ -305,6 +305,67 @@ final class CanvasView: NSView {
         inkView.sync(workspace?.strokes ?? [])
     }
 
+    // MARK: 줄 맞춤 안내선
+
+    /// 끄는 노드가 옆 노드와 맞은 줄을 보여 주는 점선. 노드 위에 보이도록 층으로 얹는다.
+    private lazy var guideLayer: CAShapeLayer = {
+        let l = CAShapeLayer()
+        l.fillColor = nil
+        l.strokeColor = Theme.accent.cgColor
+        l.zPosition = 10_000
+        l.actions = ["path": NSNull(), "position": NSNull(), "bounds": NSNull(), "hidden": NSNull(),
+                     "lineWidth": NSNull(), "lineDashPattern": NSNull()]
+        l.isHidden = true
+        layer?.addSublayer(l)
+        return l
+    }()
+
+    /// `view` 를 `origin` 으로 옮기려 할 때, 화면에 보이는 다른 노드와 줄이 맞으면 붙인 자리를 돌려주고 점선을 그린다.
+    /// 붙는 거리는 화면 점으로 6pt(배율과 무관). `enabled` 가 false 면(Cmd 를 누른 채 끌기) 붙이지 않는다.
+    func snappedOrigin(_ origin: NSPoint, for view: NodeView, enabled: Bool) -> NSPoint {
+        guard enabled else { clearGuides(); return origin }
+        let mag = max(enclosingScrollView?.magnification ?? 1, 0.05)
+        let near = visibleRect.insetBy(dx: -40 / mag, dy: -40 / mag)
+        let others = nodeViews.values.filter { $0 !== view && !$0.isHidden && $0.frame.intersects(near) }
+            .map { Rect(x: $0.frame.minX, y: $0.frame.minY, w: $0.frame.width, h: $0.frame.height) }
+        let moving = Rect(x: origin.x, y: origin.y, w: view.frame.width, h: view.frame.height)
+        let result = AlignSnap.snap(moving, to: others, threshold: 6 / mag)
+        showGuides(result.guides, mag: mag)
+        return NSPoint(x: result.rect.x, y: result.rect.y)
+    }
+
+    func clearGuides() {
+        guard guideLayer.path != nil || !guideLayer.isHidden else { return }
+        guideLayer.path = nil
+        guideLayer.isHidden = true
+    }
+
+    private func showGuides(_ guides: [AlignSnap.Guide], mag: CGFloat) {
+        guard !guides.isEmpty else { clearGuides(); return }
+        // 선은 노드 밖으로 조금 더 뻗는다.
+        let over = 12 / mag
+        var segments: [(NSPoint, NSPoint)] = []
+        for g in guides {
+            switch g.axis {
+            case .vertical: segments.append((NSPoint(x: g.position, y: g.from - over), NSPoint(x: g.position, y: g.to + over)))
+            case .horizontal: segments.append((NSPoint(x: g.from - over, y: g.position), NSPoint(x: g.to + over, y: g.position)))
+            }
+        }
+        // 캔버스가 아주 커서, 층을 선이 있는 곳에만 두고 그 안 좌표로 그린다.
+        var box = NSRect(origin: segments[0].0, size: .zero)
+        for (a, b) in segments { box = box.union(NSRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))) }
+        let path = CGMutablePath()
+        for (a, b) in segments {
+            path.move(to: CGPoint(x: a.x - box.minX, y: a.y - box.minY))
+            path.addLine(to: CGPoint(x: b.x - box.minX, y: b.y - box.minY))
+        }
+        guideLayer.frame = box
+        guideLayer.lineWidth = 1 / mag
+        guideLayer.lineDashPattern = [NSNumber(value: Double(5 / mag)), NSNumber(value: Double(4 / mag))]
+        guideLayer.path = path
+        guideLayer.isHidden = false
+    }
+
     // MARK: 그룹 프레임·연결선
 
     /// 팀마다 멤버 노드를 감싸는 프레임을 맞추고 연결선을 다시 그린다.
