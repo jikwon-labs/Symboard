@@ -4,6 +4,7 @@ import SymboardCore
 /// 콘솔의 링크를 웹 타일로 연다(15차).
 /// - Cmd+클릭: 그 콘솔과 선으로 이은 웹 타일(없으면 옆에 새로). Cmd+Shift+클릭: 기본 브라우저.
 /// - claude 가 답에 링크를 쓰면 세션 기록(JSONL)에서 읽어 같은 웹 타일에 자동으로 연다(설정에서 끔).
+/// - 부모·하위 콘솔 중 하나가 이미 띄운 주소는 다른 쪽이 다시 말해도 타일을 또 만들지 않는다.
 @MainActor
 final class WebLinkOpener {
     unowned let controller: MainWindowController
@@ -52,6 +53,26 @@ final class WebLinkOpener {
         let canvas = controller.existingCanvas(for: wsID)
         let linked = (ws.links ?? []).filter { $0.from == consoleID && $0.style == ConsoleWebLinks.linkStyle }
             .compactMap { l in ws.nodes.first { $0.id == l.to && $0.kind == .web } }
+        // 같은 무리(부모·하위 콘솔)의 다른 콘솔이 이미 띄운 페이지면 타일을 또 만들지 않는다.
+        // 자동 열기는 그대로 두고, Cmd+클릭이면 그 타일의 그 탭으로 간다.
+        let tabsOf: (UUID) -> [String]? = { id in
+            if let web = canvas?.nodeViews[id]?.content as? WebContent { return web.state.tabs }
+            return ws.nodes.first { $0.id == id && $0.kind == .web }.map { $0.tabs ?? [$0.text ?? ""] }
+        }
+        if let hit = ConsoleWebLinks.familyTile(showing: address, from: consoleID, links: ws.links ?? [], tabs: tabsOf) {
+            guard focus else { return false }
+            if let web = canvas?.nodeViews[hit.tile]?.content as? WebContent {
+                web.select(hit.tab)
+            } else {
+                model.mutateNode(hit.tile) { n in
+                    let tabs = n.tabs ?? [n.text ?? ""]
+                    n.activeTab = hit.tab
+                    if tabs.indices.contains(hit.tab) { n.text = tabs[hit.tab] }
+                }
+            }
+            reveal(hit.tile, in: wsID)
+            return true
+        }
         if let tile = linked.last {
             if let web = canvas?.nodeViews[tile.id]?.content as? WebContent {
                 web.open(address)

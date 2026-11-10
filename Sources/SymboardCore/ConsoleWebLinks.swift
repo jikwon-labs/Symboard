@@ -79,6 +79,37 @@ public enum ConsoleWebLinks {
         return nil
     }
 
+    /// 같은 일로 묶인 노드들: spawned·handoff 선으로 이어진 무리(부모·하위 콘솔과 그 사이의 프롬프트 카드). 자기 자신 포함.
+    public static func family(of id: UUID, links: [NodeLink]) -> Set<UUID> {
+        let chain = links.filter { AgentLimits.chainStyles.contains($0.style ?? "") }
+        var seen: Set<UUID> = [id], queue = [id]
+        while let cur = queue.popLast() {
+            for l in chain where l.from == cur || l.to == cur {
+                let other = l.from == cur ? l.to : l.from
+                if seen.insert(other).inserted { queue.append(other) }
+            }
+        }
+        return seen
+    }
+
+    /// 두 주소가 같은 페이지인가. 끝의 / 하나 차이는 같다고 본다(웹 타일은 열고 난 뒤의 주소로 탭을 고쳐 적는다).
+    public static func sameAddress(_ a: String, _ b: String) -> Bool {
+        func bare(_ s: String) -> Substring { s.hasSuffix("/") ? s.dropLast() : Substring(s) }
+        return !a.isEmpty && bare(a) == bare(b)
+    }
+
+    /// 같은 무리의 다른 콘솔이 이미 이 주소를 띄워 둔 웹 타일과 그 탭. 없으면 nil.
+    /// 하위 콘솔이 만든 페이지 주소를 부모 콘솔이 보고에 다시 적으면, 부모 옆에 같은 페이지 타일이 하나 더 생겼다.
+    /// - tabs: 웹 타일의 탭 주소들(웹 타일이 아니면 nil).
+    public static func familyTile(showing address: String, from consoleID: UUID, links: [NodeLink],
+                                  tabs: (UUID) -> [String]?) -> (tile: UUID, tab: Int)? {
+        let kin = family(of: consoleID, links: links).subtracting([consoleID])
+        for l in links where l.style == linkStyle && kin.contains(l.from) {
+            if let i = tabs(l.to)?.firstIndex(where: { sameAddress($0, address) }) { return (l.to, i) }
+        }
+        return nil
+    }
+
     /// 기억하는 주소 목록에 새 주소를 더한다(이미 있으면 맨 뒤로). 한도를 넘으면 오래된 것부터 뺀다.
     public static func remember(_ urls: [String], in known: inout [String]) {
         for u in urls {

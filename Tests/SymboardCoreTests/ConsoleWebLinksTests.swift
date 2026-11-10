@@ -3,6 +3,30 @@ import Testing
 @testable import SymboardCore
 
 @Suite struct ConsoleWebLinksTests {
+    @Test func leadDoesNotReopenAPageItsWorkerAlreadyShows() {
+        let lead = UUID(), card = UUID(), worker = UUID(), stranger = UUID()
+        let workerTile = UUID(), strangerTile = UUID()
+        let url = "https://claude.ai/artifact/abc"
+        let links = [
+            NodeLink(from: lead, to: card, style: NodeLink.handoffStyle),
+            NodeLink(from: card, to: worker, style: NodeLink.handoffStyle),
+            NodeLink(from: worker, to: workerTile, style: ConsoleWebLinks.linkStyle),
+            NodeLink(from: stranger, to: strangerTile, style: ConsoleWebLinks.linkStyle),
+        ]
+        let tabs: (UUID) -> [String]? = { id in
+            id == workerTile ? ["http://localhost:3000", url + "/"] : id == strangerTile ? ["https://example.com/only"] : nil
+        }
+        #expect(ConsoleWebLinks.family(of: lead, links: links) == [lead, card, worker])
+        // 하위 콘솔이 띄운 주소를 부모가 다시 말하면 그 타일의 그 탭을 가리킨다(끝의 / 차이는 같은 주소).
+        let hit = ConsoleWebLinks.familyTile(showing: url, from: lead, links: links, tabs: tabs)
+        #expect(hit?.tile == workerTile && hit?.tab == 1)
+        // 자기 타일은 여기서 보지 않는다(원래 길로 같은 탭을 고른다). 무리 밖 콘솔의 타일도 보지 않는다.
+        #expect(ConsoleWebLinks.familyTile(showing: url, from: worker, links: links, tabs: tabs) == nil)
+        #expect(ConsoleWebLinks.familyTile(showing: "https://example.com/only", from: lead, links: links, tabs: tabs) == nil)
+        #expect(ConsoleWebLinks.familyTile(showing: "https://claude.ai/artifact/other", from: lead, links: links, tabs: tabs) == nil)
+        #expect(!ConsoleWebLinks.sameAddress("", ""))
+    }
+
     @Test func findsURLsAndTrimsPunctuation() {
         let text = """
         서버를 띄웠습니다: http://localhost:3000/dashboard.
