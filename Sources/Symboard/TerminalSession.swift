@@ -18,6 +18,14 @@ final class SymTerminalView: TerminalView {
 
     /// 지난 줄 보기 위치가 바뀔 때(휠·스크롤 막대·입력으로 맨 아래 복귀).
     var onScrolled: (() -> Void)?
+
+    /// 창에 놓였을 때(노드에 붙어 화면에 들어옴).
+    var onMovedToWindow: (() -> Void)?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil { onMovedToWindow?() }
+    }
 }
 
 /// 노드 하나에 붙은 콘솔 프로세스와 그 상태. 프로세스는 앱 안(LocalLink) 또는 agentd(RemoteLink)에 있다.
@@ -77,13 +85,31 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         remote.attach(info)
         // agentd 의 PTY 크기는 지난 앱이 마지막으로 알린 값이다. 앱을 끄기 직전 크기 변경(0.12초 대기 중)이 버려졌거나
         // 꺼진 사이 글꼴·줄 간격이 바뀌면 화면 칸 수와 달라져, claude 가 넓은 폭으로 그린 줄이 접혀 화면이 깨졌다.
-        // 붙을 때 지금 칸 수를 한 번 알린다. 크기가 같으면 프로세스에 신호가 가지 않는다.
-        if info.running {
-            let term = view.getTerminal()
-            scheduleResize(cols: term.cols, rows: term.rows)
-        }
+        // 그래서 지금 칸 수를 한 번 알리는데, 붙는 이 순간의 뷰는 아직 노드에 놓이기 전의 임시 크기(600×360)다.
+        // 이 크기를 알리면 claude 가 좁고 낮은 화면으로 다시 그려 입력 칸이 보이지 않게 됐다(다른 탭 콘솔은 열 때까지 그대로).
+        // 뷰가 창에 놓이고 노드 크기로 배치된 뒤에 알린다. 크기가 같으면 프로세스에 신호가 가지 않는다.
+        if info.running { syncSizeWhenPlaced() }
         if !info.running { tracker.noteExit() }
         endedWhileAway = !info.running
+    }
+
+    /// 뷰가 창에 놓여 노드 크기로 배치된 뒤 지금 칸 수를 프로세스에 한 번 알린다.
+    private func syncSizeWhenPlaced() {
+        let send: @MainActor @Sendable () -> Void = { [weak self] in
+            guard let self, let window = self.view.window else { return }
+            // 노드 틀이 뷰 크기를 정하는 배치를 먼저 끝낸다(그 사이 크기가 바뀌면 sizeChanged 도 같은 값을 예약한다).
+            window.contentView?.layoutSubtreeIfNeeded()
+            let term = self.view.getTerminal()
+            self.scheduleResize(cols: term.cols, rows: term.rows)
+        }
+        if view.window != nil {
+            DispatchQueue.main.async(execute: send)
+        } else {
+            view.onMovedToWindow = { [weak self] in
+                self?.view.onMovedToWindow = nil
+                DispatchQueue.main.async(execute: send)
+            }
+        }
     }
 
     /// 사용자가 이 콘솔에 마지막으로 직접 친 시각. lead 알림이 쓰다 만 글에 붙지 않게 본다.
@@ -347,6 +373,18 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             view.onUserInput?()
             if !injecting, !TerminalReport.isReportOnly(data) { lastUserKey = Date() }
             link.send(data)
+            if !isPlainShell, data.contains(0x1A) { resumeAfterSuspendKey() }
+        }
+    }
+
+    /// claude 는 Ctrl+Z 를 받으면 화면을 접고(대체 화면·입력 모드를 풀고) 스스로 멈춘 뒤 `fg` 의 SIGCONT 를 기다린다.
+    /// 콘솔에는 작업 제어를 하는 셸이 없어 SIGCONT 가 영영 오지 않는다. 고아 프로세스 그룹이라 커널이 멈추게 두지도 않아
+    /// 프로세스는 살아 있는데 화면은 그리지 않고, 친 글자는 터미널이 그대로 되찍기만 했다(크기를 바꿔도 그대로).
+    /// 그래서 셸이 아닌 콘솔에 Ctrl+Z 가 가면 잠시 뒤 SIGCONT 를 보내 바로 되살린다. 사용자가 일시정지한 콘솔은 건드리지 않는다.
+    private func resumeAfterSuspendKey() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, self.running, !self.paused else { return }
+            _ = self.link.signal(SIGCONT)
         }
     }
 
