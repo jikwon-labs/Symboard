@@ -1,1 +1,1 @@
-public enum Symboard { public static let version = "0.13.0" }
+public enum Symboard { public static let version = "0.13.1" }
