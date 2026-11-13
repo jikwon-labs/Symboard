@@ -147,7 +147,8 @@ final class SessionManager {
         let links = model.workspaceID(containing: s.nodeID).flatMap { id in model.state.workspaces.first { $0.id == id }?.links } ?? []
         let openedByAgent = spec.openedByAgent == true
             || links.contains { $0.to == s.nodeID && AgentLimits.chainStyles.contains($0.style ?? "") }
-        let role = BoardTools.role(openedByAgent: openedByAgent, leadDelegates: BoardTools.leadDelegates(Prefs.shared))
+        let role = BoardTools.role(openedByAgent: openedByAgent, leadDelegates: BoardTools.leadDelegates(Prefs.shared),
+                                   crew: spec.crew.flatMap(Crew.init(rawValue:)))
         // 설정이 켜져 있으면 claude 에 보드 도구(MCP)와 짧은 안내를 인자로만 붙인다(8차 3번). 사용자 ~/.claude 는 그대로.
         var claudeArgs: [String] = []
         if spec.agent == .claude, BoardTools.enabled(Prefs.shared), let exe = BoardToolServer.serverExecutable {

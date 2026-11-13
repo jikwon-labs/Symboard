@@ -43,7 +43,20 @@ extension MainWindowController {
 
         case "spawn_console", "hand_off":
             let handoff = tool == "hand_off"
-            let agent = str("agent").isEmpty && handoff ? "claude" : str("agent").lowercased()
+            // 18차: 역할 콘솔. 역할은 claude 로만 열고, 그 역할 콘솔이 이미 있으면 새로 열지 않고 이름을 알려 준다.
+            var crew: Crew?
+            if !handoff, !str("role").isEmpty {
+                guard let c = Crew(rawValue: str("role").lowercased()), c != .ceo else {
+                    reply("role must be one of \(Crew.staff.map(\.rawValue).joined(separator: ", "))", true); return
+                }
+                if let existing = consoles(in: wsID).first(where: { $0.terminal?.crew == c.rawValue }) {
+                    reply("The \(c.rawValue) console already exists: \(existing.title) (status: \(statusText(existing.id))). "
+                          + "Give it more work with send_to_console(\"\(existing.title)\", ...) instead of opening another.", true)
+                    return
+                }
+                crew = c
+            }
+            let agent = crew != nil ? "claude" : str("agent").isEmpty && handoff ? "claude" : str("agent").lowercased()
             guard ["claude", "codex", "shell"].contains(agent), let choice = AgentCatalog.choice(id: agent) else {
                 reply("agent must be claude, codex or shell", true); return
             }
@@ -59,8 +72,9 @@ extension MainWindowController {
             }
             let open = { [weak self] in
                 guard let self else { return }
-                self.openAgentConsole(caller: caller, wsID: wsID, choice: choice, agent: agent, cwd: cwd, name: str("name"), group: str("group"),
-                                      prompt: prompt, card: handoff ? (str("title"), prompt) : nil, reply: reply)
+                self.openAgentConsole(caller: caller, wsID: wsID, choice: choice, agent: agent, cwd: cwd,
+                                      name: str("name").isEmpty ? (crew?.consoleName ?? "") : str("name"), group: str("group"),
+                                      prompt: prompt, card: handoff ? (str("title"), prompt) : nil, crew: crew, reply: reply)
             }
             // 9차 5번: 이어 띄우기 단계·개수 제한. 넘으면 사용자에게 묻는다.
             let links = ws.links ?? []
@@ -76,6 +90,36 @@ extension MainWindowController {
             askToExceed(L("%@ wants to open another console: %@.", callerNode?.displayTitle ?? L("An agent"), shown), allow: open) {
                 reply("The user did not allow another console (\(why)). Do not retry; tell the user.", true)
             }
+
+        case "show_references":
+            guard let items = ReferenceBoard.parse(args["items"]) else {
+                reply("show_references needs 2-\(ReferenceBoard.maxItems) items, each with an http(s) url and a label", true); return
+            }
+            if model.selectedWorkspace.id != wsID { model.selectWorkspace(wsID) }
+            let size = ReferenceBoard.footprint(count: items.count)
+            let area = besideFrame(w: size.w, h: size.h, near: caller)
+            let title = str("title")
+            var ids: [UUID] = []
+            for (i, item) in items.enumerated() {
+                let f = ReferenceBoard.frame(index: i, origin: Point(x: area.x, y: area.y))
+                let node = BoardNode(kind: .web, frame: f, title: title.isEmpty ? item.label : "\(title) · \(item.label)", text: item.url)
+                var withTabs = node
+                withTabs.tabs = [item.url]
+                withTabs.role = item.note.isEmpty ? nil : item.note
+                model.addNode(withTabs, to: wsID)
+                ids.append(node.id)
+            }
+            // 부른 콘솔에서 웹 선으로 잇는다. 같은 주소를 콘솔이 다시 말해도 새 타일 대신 이 타일을 보여 준다.
+            if let caller {
+                model.mutateWorkspace(wsID) { w in
+                    w.links = (w.links ?? []) + ids.map { NodeLink(from: caller, to: $0, style: ConsoleWebLinks.linkStyle) }
+                }
+            }
+            currentCanvas?.reloadNodes()
+            currentCanvas?.layoutLinks()
+            if let caller { currentCanvas?.select(caller) }
+            glideReveal([area])
+            reply("Opened \(items.count) references side by side: " + items.map(\.label).joined(separator: ", ") + ".", false)
 
         case "add_note":
             let text = args["text"] as? String ?? ""
@@ -146,7 +190,8 @@ extension MainWindowController {
 
     /// 부른 콘솔 옆에 콘솔을 연다(spawn_console·hand_off). card 가 있으면 먼저 프롬프트 카드를 놓고 부른 콘솔 → 카드 → 새 콘솔로 잇는다.
     private func openAgentConsole(caller: UUID?, wsID: UUID, choice: AgentChoice, agent: String, cwd: String, name wanted: String, group g: String,
-                                  prompt: String, card: (title: String, prompt: String)?, reply: @escaping (String, Bool) -> Void) {
+                                  prompt: String, card: (title: String, prompt: String)?, crew: Crew? = nil,
+                                  reply: @escaping (String, Bool) -> Void) {
         guard let ws = model.state.workspaces.first(where: { $0.id == wsID }) else { reply("That board is gone", true); return }
         if model.selectedWorkspace.id != wsID { model.selectWorkspace(wsID) }
         let callerNode = caller.flatMap { model.node($0) }
@@ -166,6 +211,7 @@ extension MainWindowController {
         let node: BoardNode
         var spec = choice.spec(cwd: cwd)
         spec.openedByAgent = true
+        spec.crew = crew?.rawValue
         // 하위 콘솔은 부른 콘솔과 같은 크기로 연다. 부른 콘솔이 없으면 새 콘솔 기본 크기.
         let size = callerNode.map { CGSize(width: $0.frame.w, height: $0.frame.h) } ?? Placement.consoleSize
         if let card {
@@ -173,15 +219,15 @@ extension MainWindowController {
             let title = card.title.isEmpty ? "Handoff" : card.title
             cardID = placeCard(text: "\(title) → \(name)\n\n\(card.prompt)", title: title, colorHex: Self.noteColors["yellow"]!,
                                at: Point(x: pair.x, y: pair.y))
-            node = addTerminal(spec: spec, at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), size: size, title: name, teamID: teamID)
+            node = addTerminal(spec: spec, at: Point(x: pair.x + Self.cardSize.width + 40, y: pair.y), size: size, title: name, teamID: teamID, role: crew?.label)
             glideReveal([pair], zoomIn: true)
         } else if caller != nil {
             // 부른 콘솔(lead) 좌우 같은 줄에 놓는다. 다른 콘솔이 막으면 그것을 피해 가장 가까운 빈 칸으로.
             let f = sideFrame(w: size.width, h: size.height, near: caller)
-            node = addTerminal(spec: spec, at: Point(x: f.x, y: f.y), size: size, title: name, teamID: teamID)
+            node = addTerminal(spec: spec, at: Point(x: f.x, y: f.y), size: size, title: name, teamID: teamID, role: crew?.label)
             glideReveal([f], zoomIn: true)
         } else {
-            node = addTerminal(spec: spec, at: nil, size: size, title: name, teamID: teamID, near: caller)
+            node = addTerminal(spec: spec, at: nil, size: size, title: name, teamID: teamID, role: crew?.label, near: caller)
         }
         model.mutateWorkspace(wsID) { w in
             var links = w.links ?? []
@@ -197,7 +243,7 @@ extension MainWindowController {
         if let caller { currentCanvas?.select(caller) }
         currentCanvas?.layoutGroups()
         currentCanvas?.layoutLinks()
-        let opened = "Opened console \(node.title) (\(agent))\(callerNode.map { " next to \($0.title)" } ?? "")\(cardID == nil ? "" : " with a handoff card")."
+        let opened = "Opened console \(node.title) (\(agent)\(crew.map { ", role \($0.rawValue)" } ?? ""))\(callerNode.map { " next to \($0.title)" } ?? "")\(cardID == nil ? "" : " with a handoff card")."
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { reply(opened, false); return }
         whenReady(node.id, timeout: 45) { [weak self] status in
             guard let self, let s = self.model.sessions.session(for: node.id) else { reply(opened + " It closed before the prompt was sent.", true); return }

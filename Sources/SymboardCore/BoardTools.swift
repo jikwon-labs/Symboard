@@ -30,9 +30,12 @@ public enum BoardTools {
     /// lead: 사람이 연 콘솔. 사용자와 이야기하고 일을 목적별로 새 콘솔에 나눠 맡긴다.
     /// worker: 다른 콘솔이 spawn_console·hand_off 로 연 콘솔. 받은 일을 직접 한다.
     /// plain: 나눠 맡기기 설정을 끈 경우(예전 안내).
-    public enum Role: String, Sendable { case lead, worker, plain }
+    /// ceo: "CEO 로 열기"로 연 콘솔. 필요한 역할만 골라 연다(18차). crew: CEO 가 역할을 붙여 연 콘솔.
+    public enum Role: Equatable, Sendable { case lead, worker, plain, ceo, crew(Crew) }
 
-    public static func role(openedByAgent: Bool, leadDelegates: Bool) -> Role {
+    /// crew 는 콘솔 사양에 저장된 역할(TerminalSpec.crew). 역할이 있으면 나눠 맡기기 설정과 상관없이 그 안내를 쓴다.
+    public static func role(openedByAgent: Bool, leadDelegates: Bool, crew: Crew? = nil) -> Role {
+        if let crew { return crew == .ceo ? .ceo : .crew(crew) }
         if openedByAgent { return .worker }
         return leadDelegates ? .lead : .plain
     }
@@ -111,6 +114,8 @@ public enum BoardTools {
         case .lead: return leadPrompt
         case .worker: return workerPrompt
         case .plain: return systemPrompt
+        case .ceo: return Crew.ceo.systemPrompt
+        case .crew(let c): return c.systemPrompt
         }
     }
 
@@ -175,6 +180,8 @@ public enum BoardTools {
                 "name": ["type": "string", "description": "Optional name; a short free name is picked if omitted or taken"],
                 "prompt": ["type": "string", "description": "Optional first message (claude/codex) or command line (shell)"],
                 "group": ["type": "string", "description": "Optional group to put the console in (created if missing)"],
+                "role": ["type": "string", "enum": Crew.staff.map(\.rawValue),
+                         "description": "Optional specialist role (CEO console). The console runs claude with that role's instructions; if that role's console already exists, its name is returned instead"],
              ], required: ["agent"])],
             ["name": "send_to_console",
              "description": "Type text into a console and press Enter (a prompt for claude/codex, a command for a shell).",
@@ -215,6 +222,16 @@ public enum BoardTools {
                     "id": ["type": "string"], "label": ["type": "string"],
                 ], "required": ["id", "label"]]],
              ], required: ["title", "nodes", "edges"])],
+            ["name": "show_references",
+             "description": "Open 2-6 reference web pages side by side on the board as web tiles next to your console, so the user can compare them.",
+             "inputSchema": schema([
+                "title": ["type": "string", "description": "What is being compared, e.g. \"Onboarding screens\""],
+                "items": ["type": "array", "items": ["type": "object", "properties": [
+                    "url": ["type": "string", "description": "http or https address"],
+                    "label": ["type": "string", "description": "Short name shown on the tile"],
+                    "note": ["type": "string", "description": "Optional: what to look at in this reference"],
+                ], "required": ["url", "label"]]],
+             ], required: ["items"])],
         ]
     }
 }

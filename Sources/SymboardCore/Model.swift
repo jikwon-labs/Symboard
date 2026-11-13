@@ -86,10 +86,12 @@ public struct TerminalSpec: Codable, Equatable, Sendable {
     public var openedByAgent: Bool?
     /// 보관한 콘솔이면 그 기록(17차). 있으면 프로세스를 띄우지 않고 작은 카드로 보인다.
     public var archived: ArchivedConsole?
+    /// CEO 콘솔이거나 CEO 가 연 역할 콘솔이면 그 역할(18차, Crew.rawValue). 그 역할의 안내를 붙여 띄운다.
+    public var crew: String?
 
     public init(agent: AgentKind, executable: String? = nil, extraArgs: [String] = [], cwd: String,
                 sessionID: String? = nil, hasLaunched: Bool = false, profileID: UUID? = nil, openedByAgent: Bool? = nil,
-                archived: ArchivedConsole? = nil) {
+                archived: ArchivedConsole? = nil, crew: String? = nil) {
         self.agent = agent
         self.executable = executable
         self.extraArgs = extraArgs
@@ -99,6 +101,7 @@ public struct TerminalSpec: Codable, Equatable, Sendable {
         self.profileID = profileID
         self.openedByAgent = openedByAgent
         self.archived = archived
+        self.crew = crew
     }
 }
 

@@ -108,7 +108,7 @@ import Testing
 @Suite struct BoardToolsV9Tests {
     @Test func newToolsListed() {
         let names = BoardTools.toolDefinitions.compactMap { $0["name"] as? String }
-        #expect(names == ["list_consoles", "spawn_console", "send_to_console", "read_console", "close_console", "hand_off", "add_note", "draw_diagram"])
+        #expect(names == ["list_consoles", "spawn_console", "send_to_console", "read_console", "close_console", "hand_off", "add_note", "draw_diagram", "show_references"])
         let handoff = BoardTools.toolDefinitions.first { $0["name"] as? String == "hand_off" }!
         #expect((handoff["inputSchema"] as! [String: Any])["required"] as? [String] == ["prompt"])
     }

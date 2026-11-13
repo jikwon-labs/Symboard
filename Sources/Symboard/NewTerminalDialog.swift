@@ -48,7 +48,9 @@ enum NewTerminalDialog {
         lastCwd = cwd
         let exe = (state.executable.trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath
         let args = agent == .shell ? [] : ArgumentSplitter.split(state.arguments)
-        return TerminalSpec(agent: agent, executable: agent == .custom ? exe : nil, extraArgs: args, cwd: cwd)
+        var spec = TerminalSpec(agent: agent, executable: agent == .custom ? exe : nil, extraArgs: args, cwd: cwd)
+        if agent == .claude, state.ceo { spec.crew = Crew.ceo.rawValue }
+        return spec
     }
 
     /// 처리했으면 true(키를 삼킨다).
@@ -88,6 +90,8 @@ final class NewTerminalState: ObservableObject {
     @Published var agent: AgentKind = .claude
     @Published var executable = ""
     @Published var arguments = ""
+    /// claude 를 CEO 콘솔로 연다(18차).
+    @Published var ceo = false
     @Published var cwd: String
     /// 다른 프로그램인데 실행 파일이 비어 Enter 를 누르면 올려서 그 칸에 커서를 보낸다.
     @Published var focusRequest = 0
@@ -127,6 +131,17 @@ private struct NewTerminalView: View {
                             .buttonStyle(.plain)
                             .axName(name(a))
                     }
+                }
+            }
+
+            if state.agent == .claude {
+                section(L("Mode"), note: L(state.ceo
+                    ? "Takes your work and calls only the roles it needs: planner, designer, frontend, backend, CTO."
+                    : "A regular console. It splits work into new consoles by goal.")) {
+                    Toggle(L("Open as CEO"), isOn: $state.ceo)
+                        .toggleStyle(.switch).controlSize(.small)
+                        .font(.system(size: 12)).foregroundStyle(Color.symText)
+                        .axName("Open as CEO")
                 }
             }
 

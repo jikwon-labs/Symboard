@@ -1505,7 +1505,10 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSPopove
     func newTerminal(at point: Point?) {
         NewTerminalDialog.lastCwd = projectPath
         guard let spec = NewTerminalDialog.run() else { return }
-        addTerminal(spec: spec, at: point)
+        let ceo = spec.crew == Crew.ceo.rawValue
+        // 보드 도구는 이름으로 콘솔을 찾으므로, CEO 가 이미 있으면 이름은 자동으로 짓는다.
+        let taken = model.selectedWorkspace.nodes.contains { $0.kind == .terminal && $0.title.lowercased() == "ceo" }
+        addTerminal(spec: spec, at: point, title: ceo && !taken ? Crew.ceo.consoleName : nil, role: ceo ? Crew.ceo.label : nil)
     }
 
     @discardableResult
