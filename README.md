@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand/logo.png" width="160" alt="Symboard"></p>
+
 # Symboard
 
 큰 캔버스 위에 Claude Code·Codex 같은 에이전트 콘솔을 여러 개 띄우고, 누가 일하는 중이고 누가 입력을 기다리는지 한눈에 보며, 앱을 껐다 켜도 그대로 이어지는 macOS 앱. Swift(AppKit + SwiftUI), 터미널은 SwiftTerm.
