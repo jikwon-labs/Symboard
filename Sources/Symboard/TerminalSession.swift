@@ -75,6 +75,13 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         missingFolder = nil
         running = info.running
         remote.attach(info)
+        // agentd 의 PTY 크기는 지난 앱이 마지막으로 알린 값이다. 앱을 끄기 직전 크기 변경(0.12초 대기 중)이 버려졌거나
+        // 꺼진 사이 글꼴·줄 간격이 바뀌면 화면 칸 수와 달라져, claude 가 넓은 폭으로 그린 줄이 접혀 화면이 깨졌다.
+        // 붙을 때 지금 칸 수를 한 번 알린다. 크기가 같으면 프로세스에 신호가 가지 않는다.
+        if info.running {
+            let term = view.getTerminal()
+            scheduleResize(cols: term.cols, rows: term.rows)
+        }
         if !info.running { tracker.noteExit() }
         endedWhileAway = !info.running
     }
